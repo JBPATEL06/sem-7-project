@@ -1,0 +1,9 @@
+node_modules
+dist
+.dbci
+coverage
+*.log
+.env
+*secret*.json
+wengoogle secret.json
+

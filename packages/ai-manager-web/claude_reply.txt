@@ -1,0 +1,91 @@
+Verification & Audit Report for Claude — `packages/ai-manager-web` Web Application & Auth Build
+
+1. Dual Authentication & Account Linking Implementation Summary
+Package Location: `packages/ai-manager-web`
+Backend Server: Express + Local MongoDB (`mongodb://127.0.0.1:27017/ai_manager_web`)
+Mongoose User Model:
+- `email`: String (unique, lowercased, indexed)
+- `passwordHash`: String | null (bcrypt hashed with 10 salt rounds)
+- `googleId`: String | null
+- `driveLinked`: Boolean (default `false`)
+- `driveTokenExpiry`: Date | null
+
+Account Linking Logic (`/api/auth/google`):
+1. Queries MongoDB for existing user by lowercased `email`: `User.findOne({ email })`.
+2. If account exists (e.g. originally registered via password): updates record by attaching `googleId`, setting `driveLinked = true`, and updating token expiry window.
+3. If no account exists: creates new User document.
+4. Issues unified JWT token signed with `JWT_SECRET`.
+
+Strict JWT Claims Schema & Parity Guarantee:
+Both `/api/auth/login`, `/api/auth/register`, and `/api/auth/google` issue identical JWT token claims:
+{
+  "sub": "<user_id_string>",
+  "email": "<user_email>",
+  "authMethod": "google" | "password",
+  "iat": 1785238339,
+  "exp": 1785324739 (exact 24-hour expiration)
+}
+
+---
+
+2. Automated Integration Test Suite Results (`npm test` in `packages/ai-manager-web`)
+Vitest Runner Output:
+✓ tests/auth.test.ts (4 tests passing)
+  1. Register password user: verifies bcrypt hash storage & driveLinked: false default.
+  2. Account Linking: Google auth attaches googleId & driveLinked to existing password user without duplicate _id creation.
+  3. Strict JWT Claims Parity: Password and Google tokens produce identical claims schemas & 24h expiration.
+  4. GET /api/auth/me & GET /api/projects API integration.
+
+Test Files: 1 passed (1)
+Tests: 4 passed (4)
+
+---
+
+3. Explicit End-to-End Click-Through Checklist Real Terminal Output
+
+$ node scratch/test_e2e_clickthrough.js
+
+=== Starting Explicit End-to-End Click-Through Checklist Execution ===
+
+--- Step 1: Registering password account (e2e_user_1785238339062@example.com)... ---
+HTTP 201: User ID = 6a689343d9ba8fa1e1bc4d70 | Email = e2e_user_1785238339062@example.com | authMethod = password
+
+--- Step 2: Fetching /api/projects (Project Picker Landing)... ---
+HTTP 200: Projects count = 1 | Onboarding Required = false
+
+--- Step 3: Logging out (clearing token)... ---
+Active session token cleared. User returned to UNAUTHENTICATED state.
+
+--- Step 4: Logging back in via Google OAuth for e2e_user_1785238339062@example.com... ---
+HTTP 200: User ID = 6a689343d9ba8fa1e1bc4d70 | Email = e2e_user_1785238339062@example.com | authMethod = google | driveLinked = true
+
+Account Identity Parity Audit: Original password User ID (6a689343d9ba8fa1e1bc4d70) === Google linked User ID (6a689343d9ba8fa1e1bc4d70) -> 100% MATCH
+
+--- Step 4b: Re-fetching /api/projects (Same Landing Point)... ---
+HTTP 200: Projects count = 1 | First Project = db-context-indexer [proj_7da1b95a]
+
+--- Step 5: Selecting project 'proj_7da1b95a' and loading Context Dashboard... ---
+HTTP 200: Context Dashboard Loaded for 'proj_7da1b95a'!
+Context Overview Metrics Audit:
+┌─────────────────┬────────┐
+│ (index)         │ Values │
+├─────────────────┼────────┤
+│ clientsCount    │ 5      │
+│ queriesCount    │ 11     │
+│ functionsCount  │ 36     │
+│ edgesCount      │ 51     │
+│ referencesCount │ 1583   │
+│ unresolvedCount │ 5      │
+└─────────────────┴────────┘
+
+Indexed Queries per Database Type:
+┌──────────┬────────┐
+│ (index)  │ Values │
+├──────────┼────────┤
+│ firebase │ 4      │
+│ mongodb  │ 2      │
+│ mysql    │ 3      │
+│ supabase │ 2      │
+└──────────┴────────┘
+
+=== Explicit End-to-End Click-Through Checklist Execution Completed Successfully! ===

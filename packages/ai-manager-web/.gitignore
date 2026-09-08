@@ -1,0 +1,14 @@
+node_modules/
+dist/
+dist-server/
+.ai-manager/
+.tmp_projects/
+*.sqlite
+*.sqlite-journal
+*.enc
+*.log
+.env
+.env.*
+*.env
+.env.local
+
