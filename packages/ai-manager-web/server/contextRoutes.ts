@@ -62,7 +62,7 @@ router.get('/projects/:id/plans', localOrAuth, async (req: AuthRequest, res: Res
       return;
     }
     const index = await loadIndexFromSqlite(dbPath);
-    res.json({ plans: index.plans || [] });
+    res.json({ plans: (index as any).plans || [] });
   } catch (err: any) {
     res.status(500).json({ error: err.message });
   }
@@ -79,7 +79,7 @@ router.get('/projects/:id/proposals', localOrAuth, async (req: AuthRequest, res:
       return;
     }
     const index = await loadIndexFromSqlite(dbPath);
-    res.json({ proposals: index.proposals || [] });
+    res.json({ proposals: (index as any).proposals || [] });
   } catch (err: any) {
     res.status(500).json({ error: err.message });
   }

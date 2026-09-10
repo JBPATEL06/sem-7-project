@@ -87,7 +87,7 @@ router.get('/users', requireAdmin, async (req: Request, res: Response) => {
 // PUT /api/admin/users/:id/role
 router.put('/users/:id/role', requireAdmin, async (req: Request, res: Response) => {
   try {
-    const { id } = req.params;
+    const id = req.params.id as string;
     const { role } = req.body;
     if (role !== 'user' && role !== 'admin') {
       res.status(400).json({ error: 'Invalid role' });
@@ -103,7 +103,7 @@ router.put('/users/:id/role', requireAdmin, async (req: Request, res: Response) 
 // DELETE /api/admin/users/:id
 router.delete('/users/:id', requireAdmin, async (req: Request, res: Response) => {
   try {
-    const { id } = req.params;
+    const id = req.params.id as string;
     await deleteUser(id);
     res.json({ success: true });
   } catch (error: any) {

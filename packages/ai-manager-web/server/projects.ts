@@ -1,9 +1,10 @@
 import { Router, Response } from 'express';
 import path from 'path';
 import fs from 'fs';
-import { localOrAuth, AuthRequest } from './auth.js';
+import { localOrAuth, AuthRequest, getIsMongoConnected } from './auth.js';
 import { decrypt } from './utils/encryption.js';
 import { fetchProjectFromDrive, loadIndexFromSqlite } from '@ai-manager/core';
+import { ProjectModel } from './models/index.js';
 
 export const projectsRouter = Router();
 
@@ -11,6 +12,7 @@ const LOCAL_PROJECTS_FILE = path.resolve(process.cwd(), '.ai-manager/projects.js
 
 export interface LocalProject {
   projectId: string;
+  userId?: string;
   name: string;
   projectName: string;
   description: string;
@@ -27,7 +29,73 @@ export interface LocalProject {
   metrics: string;
 }
 
-function getLocalProjects(): LocalProject[] {
+export async function getProjects(userId?: string, isAdmin: boolean = false): Promise<LocalProject[]> {
+  if (getIsMongoConnected()) {
+    try {
+      const filter = isAdmin ? {} : (userId ? { userId } : {});
+      const docs = await ProjectModel.find(filter).sort({ createdAt: -1 }).lean();
+      return docs.map((d: any) => ({
+        projectId: d.projectId,
+        userId: d.userId,
+        name: d.name,
+        projectName: d.projectName || d.name,
+        description: d.description || '',
+        rootDir: d.rootDir || '',
+        githubRepo: d.githubRepo || null,
+        githubBranch: d.githubBranch || 'main',
+        status: d.status || 'Not indexed',
+        statusVariant: d.statusVariant || 'secondary',
+        filesCount: d.filesCount ?? null,
+        files: d.files || '—',
+        dbSize: d.dbSize || '—',
+        lastModified: d.lastModified || new Date().toISOString(),
+        lastSynced: d.lastSynced || 'Never synced',
+        metrics: d.metrics || 'Not indexed'
+      }));
+    } catch (e) {
+      console.error('[Projects] Error reading from Atlas, using fallback:', e);
+    }
+  }
+
+  const local = getLocalProjects();
+  if (isAdmin || !userId) return local;
+  return local.filter((p) => !p.userId || p.userId === userId);
+}
+
+export async function getProjectById(projectId: string): Promise<LocalProject | null> {
+  if (getIsMongoConnected()) {
+    try {
+      const doc = await ProjectModel.findOne({ projectId }).lean();
+      if (doc) {
+        return {
+          projectId: (doc as any).projectId,
+          userId: (doc as any).userId,
+          name: (doc as any).name,
+          projectName: (doc as any).projectName || (doc as any).name,
+          description: (doc as any).description || '',
+          rootDir: (doc as any).rootDir || '',
+          githubRepo: (doc as any).githubRepo || null,
+          githubBranch: (doc as any).githubBranch || 'main',
+          status: (doc as any).status || 'Not indexed',
+          statusVariant: (doc as any).statusVariant || 'secondary',
+          filesCount: (doc as any).filesCount ?? null,
+          files: (doc as any).files || '—',
+          dbSize: (doc as any).dbSize || '—',
+          lastModified: (doc as any).lastModified || new Date().toISOString(),
+          lastSynced: (doc as any).lastSynced || 'Never synced',
+          metrics: (doc as any).metrics || 'Not indexed'
+        };
+      }
+    } catch (e) {
+      console.error('[Projects] Atlas getProjectById error:', e);
+    }
+  }
+
+  const local = getLocalProjects();
+  return local.find((p) => p.projectId === projectId) || null;
+}
+
+export function getLocalProjects(): LocalProject[] {
   try {
     if (fs.existsSync(LOCAL_PROJECTS_FILE)) {
       const data = fs.readFileSync(LOCAL_PROJECTS_FILE, 'utf-8');
@@ -42,7 +110,7 @@ function getLocalProjects(): LocalProject[] {
   return [];
 }
 
-function saveLocalProjects(projects: LocalProject[]) {
+export function saveLocalProjects(projects: LocalProject[]) {
   try {
     const dir = path.dirname(LOCAL_PROJECTS_FILE);
     if (!fs.existsSync(dir)) {
@@ -62,13 +130,16 @@ interface CodeCacheEntry {
 const codePreviewCache = new Map<string, CodeCacheEntry>();
 const CACHE_TTL_MS = 5 * 60 * 1000; // 5 minutes
 
-// GET /api/projects — List projects from local storage
-projectsRouter.get('/', localOrAuth, async (_req: AuthRequest, res: Response): Promise<void> => {
+// GET /api/projects — List projects (Filtered by user session, Admin sees all)
+projectsRouter.get('/', localOrAuth, async (req: AuthRequest, res: Response): Promise<void> => {
   try {
-    const localProjects = getLocalProjects();
+    const isAdmin = req.user?.role === 'admin';
+    const userId = req.user?.sub;
+    const projectsList = await getProjects(userId, isAdmin);
+
     res.status(200).json({
-      projects: localProjects,
-      onboardingRequired: localProjects.length === 0
+      projects: projectsList,
+      onboardingRequired: projectsList.length === 0
     });
   } catch (err: any) {
     console.error(`[projects/list] Error: ${err.message}`);
@@ -76,7 +147,7 @@ projectsRouter.get('/', localOrAuth, async (_req: AuthRequest, res: Response): P
   }
 });
 
-// POST /api/projects — Create / Register a new project in local storage
+// POST /api/projects — Create / Register a new project in MongoDB Atlas (userId bound from session)
 projectsRouter.post('/', localOrAuth, async (req: AuthRequest, res: Response): Promise<void> => {
   try {
     const { projectId, projectName, description, githubRepo, rootDir } = req.body;
@@ -85,16 +156,18 @@ projectsRouter.post('/', localOrAuth, async (req: AuthRequest, res: Response): P
       return;
     }
 
+    const userId = req.user?.sub || 'usr_admin_default';
     const slug = projectId.toLowerCase().replace(/[^a-z0-9-_]/g, '-');
-    const localProjects = getLocalProjects();
+    const existing = await getProjectById(slug);
 
-    if (localProjects.some((p) => p.projectId === slug || p.name === slug)) {
+    if (existing) {
       res.status(400).json({ error: `Project '${slug}' already exists.` });
       return;
     }
 
-    const newLocalProject: LocalProject = {
+    const newProject: LocalProject = {
       projectId: slug,
+      userId, // Authenticated user ID automatically assigned
       name: projectName,
       projectName,
       description: description || '',
@@ -111,56 +184,98 @@ projectsRouter.post('/', localOrAuth, async (req: AuthRequest, res: Response): P
       metrics: 'Not indexed'
     };
 
-    localProjects.unshift(newLocalProject);
+    // Save to Atlas if connected
+    if (getIsMongoConnected()) {
+      try {
+        await ProjectModel.create({
+          ...newProject,
+          createdAt: new Date().toISOString()
+        });
+      } catch (e) {
+        console.error('[Projects] Atlas create error:', e);
+      }
+    }
+
+    const localProjects = getLocalProjects();
+    localProjects.unshift(newProject);
     saveLocalProjects(localProjects);
 
-    // Record dynamic activity event
+    // Record dynamic activity event with userId
     try {
       const { logActivity } = await import('./dashboardRoutes.js');
       logActivity({
         projectId: slug,
         projectName,
+        userId,
         action: 'Project registered',
-        detail: `Linked workspace at ${newLocalProject.rootDir}`,
+        detail: `Linked workspace at ${newProject.rootDir}`,
         status: 'info'
       });
     } catch {}
 
     res.status(201).json({
-      message: 'Project created successfully in local workspace.',
-      project: newLocalProject
+      message: 'Project created successfully in database.',
+      project: newProject
     });
   } catch (err: any) {
     res.status(500).json({ error: `Failed to create project: ${err.message}` });
   }
 });
 
-// DELETE /api/projects/:id — Remove project workspace from local storage
+// DELETE /api/projects/:id — Remove project (RBAC & Ownership enforced: non-owner/non-admin rejected with 403)
 projectsRouter.delete('/:id', localOrAuth, async (req: AuthRequest, res: Response): Promise<void> => {
   try {
-    const projectId = req.params.id;
-    let localProjects = getLocalProjects();
-    const beforeCount = localProjects.length;
-    localProjects = localProjects.filter((p) => p.projectId !== projectId);
+    const projectId = req.params.id as string;
+    const project = await getProjectById(projectId);
 
-    if (localProjects.length === beforeCount) {
+    if (!project) {
       res.status(404).json({ error: `Project '${projectId}' not found.` });
       return;
     }
 
+    // Ownership Enforcement
+    const isAdmin = req.user?.role === 'admin';
+    const isOwner = project.userId === req.user?.sub;
+
+    if (!isAdmin && !isOwner) {
+      res.status(403).json({ error: 'Forbidden. You do not have permission to delete this project.' });
+      return;
+    }
+
+    if (getIsMongoConnected()) {
+      try {
+        await ProjectModel.deleteOne({ projectId });
+      } catch (e) {
+        console.error('[Projects] Atlas delete error:', e);
+      }
+    }
+
+    let localProjects = getLocalProjects();
+    localProjects = localProjects.filter((p) => p.projectId !== projectId);
     saveLocalProjects(localProjects);
-    res.status(200).json({ message: `Project '${projectId}' removed from workspace.` });
+
+    res.status(200).json({ message: `Project '${projectId}' removed successfully.` });
   } catch (err: any) {
     res.status(500).json({ error: `Failed to delete project: ${err.message}` });
   }
 });
 
-// GET /api/projects/:id/context — Load AST context index
+// GET /api/projects/:id/context — Load AST context index (Ownership checked)
 projectsRouter.get('/:id/context', localOrAuth, async (req: AuthRequest, res: Response): Promise<void> => {
   try {
     const projectId = req.params.id as string;
-    const targetDbFile = path.resolve(`.tmp_projects/${projectId}/index.sqlite`);
+    const project = await getProjectById(projectId);
 
+    if (project) {
+      const isAdmin = req.user?.role === 'admin';
+      const isOwner = project.userId === req.user?.sub;
+      if (!isAdmin && !isOwner) {
+        res.status(403).json({ error: 'Forbidden. You do not have permission to access this project context.' });
+        return;
+      }
+    }
+
+    const targetDbFile = path.resolve(`.tmp_projects/${projectId}/index.sqlite`);
     let dbFilePath = targetDbFile;
 
     if (!fs.existsSync(dbFilePath)) {

@@ -1,261 +1,429 @@
 import React, { useState } from 'react';
 import { Card, CardHeader, CardTitle, CardContent } from '../components/ui/card';
 import { Button } from '../components/ui/button';
+import { Badge } from '../components/ui/badge';
 import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from '../components/ui/select';
 import {
   GitCommitHorizontal,
   FolderOpen,
   Folder,
   FileCode2,
-  RefreshCw
+  RefreshCw,
+  GitBranch as GitBranchIcon,
+  CheckCircle2,
+  Database,
+  ArrowUpRight,
+  Clock,
+  GitMerge,
+  ShieldAlert,
+  Code,
+  Layers,
+  Flag,
+  Sparkles,
+  PanelLeftClose,
+  PanelLeftOpen,
+  ChevronLeft,
+  ChevronRight,
+  History,
+  FolderTree
 } from 'lucide-react';
+import { useGit } from '../hooks/useGit';
+import { BranchFlagBadge } from '../components/git/BranchFlagBadge';
+import { CodeViewerPane } from '../components/git/CodeViewerPane';
+import { MergeConflictStudio } from '../components/git/MergeConflictStudio';
+import { BranchHealthBoard } from '../components/git/BranchHealthBoard';
+import { HierarchicalFileTree } from '../components/git/HierarchicalFileTree';
 
 interface GitViewPageProps {
+  projectId?: string;
   initialEmpty?: boolean;
 }
 
-export const GitViewPage: React.FC<GitViewPageProps> = ({ initialEmpty = false }) => {
-  const [isEmpty, setIsEmpty] = useState(initialEmpty);
-  const [branch, setBranch] = useState('main');
+export const GitViewPage: React.FC<GitViewPageProps> = ({
+  projectId = 'acme-api',
+  initialEmpty = false
+}) => {
+  const [forceEmpty, setForceEmpty] = useState(initialEmpty);
+  const [activeTab, setActiveTab] = useState<'inspector' | 'conflicts' | 'health'>('inspector');
+  const [selectedFilePath, setSelectedFilePath] = useState<string | null>(null);
+  const [isHistoryCollapsed, setIsHistoryCollapsed] = useState<boolean>(false);
 
-  const commits = [
-    {
-      sha: 'a3f291c',
-      message: 'Fix Groq auth header on retry',
-      tag: 'Indexed HEAD',
-      author: 'JD',
-      authorColor: 'bg-primary/20 text-primary',
-      time: '2h ago',
-      isHead: true
-    },
-    {
-      sha: 'f912ab0',
-      message: 'Reindex context after schema migration',
-      author: 'JD',
-      authorColor: 'bg-primary/20 text-primary',
-      time: '5h ago'
-    },
-    {
-      sha: 'c02e77d',
-      message: 'Add order refund service',
-      author: 'AK',
-      authorColor: 'bg-secondary text-secondary-foreground',
-      time: '1d ago'
-    },
-    {
-      sha: '88bb14e',
-      message: 'Update ts-morph parser config',
-      author: 'JD',
-      authorColor: 'bg-primary/20 text-primary',
-      time: '2d ago'
-    },
-    {
-      sha: '1d4f620',
-      message: 'Merge branch feature/auth-gateway',
-      author: 'AK',
-      authorColor: 'bg-secondary text-secondary-foreground',
-      time: '3d ago'
-    },
-    {
-      sha: '77aa903',
-      message: 'Initial indexer scaffold',
-      author: 'JD',
-      authorColor: 'bg-primary/20 text-primary',
-      time: '5d ago',
-      isLast: true
+  const {
+    branches,
+    currentBranch,
+    selectBranch,
+    commits,
+    selectedCommit,
+    setSelectedCommit,
+    treeFiles,
+    treeStats,
+    changedFiles,
+    // File code inspection
+    selectedFile,
+    setSelectedFile,
+    fetchFileContent,
+    isFileLoading,
+    // Branch flags
+    branchFlags,
+    updateBranchFlag,
+    // Merge conflict studio
+    mergeResult,
+    isCheckingMerge,
+    checkMerge,
+    resolveConflict,
+    // Status
+    isLoading,
+    isSyncing,
+    error,
+    syncGit
+  } = useGit(projectId);
+
+  const isEmpty = forceEmpty || (!isLoading && commits.length === 0);
+  const currentFlag = branchFlags[currentBranch];
+
+  const handleFileClick = async (filePath: string) => {
+    setSelectedFilePath(filePath);
+    try {
+      await fetchFileContent(filePath, selectedCommit || currentBranch);
+    } catch (e) {
+      console.error('Failed to open file', e);
     }
-  ];
+  };
+
+  const getBranchDotClass = (branchName: string) => {
+    const st = branchFlags[branchName]?.status;
+    if (st === 'green') return 'bg-emerald-400';
+    if (st === 'red') return 'bg-rose-400';
+    if (st === 'problem') return 'bg-amber-400';
+    return 'bg-muted-foreground';
+  };
 
   return (
-    <main className="p-8 flex-1 overflow-y-auto">
-      <div className="flex flex-col gap-6 max-w-7xl mx-auto">
-        {/* Header & Controls */}
-        <div className="flex justify-between items-start flex-wrap gap-4">
+    <main className="p-6 md:p-8 flex-1 overflow-y-auto">
+      <div className="flex flex-col gap-5 max-w-7xl mx-auto">
+        {/* Top Header & Project Bar */}
+        <div className="flex justify-between items-center flex-wrap gap-4 pb-3 border-b border-border/60">
           <div className="flex flex-col gap-1">
-            <div className="flex items-center gap-3">
-              <h1 className="font-bold text-foreground text-2xl tracking-tight">
-                Git Visualizer
+            <div className="flex items-center gap-3 flex-wrap">
+              <div className="size-8 rounded-lg bg-primary/10 border border-primary/20 flex items-center justify-center text-primary shadow-xs">
+                <GitBranchIcon className="size-4.5" />
+              </div>
+              <h1 className="font-bold text-foreground text-xl tracking-tight">
+                Git Visualizer & Studio
               </h1>
-              {/* Quick toggle for Demo / Screen 11 testing */}
-              <button
-                type="button"
-                onClick={() => setIsEmpty(!isEmpty)}
-                className="text-[11px] font-mono text-muted-foreground border border-border px-2 py-0.5 rounded hover:bg-muted cursor-pointer"
-                title="Toggle empty state view (Screen 11)"
-              >
-                {isEmpty ? 'View Populated State' : 'View Empty State'}
-              </button>
+              <Badge variant="outline" className="text-xs font-mono">
+                {projectId}
+              </Badge>
+              {/* Branch Status Badge */}
+              <BranchFlagBadge
+                branch={currentBranch}
+                flag={currentFlag}
+                onUpdateFlag={(status, note) => updateBranchFlag(currentBranch, status, note)}
+                align="left"
+              />
             </div>
-            <p className="text-muted-foreground text-sm">
-              Commit graph and file tree linked to indexed context
+            <p className="text-muted-foreground text-xs">
+              Live commit tree, branch governance flags, schema-linked file explorer, and merge conflict solver.
             </p>
           </div>
-          <div className="flex items-center gap-3">
-            <Select value={branch} onValueChange={setBranch} defaultValue="main">
-              <SelectTrigger className="w-[150px] text-xs">
-                <SelectValue placeholder="Branch: main" />
+
+          <div className="flex items-center gap-3 flex-wrap">
+            {/* Branch Picker */}
+            <Select value={currentBranch} onValueChange={selectBranch}>
+              <SelectTrigger className="w-[190px] text-xs h-9" disabled={isLoading || branches.length === 0}>
+                <div className="flex items-center gap-2 truncate">
+                  <span className={`size-2 rounded-full shrink-0 ${getBranchDotClass(currentBranch)}`} />
+                  <GitBranchIcon className="size-3.5 shrink-0 text-muted-foreground" />
+                  <SelectValue placeholder={`Branch: ${currentBranch || 'main'}`} />
+                </div>
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="main">Branch: main</SelectItem>
-                <SelectItem value="develop">Branch: develop</SelectItem>
+                {branches.length > 0 ? (
+                  branches.map((b) => (
+                    <SelectItem key={b.name} value={b.name}>
+                      <div className="flex items-center gap-2">
+                        <span className={`size-1.5 rounded-full ${getBranchDotClass(b.name)}`} />
+                        <span>Branch: {b.name} {b.current ? '(HEAD)' : ''}</span>
+                      </div>
+                    </SelectItem>
+                  ))
+                ) : (
+                  <SelectItem value="main">Branch: main</SelectItem>
+                )}
               </SelectContent>
             </Select>
-            <Button variant="ghost" className="gap-2 text-xs text-muted-foreground hover:text-foreground">
-              <RefreshCw className="size-3.5" />
-              Refresh
+
+            {/* Sync Repository Button */}
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => syncGit()}
+              disabled={isSyncing || isLoading}
+              className="gap-2 text-xs h-9 px-3.5 text-foreground cursor-pointer shadow-xs"
+            >
+              <RefreshCw className={`size-3.5 ${isSyncing ? 'animate-spin text-primary' : ''}`} />
+              {isSyncing ? 'Syncing...' : 'Sync Git'}
             </Button>
           </div>
         </div>
 
-        {/* 2-Column Section */}
-        <div className="grid gap-6 grid-cols-1 lg:grid-cols-[minmax(0,1.55fr)_minmax(320px,1fr)]">
-          {/* Left Column: Commit Graph or Empty State */}
-          <Card className="p-6 gap-4 bg-card">
-            <CardHeader className="p-0 mb-3">
-              <CardTitle className="text-base">Commit Graph</CardTitle>
-            </CardHeader>
-            <CardContent className="p-0">
-              {isEmpty ? (
-                <div className="text-center flex flex-col justify-center items-center gap-4 min-h-[440px]">
-                  <div className="rounded-full bg-primary/10 flex justify-center items-center size-14 shadow-inner">
-                    <GitCommitHorizontal className="text-primary size-7" />
-                  </div>
-                  <div className="flex flex-col gap-2">
-                    <h2 className="font-semibold text-foreground text-base">
-                      No commits indexed yet
-                    </h2>
-                    <p className="text-muted-foreground text-sm max-w-[300px]">
-                      Commits will appear here after the repository is indexed.
-                    </p>
-                  </div>
-                  <Button className="bg-primary text-primary-foreground font-medium text-sm mt-2">
-                    Index repository
-                  </Button>
-                </div>
-              ) : (
-                <div className="flex flex-col">
-                  {commits.map((c, idx) => (
-                    <div key={c.sha} className="flex relative py-3 items-center gap-4 hover:bg-muted/20 px-2 rounded transition-colors">
-                      {/* Graph Line & Node */}
-                      <div className="flex relative self-stretch justify-center w-4">
-                        {!c.isLast && (
-                          <span className="bg-border absolute top-4 bottom-[-16px] w-px" />
-                        )}
-                        {idx > 0 && (
-                          <span className="bg-border absolute top-[-16px] h-5 w-px" />
-                        )}
-                        <span
-                          className={`ring-4 ring-card rounded-full relative z-10 mt-1 size-3 ${
-                            c.isHead ? 'bg-primary' : 'bg-accent'
-                          }`}
-                        />
-                      </div>
+        {/* Studio View Navigation Toolbar */}
+        <div className="flex items-center justify-between border-b border-border gap-2 pb-px">
+          <div className="flex items-center gap-1">
+            <button
+              type="button"
+              onClick={() => setActiveTab('inspector')}
+              className={`flex items-center gap-2 px-3.5 py-2 text-xs font-semibold rounded-t-lg transition-colors cursor-pointer border-b-2 ${
+                activeTab === 'inspector'
+                  ? 'border-primary text-primary bg-primary/10'
+                  : 'border-transparent text-muted-foreground hover:text-foreground hover:bg-muted/40'
+              }`}
+            >
+              <Code className="size-3.5" />
+              <span>Inspector & Code Studio</span>
+            </button>
 
-                      <span className="font-mono text-muted-foreground text-xs w-16 shrink-0">
-                        {c.sha}
-                      </span>
-                      <span className="text-foreground text-sm flex-1 truncate">
-                        {c.message}
-                      </span>
-                      {c.tag && (
-                        <span className="font-medium rounded-full bg-primary/15 text-primary text-[10px] py-0.5 px-2 shrink-0">
-                          {c.tag}
-                        </span>
-                      )}
-                      <span
-                        className={`font-semibold rounded-full text-[10px] flex justify-center items-center size-7 shrink-0 ${c.authorColor}`}
-                      >
-                        {c.author}
-                      </span>
-                      <span className="text-right text-muted-foreground text-xs w-14 shrink-0 font-mono">
-                        {c.time}
-                      </span>
-                    </div>
-                  ))}
-                </div>
+            <button
+              type="button"
+              onClick={() => setActiveTab('conflicts')}
+              className={`flex items-center gap-2 px-3.5 py-2 text-xs font-semibold rounded-t-lg transition-colors cursor-pointer border-b-2 ${
+                activeTab === 'conflicts'
+                  ? 'border-primary text-primary bg-primary/10'
+                  : 'border-transparent text-muted-foreground hover:text-foreground hover:bg-muted/40'
+              }`}
+            >
+              <GitMerge className="size-3.5" />
+              <span>Merge Conflict Studio</span>
+              {mergeResult && mergeResult.conflictCount > 0 && (
+                <Badge className="bg-rose-500/20 text-rose-400 text-[9px] px-1 py-0 ml-1">
+                  {mergeResult.conflictCount}
+                </Badge>
               )}
-            </CardContent>
-          </Card>
+            </button>
 
-          {/* Right Column: File Tree or Empty State */}
-          <Card className="p-6 gap-4 bg-card">
-            <CardHeader className="p-0 mb-3">
-              <CardTitle className="text-base">File Tree</CardTitle>
-            </CardHeader>
-            <CardContent className="p-0">
-              {isEmpty ? (
-                <div className="text-center flex flex-col justify-center items-center gap-4 min-h-[440px]">
-                  <div className="rounded-full bg-muted flex justify-center items-center size-14 shadow-inner">
-                    <Folder className="text-muted-foreground size-7" />
-                  </div>
-                  <div className="flex flex-col gap-2">
-                    <h2 className="font-semibold text-foreground text-base">
-                      No files available
-                    </h2>
-                    <p className="text-muted-foreground text-sm max-w-[260px]">
-                      The file tree will appear here after the repository is indexed.
-                    </p>
-                  </div>
-                </div>
-              ) : (
-                <div className="font-mono text-sm flex flex-col select-none">
-                  {/* src/ */}
-                  <div className="text-foreground flex py-2 items-center gap-2">
-                    <FolderOpen className="text-primary size-4" />
-                    <span>src/</span>
-                  </div>
+            <button
+              type="button"
+              onClick={() => setActiveTab('health')}
+              className={`flex items-center gap-2 px-3.5 py-2 text-xs font-semibold rounded-t-lg transition-colors cursor-pointer border-b-2 ${
+                activeTab === 'health'
+                  ? 'border-primary text-primary bg-primary/10'
+                  : 'border-transparent text-muted-foreground hover:text-foreground hover:bg-muted/40'
+              }`}
+            >
+              <Flag className="size-3.5" />
+              <span>Branch Flags Matrix</span>
+              <Badge variant="secondary" className="text-[9px] font-mono ml-1">
+                {branches.length}
+              </Badge>
+            </button>
+          </div>
 
-                  {/* routes/ */}
-                  <div className="text-foreground flex py-2 pl-6 items-center gap-2">
-                    <FolderOpen className="text-primary size-4" />
-                    <span>routes/</span>
-                  </div>
-                  <div className="text-muted-foreground flex py-1.5 pl-12 items-center gap-2 hover:text-foreground cursor-pointer">
-                    <FileCode2 className="size-4" />
-                    <span>orders.ts</span>
-                  </div>
-                  <div className="text-muted-foreground flex py-1.5 pl-12 items-center gap-2 hover:text-foreground cursor-pointer">
-                    <FileCode2 className="size-4" />
-                    <span>auth.ts</span>
-                  </div>
+          <div className="flex items-center gap-2">
+            {activeTab === 'inspector' && (
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => setIsHistoryCollapsed(!isHistoryCollapsed)}
+                className="text-xs h-7 px-2.5 gap-1.5 cursor-pointer text-muted-foreground hover:text-foreground hover:bg-muted/50"
+                title={isHistoryCollapsed ? 'Show commit history pane' : 'Collapse commit history to expand code view'}
+              >
+                {isHistoryCollapsed ? (
+                  <>
+                    <PanelLeftOpen className="size-3.5 text-primary" />
+                    <span>Show Commits</span>
+                  </>
+                ) : (
+                  <>
+                    <PanelLeftClose className="size-3.5" />
+                    <span>Collapse Commits</span>
+                  </>
+                )}
+              </Button>
+            )}
 
-                  {/* services/ */}
-                  <div className="text-foreground flex py-2 pl-6 items-center gap-2">
-                    <FolderOpen className="text-primary size-4" />
-                    <span>services/</span>
-                  </div>
-                  {/* Linked file refund.ts */}
-                  <div className="rounded-lg bg-primary/10 text-primary flex py-1.5 pl-12 pr-3 items-center gap-2 my-0.5">
-                    <FileCode2 className="size-4 shrink-0" />
-                    <span>refund.ts</span>
-                    <span className="font-sans font-medium rounded-full bg-primary/15 text-[10px] flex ml-auto py-0.5 px-2 items-center gap-1">
-                      <span className="rounded-full bg-primary size-1.5" />
-                      linked
-                    </span>
-                  </div>
-                  <div className="text-muted-foreground flex py-1.5 pl-12 items-center gap-2 hover:text-foreground cursor-pointer">
-                    <FileCode2 className="size-4" />
-                    <span>notify.ts</span>
-                  </div>
-
-                  {/* Collapsed Folders */}
-                  <div className="text-muted-foreground flex py-1.5 pl-6 items-center gap-2 hover:text-foreground cursor-pointer">
-                    <Folder className="size-4" />
-                    <span>db/</span>
-                  </div>
-                  <div className="text-muted-foreground flex py-1.5 pl-6 items-center gap-2 hover:text-foreground cursor-pointer">
-                    <Folder className="size-4" />
-                    <span>models/</span>
-                  </div>
-                  <div className="text-muted-foreground flex py-1.5 pl-6 items-center gap-2 hover:text-foreground cursor-pointer">
-                    <Folder className="size-4" />
-                    <span>utils/</span>
-                  </div>
-                </div>
-              )}
-            </CardContent>
-          </Card>
+            <button
+              type="button"
+              onClick={() => setForceEmpty(!forceEmpty)}
+              className="text-[10px] font-mono text-muted-foreground/80 border border-border/60 px-2 py-0.5 rounded hover:bg-muted cursor-pointer transition-colors"
+              title="Toggle empty state view"
+            >
+              {forceEmpty ? 'Live' : 'Simulate Empty'}
+            </button>
+          </div>
         </div>
+
+        {error && (
+          <div className="p-3 rounded-lg bg-destructive/10 border border-destructive/20 text-destructive text-xs">
+            {error}
+          </div>
+        )}
+
+        {/* TAB 1: Unified Workbench Layout */}
+        {activeTab === 'inspector' && (
+          <div className="border border-border/80 rounded-2xl bg-card overflow-hidden shadow-xl flex h-[calc(100vh-230px)] min-h-[560px]">
+            {/* PANE 1: Commit History List */}
+            {!isHistoryCollapsed && (
+              <div className="w-80 min-w-[270px] max-w-[310px] border-r border-border flex flex-col bg-card/50 select-none">
+                {/* Pane Header */}
+                <div className="px-4 py-2.5 border-b border-border/60 flex items-center justify-between bg-muted/20">
+                  <div className="flex items-center gap-2">
+                    <History className="size-3.5 text-primary" />
+                    <span className="text-xs font-semibold text-foreground">Commits</span>
+                    <Badge variant="secondary" className="text-[10px] font-mono px-1.5 py-0">
+                      {commits.length}
+                    </Badge>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => setIsHistoryCollapsed(true)}
+                    className="text-muted-foreground hover:text-foreground p-1 rounded hover:bg-muted/60 transition-colors cursor-pointer"
+                    title="Collapse history pane"
+                  >
+                    <PanelLeftClose className="size-3.5" />
+                  </button>
+                </div>
+
+                {/* Pane Content */}
+                <div className="flex-1 overflow-y-auto p-2 space-y-1">
+                  {isLoading ? (
+                    <div className="flex flex-col items-center justify-center h-48 gap-2">
+                      <div className="size-5 border-2 border-primary border-t-transparent rounded-full animate-spin" />
+                      <span className="text-[11px] text-muted-foreground font-mono">Loading commits...</span>
+                    </div>
+                  ) : isEmpty ? (
+                    <div className="flex flex-col items-center justify-center h-48 text-center p-4 gap-2">
+                      <GitCommitHorizontal className="size-6 text-muted-foreground" />
+                      <span className="text-xs text-muted-foreground">No commits indexed</span>
+                    </div>
+                  ) : (
+                    commits.map((c) => {
+                      const isSelected = selectedCommit === c.sha;
+                      return (
+                        <div
+                          key={c.sha}
+                          onClick={() => setSelectedCommit(c.sha)}
+                          className={`p-2.5 rounded-xl cursor-pointer transition-all border text-left flex flex-col gap-1.5 ${
+                            isSelected
+                              ? 'bg-primary/10 border-primary/40 shadow-xs'
+                              : 'border-transparent hover:bg-muted/40 text-muted-foreground'
+                          }`}
+                        >
+                          <div className="flex items-center justify-between gap-1.5">
+                            <span className="font-mono text-[11px] font-bold text-foreground">
+                              {c.sha}
+                            </span>
+                            <span className="text-[10px] text-muted-foreground font-mono">
+                              {c.time}
+                            </span>
+                          </div>
+
+                          <p className="text-xs font-medium text-foreground line-clamp-2 leading-snug">
+                            {c.message}
+                          </p>
+
+                          <div className="flex items-center justify-between pt-1 gap-1">
+                            <span
+                              className={`font-semibold rounded-full text-[9px] flex justify-center items-center size-5 shrink-0 ${c.authorColor}`}
+                              title={`${c.authorName} <${c.authorEmail}>`}
+                            >
+                              {c.author}
+                            </span>
+
+                            {c.tag && (
+                              <span
+                                className={`font-medium rounded-full text-[9px] py-0.2 px-2 shrink-0 ${
+                                  c.isDbRelated
+                                    ? 'bg-emerald-500/15 text-emerald-400 border border-emerald-500/30'
+                                    : 'bg-primary/15 text-primary'
+                                }`}
+                              >
+                                {c.tag}
+                              </span>
+                            )}
+                          </div>
+                        </div>
+                      );
+                    })
+                  )}
+                </div>
+              </div>
+            )}
+
+            {/* PANE 2: Hierarchical Folder & File Explorer */}
+            <div className="w-72 min-w-[240px] max-w-[290px] border-r border-border flex flex-col bg-muted/10">
+              {/* Explorer Header */}
+              <div className="px-4 py-2.5 border-b border-border/60 flex items-center justify-between bg-muted/20">
+                <div className="flex items-center gap-2">
+                  <FolderTree className="size-3.5 text-amber-400" />
+                  <span className="text-xs font-semibold text-foreground">Files</span>
+                  <Badge variant="outline" className="text-[10px] font-mono px-1.5 py-0">
+                    {treeFiles.length}
+                  </Badge>
+                </div>
+                {treeStats.dbRelatedCount > 0 && (
+                  <Badge className="bg-emerald-500/15 text-emerald-400 text-[9px] gap-1 px-1.5 py-0">
+                    <Database className="size-2.5" />
+                    {treeStats.dbRelatedCount} DB
+                  </Badge>
+                )}
+              </div>
+
+              {/* Hierarchical File Tree */}
+              <div className="flex-1 overflow-hidden">
+                <HierarchicalFileTree
+                  files={treeFiles}
+                  changedFiles={changedFiles}
+                  selectedFilePath={selectedFilePath}
+                  selectedCommitSha={selectedCommit}
+                  onSelectFile={handleFileClick}
+                />
+              </div>
+            </div>
+
+            {/* PANE 3: Code Viewer & Editor (Takes All Remaining Space) */}
+            <div className="flex-1 flex flex-col bg-card min-w-0 overflow-hidden">
+              <CodeViewerPane
+                file={selectedFile}
+                isLoading={isFileLoading}
+                onClose={() => {
+                  setSelectedFile(null);
+                  setSelectedFilePath(null);
+                }}
+              />
+            </div>
+          </div>
+        )}
+
+        {/* TAB 2: Merge Conflict Studio */}
+        {activeTab === 'conflicts' && (
+          <MergeConflictStudio
+            branches={branches}
+            currentBranch={currentBranch}
+            branchFlags={branchFlags}
+            mergeResult={mergeResult}
+            isCheckingMerge={isCheckingMerge}
+            onCheckMerge={checkMerge}
+            onResolveConflict={resolveConflict}
+          />
+        )}
+
+        {/* TAB 3: Branch Flags Board */}
+        {activeTab === 'health' && (
+          <BranchHealthBoard
+            branches={branches}
+            currentBranch={currentBranch}
+            branchFlags={branchFlags}
+            onUpdateFlag={updateBranchFlag}
+            onSelectBranch={(b) => {
+              selectBranch(b);
+              setActiveTab('inspector');
+            }}
+            onOpenMergeStudio={(b) => {
+              selectBranch(b);
+              setActiveTab('conflicts');
+            }}
+          />
+        )}
       </div>
     </main>
   );

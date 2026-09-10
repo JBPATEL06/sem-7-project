@@ -24,7 +24,7 @@ afterAll(async () => {
 
 describe('Local-First Auth & Projects Test Suite', () => {
   it('1. Token generation & claims verification (24h expiry)', () => {
-    const user = { id: 'usr_123', email: 'test@local.workspace' };
+    const user = { id: 'usr_123', email: 'test@local.workspace', role: 'user' as const };
     const token = generateToken(user);
     expect(token).toBeDefined();
 

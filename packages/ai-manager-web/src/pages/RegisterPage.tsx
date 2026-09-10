@@ -58,7 +58,7 @@ export const RegisterPage: React.FC<RegisterPageProps> = ({ onNavigateToLogin, o
             <span className="font-mono font-bold text-primary-foreground text-xl">{`>_`}</span>
           </div>
           <h1 className="text-2xl font-bold text-foreground tracking-tight">AI Manager Platform</h1>
-          <p className="text-sm text-muted-foreground mt-1">Create a standard user account</p>
+          <p className="text-sm text-muted-foreground mt-1">Database Context & Engineering Intelligence</p>
         </div>
 
         {/* Register Card */}
@@ -66,7 +66,7 @@ export const RegisterPage: React.FC<RegisterPageProps> = ({ onNavigateToLogin, o
           <div className="flex items-center justify-between mb-6">
             <div>
               <h2 className="text-lg font-semibold text-foreground">Sign Up</h2>
-              <p className="text-xs text-muted-foreground">Register local credentials with bcrypt encryption</p>
+              <p className="text-xs text-muted-foreground">Create an account to access project workspaces</p>
             </div>
             <div className="size-8 rounded-full bg-primary/10 flex items-center justify-center text-primary">
               <UserPlus className="size-4" />
@@ -74,9 +74,22 @@ export const RegisterPage: React.FC<RegisterPageProps> = ({ onNavigateToLogin, o
           </div>
 
           {error && (
-            <div className="mb-5 p-3 rounded-lg bg-destructive/10 border border-destructive/20 flex items-start gap-2.5 text-xs text-destructive">
-              <AlertCircle className="size-4 shrink-0 mt-0.5" />
-              <span>{error}</span>
+            <div className="mb-5 p-3 rounded-lg bg-destructive/10 border border-destructive/20 flex flex-col gap-1.5 text-xs text-destructive">
+              <div className="flex items-start gap-2">
+                <AlertCircle className="size-4 shrink-0 mt-0.5" />
+                <span>{error}</span>
+              </div>
+              {error.includes('already registered') && (
+                <div className="pl-6 pt-1">
+                  <button
+                    type="button"
+                    onClick={onNavigateToLogin}
+                    className="text-primary hover:underline font-semibold"
+                  >
+                    Go to Sign In or Reset Password →
+                  </button>
+                </div>
+              )}
             </div>
           )}
 
@@ -91,7 +104,7 @@ export const RegisterPage: React.FC<RegisterPageProps> = ({ onNavigateToLogin, o
                   type="email"
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
-                  placeholder="user@example.com"
+                  placeholder="name@company.com"
                   className="w-full bg-muted/40 border border-border rounded-lg pl-9 pr-3.5 py-2 text-sm text-foreground focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary transition-colors"
                   required
                 />
@@ -165,7 +178,7 @@ export const RegisterPage: React.FC<RegisterPageProps> = ({ onNavigateToLogin, o
         {/* Security badge note */}
         <div className="flex items-center justify-center gap-2 text-xs text-muted-foreground/80 mt-6 font-mono">
           <Shield className="size-3.5 text-accent" />
-          <span>Local-first BCrypt + JWT Auth • Role-based access</span>
+          <span>MongoDB Database Auth • BCrypt + JWT Session Security</span>
         </div>
       </div>
     </div>

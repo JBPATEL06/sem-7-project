@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   Home,
   LayoutGrid,
@@ -9,12 +9,16 @@ import {
   GitCommitHorizontal,
   Settings as SettingsIcon,
   ShieldAlert,
+  Layers,
+  Monitor,
   Bell,
   Moon,
   Sun,
   ChevronDown,
   LogOut,
-  User as UserIcon
+  User as UserIcon,
+  PanelLeftClose,
+  PanelLeftOpen
 } from 'lucide-react';
 import { useTheme } from '../context/ThemeContext';
 import { useAuth } from '../context/AuthContext';
@@ -24,6 +28,8 @@ export type NavRoute =
   | 'dashboard'
   | 'projects'
   | 'db-manager'
+  | 'diagrams'
+  | 'screens'
   | 'validator'
   | 'qa'
   | 'flow-audit'
@@ -51,11 +57,36 @@ export const Layout: React.FC<LayoutProps> = ({
   const { theme, toggleTheme } = useTheme();
   const { user, logout, isAdmin } = useAuth();
   const [isProfileOpen, setIsProfileOpen] = useState(false);
+  const [isSidebarCollapsed, setIsSidebarCollapsed] = useState<boolean>(() => {
+    return localStorage.getItem('ai_manager_sidebar_collapsed') === 'true';
+  });
+
+  const toggleSidebar = () => {
+    setIsSidebarCollapsed((prev) => {
+      const next = !prev;
+      localStorage.setItem('ai_manager_sidebar_collapsed', String(next));
+      return next;
+    });
+  };
+
+  // Keyboard shortcut Ctrl+B / Cmd+B to toggle sidebar
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'b') {
+        e.preventDefault();
+        toggleSidebar();
+      }
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, []);
 
   const baseNavItems: { id: NavRoute; label: string; icon: React.FC<{ className?: string }> }[] = [
     { id: 'dashboard', label: 'Home', icon: Home },
     { id: 'projects', label: 'Projects', icon: LayoutGrid },
     { id: 'db-manager', label: 'DB Manager', icon: Database },
+    { id: 'diagrams', label: 'Diagrams', icon: Layers },
+    { id: 'screens', label: 'Penpot Specs', icon: Monitor },
     { id: 'validator', label: 'Validator', icon: FlaskConical },
     { id: 'qa', label: 'QA', icon: ShieldCheck },
     { id: 'flow-audit', label: 'Flow Audit', icon: GitBranch },
@@ -70,25 +101,42 @@ export const Layout: React.FC<LayoutProps> = ({
   const initials = user?.email ? user.email.slice(0, 2).toUpperCase() : 'US';
 
   return (
-    <div className="bg-background text-foreground w-full min-h-screen flex">
-      {/* Fixed Left Sidebar (220px) */}
-      <aside className="bg-sidebar border-r border-border flex flex-col w-[220px] min-w-[220px] h-screen sticky top-0 z-30 select-none">
+    <div className="bg-background text-foreground w-screen h-screen overflow-hidden flex">
+      {/* Fixed Left Sidebar (220px / Collapsible) */}
+      <aside
+        className={`bg-sidebar border-r border-border flex flex-col h-full z-30 select-none overflow-hidden transition-all duration-200 ${
+          isSidebarCollapsed
+            ? 'w-0 min-w-0 border-r-0 opacity-0 pointer-events-none'
+            : 'w-[220px] min-w-[220px] opacity-100'
+        }`}
+      >
         {/* App Header Brand */}
-        <div
-          className="flex p-4 pb-5 pt-5 items-center gap-2 cursor-pointer"
-          onClick={() => onNavigate('dashboard')}
-        >
-          <div className="rounded-md bg-primary flex justify-center items-center size-8 shadow-sm">
-            <span className="font-mono font-bold text-primary-foreground text-xs">{`>_`}</span>
+        <div className="flex p-4 pb-5 pt-5 items-center justify-between">
+          <div
+            className="flex items-center gap-2 cursor-pointer flex-1 min-w-0"
+            onClick={() => onNavigate('dashboard')}
+          >
+            <div className="rounded-md bg-primary flex justify-center items-center size-8 shadow-sm shrink-0">
+              <span className="font-mono font-bold text-primary-foreground text-xs">{`>_`}</span>
+            </div>
+            <div className="flex flex-col min-w-0">
+              <span className="font-bold text-foreground text-sm tracking-tight truncate">AI Manager</span>
+              <span className="text-muted-foreground text-xs truncate">dbci frontend</span>
+            </div>
           </div>
-          <div className="flex flex-col">
-            <span className="font-bold text-foreground text-sm tracking-tight">AI Manager</span>
-            <span className="text-muted-foreground text-xs">dbci frontend</span>
-          </div>
+
+          <button
+            type="button"
+            onClick={toggleSidebar}
+            className="p-1 text-muted-foreground hover:text-foreground hover:bg-muted/50 rounded-md transition-colors cursor-pointer shrink-0"
+            title="Hide Sidebar (Ctrl+B)"
+          >
+            <PanelLeftClose className="size-4" />
+          </button>
         </div>
 
         {/* Navigation items */}
-        <nav className="p-2 flex-1 overflow-y-auto">
+        <nav className="p-2 flex-1 overflow-y-auto overscroll-contain">
           <ul className="flex flex-col gap-1">
             {baseNavItems.map((item) => {
               const Icon = item.icon;
@@ -138,10 +186,24 @@ export const Layout: React.FC<LayoutProps> = ({
       </aside>
 
       {/* Main Container */}
-      <div className="flex flex-col flex-1 min-w-0">
+      <div className="flex flex-col flex-1 min-w-0 h-full overflow-hidden">
         {/* Fixed Top Bar (64px) */}
-        <header className="bg-background border-b border-border flex px-6 justify-between items-center w-full h-16 sticky top-0 z-20">
-          <div className="flex items-center gap-6">
+        <header className="bg-background border-b border-border flex px-6 justify-between items-center w-full h-16 shrink-0 z-20">
+          <div className="flex items-center gap-4">
+            {/* Sidebar Toggle Button */}
+            <button
+              type="button"
+              onClick={toggleSidebar}
+              className={`p-2 rounded-lg transition-colors cursor-pointer ${
+                isSidebarCollapsed
+                  ? 'bg-primary/10 text-primary hover:bg-primary/20'
+                  : 'text-muted-foreground hover:text-foreground hover:bg-muted/50'
+              }`}
+              title={isSidebarCollapsed ? 'Show Sidebar (Ctrl+B)' : 'Hide Sidebar (Ctrl+B)'}
+            >
+              {isSidebarCollapsed ? <PanelLeftOpen className="size-5" /> : <PanelLeftClose className="size-5" />}
+            </button>
+
             <div className="flex flex-col justify-center">
               <span className="font-bold text-foreground text-sm leading-tight">
                 {projectName}
@@ -221,7 +283,7 @@ export const Layout: React.FC<LayoutProps> = ({
         </header>
 
         {/* Page Main Content */}
-        <div className="flex-1">
+        <div className="flex-1 min-h-0 flex flex-col overflow-hidden">
           {children}
         </div>
       </div>

@@ -89,7 +89,7 @@ settingsRouter.get('/keys', localOrAuth, async (req: AuthRequest, res: Response)
 // GET /api/settings/keys/:keyType/reveal — Explicitly decrypt and return plaintext key ONLY on user-triggered reveal call
 settingsRouter.get('/keys/:keyType/reveal', localOrAuth, async (req: AuthRequest, res: Response): Promise<void> => {
   try {
-    const { keyType } = req.params;
+    const keyType = req.params.keyType as string;
     if (!keyType || !['groq', 'github', 'openai'].includes(keyType)) {
       res.status(400).json({ error: `Invalid keyType '${keyType}'. Must be groq, github, or openai.` });
       return;

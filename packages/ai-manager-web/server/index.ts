@@ -1,3 +1,8 @@
+import dns from 'dns';
+try {
+  dns.setServers(['8.8.8.8', '1.1.1.1']);
+} catch {}
+
 import express from 'express';
 import helmet from 'helmet';
 import cors from 'cors';
@@ -12,6 +17,9 @@ import { dashboardRouter } from './dashboardRoutes.js';
 import { settingsRouter } from './settingsRoutes.js';
 import { qaRouter } from './qaRoutes.js';
 import { adminRouter } from './adminRoutes.js';
+import { gitRouter } from './gitRoutes.js';
+import { diagramRouter } from './diagramRoutes.js';
+import { screenRouter } from './screenRoutes.js';
 import contextRouter from './contextRoutes.js';
 
 dotenv.config();
@@ -40,6 +48,9 @@ app.use('/api/db', dbRouter);
 app.use('/api/dashboard', dashboardRouter);
 app.use('/api/settings', settingsRouter);
 app.use('/api/qa', qaRouter);
+app.use('/api/git', gitRouter);
+app.use('/api/diagrams', diagramRouter);
+app.use('/api/screens', screenRouter);
 app.use('/api', contextRouter);
 
 

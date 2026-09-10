@@ -11,6 +11,8 @@ import { ValidatorPage } from './pages/ValidatorPage';
 import { QaPage } from './pages/QaPage';
 import { FlowAuditPage } from './pages/FlowAuditPage';
 import { GitViewPage } from './pages/GitViewPage';
+import { DiagramsPage } from './pages/DiagramsPage';
+import { ScreensPage } from './pages/ScreensPage';
 import { SettingsPage } from './pages/SettingsPage';
 import { AdminPage } from './pages/AdminPage';
 
@@ -21,6 +23,7 @@ const AppContent: React.FC = () => {
   // Determine initial route from pathname or hash if provided
   const getInitialRoute = (): NavRoute => {
     const path = window.location.pathname.replace('/', '') || window.location.hash.replace('#/', '').replace('#', '');
+    if (path === 'git') return 'git-view';
     if (
       [
         'onboarding',
@@ -31,6 +34,8 @@ const AppContent: React.FC = () => {
         'qa',
         'flow-audit',
         'git-view',
+        'diagrams',
+        'screens',
         'settings',
         'admin'
       ].includes(path)
@@ -117,7 +122,11 @@ const AppContent: React.FC = () => {
       case 'flow-audit':
         return <FlowAuditPage />;
       case 'git-view':
-        return <GitViewPage />;
+        return <GitViewPage projectId={selectedProject} />;
+      case 'diagrams':
+        return <DiagramsPage projectId={selectedProject} />;
+      case 'screens':
+        return <ScreensPage selectedProject={{ id: selectedProject, name: selectedProject }} />;
       case 'settings':
         return <SettingsPage />;
       case 'admin':

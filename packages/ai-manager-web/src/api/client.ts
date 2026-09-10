@@ -48,4 +48,18 @@ export class ApiClient {
     if (!res.ok) throw new Error(data.error || 'API DELETE failed');
     return data;
   }
+
+  // Legacy Prototype Compatibility
+  static async getPlans(..._args: any[]): Promise<any> { return this.get('/api/plans'); }
+  static async getProposals(..._args: any[]): Promise<any> { return this.get('/api/proposals'); }
+  static async getQueries(..._args: any[]): Promise<any> { return this.get('/api/queries'); }
+  static async getCallGraph(..._args: any[]): Promise<any> { return this.get('/api/call-graph'); }
+  static async getDiscussions(..._args: any[]): Promise<any> { return this.get('/api/discussions'); }
+  static async getDecisions(..._args: any[]): Promise<any> { return this.get('/api/decisions'); }
+  static async getFunctionDetail(...args: any[]): Promise<any> { return this.get(`/api/functions/${encodeURIComponent(args[0] || '')}`); }
+  static async sendGroqChat(...args: any[]): Promise<any> { return this.post('/api/chat', args[0] || {}); }
+  static async approveProposal(...args: any[]): Promise<any> { return this.post(`/api/proposals/${args[0]}/approve`, {}); }
+  static async rejectProposal(...args: any[]): Promise<any> { return this.post(`/api/proposals/${args[0]}/reject`, {}); }
 }
+
+export const getApiClient = () => ApiClient;

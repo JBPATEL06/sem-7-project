@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Shield, KeyRound, AlertCircle, ArrowRight, Lock, Mail } from 'lucide-react';
+import { Shield, KeyRound, AlertCircle, ArrowRight, Lock, Mail, Database, CheckCircle2 } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 
 interface LoginPageProps {
@@ -13,10 +13,14 @@ export const LoginPage: React.FC<LoginPageProps> = ({ onNavigateToRegister, onSu
   const [password, setPassword] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [isResetMode, setIsResetMode] = useState(false);
+  const [resetSuccess, setResetSuccess] = useState<string | null>(null);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError(null);
+    setResetSuccess(null);
+
     if (!email || !password) {
       setError('Please enter both email and password.');
       return;
@@ -24,14 +28,34 @@ export const LoginPage: React.FC<LoginPageProps> = ({ onNavigateToRegister, onSu
 
     setIsLoading(true);
     try {
-      const res = await login(email, password);
-      if (res.success) {
-        onSuccess();
+      if (isResetMode) {
+        const res = await fetch('/api/auth/reset-password', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ email, newPassword: password })
+        });
+        const data = await res.json();
+        if (!res.ok || !data.success) {
+          setError(data.error || 'Password update failed.');
+          return;
+        }
+        setResetSuccess('Password updated successfully! Signing in...');
+        setTimeout(async () => {
+          const loginRes = await login(email, password);
+          if (loginRes.success) {
+            onSuccess();
+          }
+        }, 500);
       } else {
-        setError(res.error || 'Invalid email or password.');
+        const res = await login(email, password);
+        if (res.success) {
+          onSuccess();
+        } else {
+          setError(res.error || 'Invalid email or password.');
+        }
       }
     } catch (err: any) {
-      setError(err.message || 'Login failed.');
+      setError(err.message || 'Authentication operation failed.');
     } finally {
       setIsLoading(false);
     }
@@ -46,15 +70,19 @@ export const LoginPage: React.FC<LoginPageProps> = ({ onNavigateToRegister, onSu
             <span className="font-mono font-bold text-primary-foreground text-xl">{`>_`}</span>
           </div>
           <h1 className="text-2xl font-bold text-foreground tracking-tight">AI Manager Platform</h1>
-          <p className="text-sm text-muted-foreground mt-1">Local-first database context indexer</p>
+          <p className="text-sm text-muted-foreground mt-1">Database Context & Engineering Intelligence</p>
         </div>
 
         {/* Login Card */}
         <div className="bg-card border border-border rounded-xl shadow-xl p-8">
           <div className="flex items-center justify-between mb-6">
             <div>
-              <h2 className="text-lg font-semibold text-foreground">Sign In</h2>
-              <p className="text-xs text-muted-foreground">Access your workspace and project schemas</p>
+              <h2 className="text-lg font-semibold text-foreground">
+                {isResetMode ? 'Set / Reset Password' : 'Sign In'}
+              </h2>
+              <p className="text-xs text-muted-foreground">
+                {isResetMode ? 'Update your account password' : 'Enter your credentials to access your workspace'}
+              </p>
             </div>
             <div className="size-8 rounded-full bg-primary/10 flex items-center justify-center text-primary">
               <KeyRound className="size-4" />
@@ -65,6 +93,13 @@ export const LoginPage: React.FC<LoginPageProps> = ({ onNavigateToRegister, onSu
             <div className="mb-5 p-3 rounded-lg bg-destructive/10 border border-destructive/20 flex items-start gap-2.5 text-xs text-destructive">
               <AlertCircle className="size-4 shrink-0 mt-0.5" />
               <span>{error}</span>
+            </div>
+          )}
+
+          {resetSuccess && (
+            <div className="mb-5 p-3 rounded-lg bg-emerald-500/10 border border-emerald-500/20 flex items-start gap-2.5 text-xs text-emerald-400">
+              <CheckCircle2 className="size-4 shrink-0 mt-0.5" />
+              <span>{resetSuccess}</span>
             </div>
           )}
 
@@ -79,7 +114,7 @@ export const LoginPage: React.FC<LoginPageProps> = ({ onNavigateToRegister, onSu
                   type="email"
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
-                  placeholder="admin@local.workspace"
+                  placeholder="name@company.com"
                   className="w-full bg-muted/40 border border-border rounded-lg pl-9 pr-3.5 py-2 text-sm text-foreground focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary transition-colors"
                   required
                 />
@@ -87,9 +122,22 @@ export const LoginPage: React.FC<LoginPageProps> = ({ onNavigateToRegister, onSu
             </div>
 
             <div>
-              <label className="block text-xs font-medium text-foreground mb-1.5">
-                Password
-              </label>
+              <div className="flex items-center justify-between mb-1.5">
+                <label className="block text-xs font-medium text-foreground">
+                  {isResetMode ? 'New Password' : 'Password'}
+                </label>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setIsResetMode(!isResetMode);
+                    setError(null);
+                    setResetSuccess(null);
+                  }}
+                  className="text-[11px] text-primary hover:underline cursor-pointer"
+                >
+                  {isResetMode ? 'Back to sign in' : 'Forgot / Set password?'}
+                </button>
+              </div>
               <div className="relative">
                 <Lock className="size-4 text-muted-foreground absolute left-3 top-1/2 -translate-y-1/2" />
                 <input
@@ -112,7 +160,7 @@ export const LoginPage: React.FC<LoginPageProps> = ({ onNavigateToRegister, onSu
                 <div className="size-4 border-2 border-primary-foreground border-t-transparent rounded-full animate-spin" />
               ) : (
                 <>
-                  <span>Sign In</span>
+                  <span>{isResetMode ? 'Update Password & Sign In' : 'Sign In'}</span>
                   <ArrowRight className="size-4" />
                 </>
               )}
@@ -136,7 +184,7 @@ export const LoginPage: React.FC<LoginPageProps> = ({ onNavigateToRegister, onSu
         {/* Security badge note */}
         <div className="flex items-center justify-center gap-2 text-xs text-muted-foreground/80 mt-6 font-mono">
           <Shield className="size-3.5 text-accent" />
-          <span>Local-first BCrypt + JWT Auth • Role-based access</span>
+          <span>MongoDB Database Auth • BCrypt + JWT Session Security</span>
         </div>
       </div>
     </div>

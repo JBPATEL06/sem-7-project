@@ -53,13 +53,53 @@
   - Built `packages/ai-manager-web/src/pages/AdminPage.tsx` with dynamic Admin Overview stats and User Management data grid.
   - Wired Admin Page to the frontend routing with an `isAdmin` boundary check.
   - Linked `Layout.tsx` Admin sidebar route dynamically based on the user's role.
-- **Cross-Session Memory**: Synchronized `ai-manager` project and technical audit in Kankali Context Hub.
+  - Built and wired real Admin API endpoints (`GET /api/admin/overview`, `GET /api/admin/users`, `PUT /api/admin/users/:id/role`, `DELETE /api/admin/users/:id`).
+- **Academic Milestone Day 2 — Git Management & History Visualizer (Completed & Verified)**:
+  - Installed and configured `simple-git` across `packages/ai-manager-web`.
+  - Built `packages/ai-manager-web/server/gitRoutes.ts` exposing `GET /api/git/branches`, `GET /api/git/commits`, `GET /api/git/tree`, and `POST /api/git/sync`.
+  - Created `packages/ai-manager-web/src/hooks/useGit.ts` using the shared `apiClient` token management toolkit.
+  - Rewrote `packages/ai-manager-web/src/pages/GitViewPage.tsx` with live commit history, branch switcher, schema-related file tagging, commit diff inspection, and real repository sync.
+  - Verified all 4 endpoints via standalone test script `testGit.ts` with real execution output.
+- **Academic Milestone Day 3 — Excalidraw Canvas & Diagram Studio (Completed & Verified)**:
+  - Installed `@excalidraw/excalidraw` across `packages/ai-manager-web`.
+  - Implemented `packages/ai-manager-web/server/diagramRoutes.ts` backed by `JsonStore<Diagram>` (`.ai-manager/diagrams.json`).
+  - Created `src/hooks/useDiagrams.ts` and `src/pages/DiagramsPage.tsx` with embedded Excalidraw, diagram templates (Architecture, ER Diagram, Flow, Blank), JSON/PNG/SVG export, and JSON file import.
+  - Wired `/diagrams` route and sidebar navigation item.
+  - Verified full 8-step CRUD and export cycle via `testDiagrams.ts` with real output.
+- **MongoDB Atlas User & Application Data Persistence (Completed & Verified)**:
+  - Connected live MongoDB Atlas cluster (`cluster0.cgdh1pm.mongodb.net/ai_manager`) using `MONGODB_URI` from credentials.
+  - Implemented full Mongoose data schemas for `User`, `Project`, `Module`, `Diagram`, `BranchFlag`, `ActivityLog`, `Setting`, `DbConnection`, and `Screen`.
+  - Stored all user registration, authentication credentials (bcrypt hashed), roles, and profiles directly in MongoDB Atlas.
+  - Connected CRUD operations for projects, diagrams, and branch flags to persist in MongoDB Atlas with local backup mirroring.
+  - Cleaned UI on login and registration pages to provide a clean enterprise experience with password reset capability.
+- **Multi-User Data Isolation & Ownership Enforcement (Completed & Verified)**:
+  - Added indexed `userId` ownership reference to all user-created models (`Project`, `Diagram`, `Module`, `ActivityLog`, `DbConnection`, `BranchFlag`, `Screen`).
+  - Implemented automatic per-user read filtering (`GET /api/projects`, `GET /api/diagrams`, `GET /api/dashboard/activity`, `GET /api/dashboard/stats`) by authenticated `req.user.sub` unless requester has `admin` role.
+  - Implemented strict ownership access control rejecting unauthorized updates/deletions with `403 Forbidden`.
+  - Implemented server startup migration assigning legacy unowned Atlas records to the seeded admin account.
+  - Verified provably via `scripts/testDataIsolation.ts` (cross-user isolation, 403 attack rejections, admin global visibility, 100% Atlas records userId migration).
+- **Academic Milestone Day 4 — Penpot Layout Spec Plugin Bridge (Completed & Verified)**:
+  - Implemented `packages/ai-manager-web/server/screenRoutes.ts` with multi-user `userId` isolation and CRUD endpoints (`GET /api/screens`, `POST /api/screens`, `PUT /api/screens/:id`, `DELETE /api/screens/:id`).
+  - Added template presets (`saas-dashboard`, `auth-portal`, `kanban-board`) for rapid UI specification.
+  - Implemented AI Prompt-to-Layout Generator (`POST /api/screens/generate`) creating structured layout trees from natural language prompts.
+  - Implemented official Penpot Plugin Manifest export (`GET /api/screens/:id/export?format=penpot`) generating Schema 2.0 JSON manifests.
+  - Built `src/hooks/useScreens.ts` and `src/pages/ScreensPage.tsx` with wireframe canvas, property inspector (dimensions, padding, border radius, color tokens), zoom controls, and AST JSON viewer.
+  - Wired `/screens` route in `src/App.tsx` and sidebar navigation item in `src/components/Layout.tsx`.
+  - Executed standalone test suite `scripts/testScreens.ts` with 8/8 tests passing (CRUD cycle, AI generation, Penpot export, cross-user 403 blocks, admin access).
+  - **Figma UI 3 & Performance Canvas Engine Overhaul**: Zero-lag drag & resize engine (RAF-throttling, `transition: none` on active items, 4px grid snap), isolated canvas scrolling (`overscroll-contain`, no page scroll leaks), 8-point perimeter resize handles, modern Figma UI 3 floating frosted bottom toolbar dock (`[V]`, `[F]`, `[R]`, `[T]`, `[❖]`, `[H]`, AI Gen, Present, Export, Zoom) aligned to Obsidian dark theme, and complete coordinate isolation between frames and child elements (preventing multi-element displacement and layout gaps).
+  - **Comprehensive Light / White Theme Engine**: Full Light/Dark theme adaptivity across all pages and Penpot/Figma Specs studio (`ScreensPage.tsx`, `Layout.tsx`, `GitViewPage.tsx`). Left sidebar, center dot grid canvas (`#f1f5f9`), property inspector, modal dialogs, and floating frosted toolbar dock (`bg-white/95`) seamlessly respond to the TopBar theme toggle and synchronize with `localStorage` and `data-theme` CSS tokens.
+  - **Collapsible Navigation & Design Studio Sidebars**:
+    - **Global Sidebar**: TopBar & Sidebar Header toggle buttons (`PanelLeftClose`/`PanelLeftOpen`) + `Ctrl+B` / `Cmd+B` shortcut + `localStorage` persistence (`ai_manager_sidebar_collapsed`) with smooth width transition.
+    - **Studio Side Panels**: Independent Left Layers toggle, Right Inspector toggle, and Floating Dock **Zen Mode** button (`Sidebar` icon) with `localStorage` persistence, maximizing available canvas workspace.
+  - **Infinite Canvas & Board Workspace (Figma & Miro Style)**:
+    - **Penpot Specs Studio (`ScreensPage.tsx`)**: 16,000px × 10,000px vast infinite field with seamless tiled dot grid pattern, 360-degree freehand panning, auto-centering on screen selection (`centerArtboard`), and `Shift + 1` / `Shift + 0` quick center view shortcuts.
+    - **Diagram Studio (`DiagramsPage.tsx`)**: Edge-to-edge full viewport infinite Excalidraw board with **Fit View** (`Maximize2`) auto-framing action.
 
 ## In Progress / Unwired Interactive Features (Mock/Static Only)
 The following buttons and interactive controls render visually but are not yet wired to live backend services:
 - `/onboarding`: "Index repository" button (static transition, no live repository cloning/indexing).
 - `/validator`: "Validate", "Run Query", model selector, context file chips (static results, no live LLM/AST validation pipeline).
-- `/git-view`: "Re-index Commits", "Sync Git History" (static commit graph and file tree).
 
 ## Broken / Known-Bad
 - None currently failing.
+

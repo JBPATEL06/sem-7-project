@@ -1,7 +1,8 @@
 import { Router, Response } from 'express';
 import path from 'path';
 import fs from 'fs';
-import { localOrAuth, AuthRequest } from './auth.js';
+import { localOrAuth, AuthRequest, getIsMongoConnected } from './auth.js';
+import { ProjectModel, ActivityLogModel } from './models/index.js';
 import initSqlJs from 'sql.js';
 
 export const dashboardRouter = Router();
@@ -14,30 +15,41 @@ export interface ActivityItem {
   id: string;
   projectId: string;
   projectName: string;
+  userId?: string;
   action: string;
   detail: string;
   timestamp: string;
   status: 'success' | 'warning' | 'info';
 }
 
-export function logActivity(item: Omit<ActivityItem, 'id' | 'timestamp'>) {
+export async function logActivity(item: Omit<ActivityItem, 'id' | 'timestamp'>) {
   try {
+    const newActivity: ActivityItem = {
+      ...item,
+      userId: item.userId || 'usr_admin_default',
+      id: `act_${Date.now()}_${Math.random().toString(36).slice(2, 6)}`,
+      timestamp: new Date().toISOString()
+    };
+
+    if (getIsMongoConnected()) {
+      try {
+        await ActivityLogModel.create(newActivity);
+      } catch (e) {
+        console.error('[logActivity] Atlas create error:', e);
+      }
+    }
+
     const dir = path.dirname(ACTIVITY_FILE);
     if (!fs.existsSync(dir)) fs.mkdirSync(dir, { recursive: true });
 
     let activities: ActivityItem[] = [];
     if (fs.existsSync(ACTIVITY_FILE)) {
-      activities = JSON.parse(fs.readFileSync(ACTIVITY_FILE, 'utf-8'));
+      try {
+        activities = JSON.parse(fs.readFileSync(ACTIVITY_FILE, 'utf-8'));
+      } catch {}
     }
 
-    const newActivity: ActivityItem = {
-      ...item,
-      id: `act_${Date.now()}_${Math.random().toString(36).slice(2, 6)}`,
-      timestamp: new Date().toISOString()
-    };
-
     activities.unshift(newActivity);
-    // Keep max 50 recent items
     if (activities.length > 50) activities = activities.slice(0, 50);
 
     fs.writeFileSync(ACTIVITY_FILE, JSON.stringify(activities, null, 2));
@@ -54,23 +66,29 @@ function formatBytes(bytes: number): string {
   return `${parseFloat((bytes / Math.pow(k, i)).toFixed(1))} ${sizes[i]}`;
 }
 
-// GET /api/dashboard/stats — Real calculated metrics from local-first storage
+// GET /api/dashboard/stats — Calculated metrics (scoped to userId for regular users, global for admin)
 dashboardRouter.get('/stats', localOrAuth, async (req: AuthRequest, res: Response): Promise<void> => {
   try {
-    // 1. Projects metrics
+    const isAdmin = req.user?.role === 'admin';
+    const userId = req.user?.sub;
+
     let projects: any[] = [];
-    if (fs.existsSync(PROJECTS_FILE)) {
+    if (getIsMongoConnected()) {
+      const filter = isAdmin ? {} : (userId ? { userId } : {});
+      projects = await ProjectModel.find(filter).lean();
+    } else if (fs.existsSync(PROJECTS_FILE)) {
       try {
-        projects = JSON.parse(fs.readFileSync(PROJECTS_FILE, 'utf-8'));
+        const parsed = JSON.parse(fs.readFileSync(PROJECTS_FILE, 'utf-8'));
+        projects = isAdmin ? parsed : parsed.filter((p: any) => !p.userId || p.userId === userId);
       } catch {}
     }
 
     const totalProjects = projects.length;
     const indexedProjects = projects.filter((p) => p.status === 'Indexed' || p.status === 'Active').length;
-    const githubRepos = projects.filter((p) => p.repository && p.repository.includes('github.com')).length;
+    const githubRepos = projects.filter((p) => p.githubRepo && p.githubRepo.includes('github.com')).length;
     const localRepos = totalProjects - githubRepos;
 
-    // 2. Database sizes across all project SQLite files
+    // Database sizes across all project SQLite files
     let totalDbSizeBytes = 0;
     let sqliteFilesCount = 0;
 
@@ -86,14 +104,14 @@ dashboardRouter.get('/stats', localOrAuth, async (req: AuthRequest, res: Respons
       }
     }
 
-    // Also check root .dbci if exists
+    // Root .dbci if exists
     const rootDbci = path.resolve('.dbci/index.sqlite');
     if (fs.existsSync(rootDbci)) {
       totalDbSizeBytes += fs.statSync(rootDbci).size;
       sqliteFilesCount++;
     }
 
-    // 3. Test sql.js engine runtime
+    // sql.js engine runtime check
     let sqlJsStatus: 'Operational' | 'Degraded' | 'Unavailable' = 'Operational';
     try {
       const SQL = await initSqlJs();
@@ -104,19 +122,18 @@ dashboardRouter.get('/stats', localOrAuth, async (req: AuthRequest, res: Respons
       sqlJsStatus = 'Degraded';
     }
 
-    // 4. Check Groq API key configuration
+    // Check Groq API key configuration
     const groqKeyPresent = Boolean(process.env.GROQ_API_KEY && process.env.GROQ_API_KEY.trim().length > 5);
     const groqStatus = groqKeyPresent ? 'Operational' : 'Not Configured (Key Required)';
 
-    // 5. Check Encryption Layer (Credentials file exists or pending Item 4)
+    // Encryption Layer Check
     const credsPath = path.resolve(process.cwd(), '.ai-manager/credentials.enc');
     const encryptionStatus = fs.existsSync(credsPath) ? 'AES-256-GCM Active' : 'Pending Item 4 (Settings)';
 
-    // 6. Compute real last sync from project timestamps
+    // Compute real last sync from project timestamps
     let lastSyncTime: string | null = null;
     const syncedProjects = projects.filter((p) => p.lastSynced && p.lastSynced !== 'Never synced');
     if (syncedProjects.length > 0) {
-      // Find latest sync timestamp
       const timestamps = syncedProjects
         .map((p) => new Date(p.lastSynced).getTime())
         .filter((t) => !isNaN(t));
@@ -142,7 +159,8 @@ dashboardRouter.get('/stats', localOrAuth, async (req: AuthRequest, res: Respons
         indexerEngine: 'Pending Tier 2 (DBCI Scanner)',
         groqApi: groqStatus,
         sqlJsRuntime: sqlJsStatus,
-        encryptionLayer: encryptionStatus
+        encryptionLayer: encryptionStatus,
+        mongoPrimaryStore: getIsMongoConnected() ? 'Connected (Atlas)' : 'Local JSON'
       }
     });
   } catch (err: any) {
@@ -151,29 +169,37 @@ dashboardRouter.get('/stats', localOrAuth, async (req: AuthRequest, res: Respons
   }
 });
 
-// GET /api/dashboard/activity — Real chronological activity stream
+// GET /api/dashboard/activity — Chronological activity stream (scoped to user, admin sees all)
 dashboardRouter.get('/activity', localOrAuth, async (req: AuthRequest, res: Response): Promise<void> => {
   try {
+    const isAdmin = req.user?.role === 'admin';
+    const userId = req.user?.sub;
+
     let activities: ActivityItem[] = [];
-    if (fs.existsSync(ACTIVITY_FILE)) {
+
+    if (getIsMongoConnected()) {
       try {
-        activities = JSON.parse(fs.readFileSync(ACTIVITY_FILE, 'utf-8'));
-      } catch {}
+        const filter = isAdmin ? {} : (userId ? { userId } : {});
+        const docs = await ActivityLogModel.find(filter).sort({ timestamp: -1 }).limit(50).lean();
+        activities = docs.map((d: any) => ({
+          id: d.id,
+          projectId: d.projectId,
+          projectName: d.projectName,
+          userId: d.userId,
+          action: d.action,
+          detail: d.detail,
+          timestamp: d.timestamp,
+          status: d.status
+        }));
+      } catch (e) {
+        console.error('[dashboard/activity] Atlas read error:', e);
+      }
     }
 
-    // If empty, generate fallback seed from existing project creations if any
-    if (activities.length === 0 && fs.existsSync(PROJECTS_FILE)) {
+    if (activities.length === 0 && fs.existsSync(ACTIVITY_FILE)) {
       try {
-        const projects = JSON.parse(fs.readFileSync(PROJECTS_FILE, 'utf-8'));
-        activities = projects.map((p: any) => ({
-          id: `act_${p.projectId || p.id || p.name}`,
-          projectId: p.projectId || p.id || p.name,
-          projectName: p.name || p.projectName || 'Project',
-          action: 'Project registered',
-          detail: `Local workspace linked at ${p.rootDir || p.path || 'local directory'}`,
-          timestamp: p.createdAt || p.lastModified || new Date().toISOString(),
-          status: 'info'
-        }));
+        const raw = JSON.parse(fs.readFileSync(ACTIVITY_FILE, 'utf-8'));
+        activities = isAdmin ? raw : raw.filter((a: any) => !a.userId || a.userId === userId);
       } catch {}
     }
 
