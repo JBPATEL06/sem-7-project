@@ -4,13 +4,11 @@ import { Button } from '../components/ui/button';
 import { Input } from '../components/ui/input';
 import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from '../components/ui/select';
 import { useDbManager } from '../hooks/useDbManager';
+import { ConnectDbModal } from '../components/db/ConnectDbModal';
 import {
   Lock,
   Search,
   Download,
-  ChevronRight,
-  ChevronDown,
-  ChevronLeft,
   Database,
   Play,
   Plus,
@@ -20,8 +18,17 @@ import {
   AlertCircle,
   X,
   Code2,
-  Key
+  Key,
+  Server,
+  Zap,
+  Trash2,
+  Maximize2,
+  RefreshCw,
+  Share2,
+  FolderPlus,
+  Sparkles
 } from 'lucide-react';
+import { Badge } from '../components/ui/badge';
 
 interface DbManagerPageProps {
   projectId?: string;
@@ -29,6 +36,8 @@ interface DbManagerPageProps {
 
 export const DbManagerPage: React.FC<DbManagerPageProps> = ({ projectId = 'acme-api' }) => {
   const {
+    connections,
+    activeConnectionId,
     schema,
     activeTable,
     tableRows,
@@ -37,27 +46,55 @@ export const DbManagerPage: React.FC<DbManagerPageProps> = ({ projectId = 'acme-
     isQueryRunning,
     queryResult,
     error,
+    syncMessage,
+    switchConnection,
+    refetchSchema,
     loadTableData,
     runQuery,
-    createTable
+    connectDatabase,
+    disconnectDatabase,
+    syncErDiagram,
+    createTable,
+    createCollection
   } = useDbManager(projectId);
 
   const [searchQuery, setSearchQuery] = useState('');
   const [tableFilter, setTableFilter] = useState('all');
   const [customQuery, setCustomQuery] = useState<string>('SELECT * FROM sqlite_master;');
+  const [mongoOperation, setMongoOperation] = useState<'find' | 'count' | 'stats'>('find');
+  const [mongoFilter, setMongoFilter] = useState<string>('{}');
   const [currentPage, setCurrentPage] = useState(1);
-  const pageSize = 10;
+  const pageSize = 12;
 
-  // Create Table Modal State
-  const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
+  // Modals state
+  const [isConnectModalOpen, setIsConnectModalOpen] = useState(false);
+  const [isCreateTableOpen, setIsCreateTableOpen] = useState(false);
+  const [isCreateCollectionOpen, setIsCreateCollectionOpen] = useState(false);
+  const [isSeeding, setIsSeeding] = useState(false);
+
+  // Create Table Form
   const [newTableName, setNewTableName] = useState('');
   const [colsList, setColsList] = useState<Array<{ name: string; type: string; isPk: boolean; notNull: boolean }>>([
     { name: 'id', type: 'INTEGER', isPk: true, notNull: true },
     { name: 'name', type: 'TEXT', isPk: false, notNull: true }
   ]);
-  const [createError, setCreateError] = useState<string | null>(null);
+  const [createTableError, setCreateTableError] = useState<string | null>(null);
 
-  const isIndexed = Boolean(schema?.indexed && schema?.tables && schema.tables.length > 0);
+  // Create Collection Form (MongoDB)
+  const [newCollectionName, setNewCollectionName] = useState('');
+  const [initialDocText, setInitialDocText] = useState('{\n  "name": "Jane Doe",\n  "email": "jane@example.com",\n  "role": "admin"\n}');
+  const [createCollectionError, setCreateCollectionError] = useState<string | null>(null);
+
+  const [isSyncingEr, setIsSyncingEr] = useState(false);
+
+  const activeConnection = connections.find((c) => c.id === activeConnectionId);
+  const dbType = schema?.dbType || activeConnection?.type || 'sqlite';
+
+  const totalCollections = schema?.collections?.length || 0;
+  const totalTables = schema?.tables?.length || 0;
+  const totalKeys = schema?.keys?.length || 0;
+
+  const isIndexed = totalTables > 0 || totalCollections > 0 || totalKeys > 0;
 
   const filteredTables = (schema?.tables || []).filter((t) => {
     const matchesSearch = t.name.toLowerCase().includes(searchQuery.toLowerCase());
@@ -65,366 +102,584 @@ export const DbManagerPage: React.FC<DbManagerPageProps> = ({ projectId = 'acme-
     return matchesSearch && matchesFilter;
   });
 
-  const activeTableSchema = (schema?.tables || []).find((t) => t.name === activeTable);
+  const filteredCollections = (schema?.collections || []).filter((c) =>
+    c.name.toLowerCase().includes(searchQuery.toLowerCase())
+  );
 
-  const handleRunCustomQuery = async (e?: React.FormEvent) => {
+  const filteredKeys = (schema?.keys || []).filter((k) =>
+    k.key.toLowerCase().includes(searchQuery.toLowerCase())
+  );
+
+  const activeTableSchema = (schema?.tables || []).find((t) => t.name === activeTable);
+  const activeColSchema = (schema?.collections || []).find((c) => c.name === activeTable);
+
+  const handleRunQuery = async (e?: React.FormEvent) => {
     if (e) e.preventDefault();
-    if (!customQuery.trim()) return;
-    await runQuery(customQuery);
+    if (dbType === 'mongodb') {
+      await runQuery(mongoFilter, mongoOperation);
+    } else {
+      if (!customQuery.trim()) return;
+      await runQuery(customQuery);
+    }
   };
 
   const handleAddColumnField = () => {
     setColsList((prev) => [...prev, { name: '', type: 'TEXT', isPk: false, notNull: false }]);
   };
 
-  const handleCreateSubmit = async (e: React.FormEvent) => {
+  const handleCreateTableSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!newTableName.trim()) {
-      setCreateError('Table name is required.');
+      setCreateTableError('Table name is required.');
       return;
     }
     const validCols = colsList.filter((c) => c.name.trim() !== '');
     if (validCols.length === 0) {
-      setCreateError('At least one column is required.');
+      setCreateTableError('At least one column is required.');
       return;
     }
 
-    setCreateError(null);
+    setCreateTableError(null);
     const res = await createTable(newTableName.trim(), validCols);
     if (res.success) {
-      setIsCreateModalOpen(false);
+      setIsCreateTableOpen(false);
       setNewTableName('');
       setColsList([
         { name: 'id', type: 'INTEGER', isPk: true, notNull: true },
         { name: 'name', type: 'TEXT', isPk: false, notNull: true }
       ]);
     } else {
-      setCreateError(res.error || 'Failed to create table');
+      setCreateTableError(res.error || 'Failed to create table');
     }
   };
 
-  // Pagination on current loaded rows
+  const handleCreateCollectionSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!newCollectionName.trim()) {
+      setCreateCollectionError('Collection name is required.');
+      return;
+    }
+
+    let parsedDoc: any = null;
+    if (initialDocText.trim()) {
+      try {
+        parsedDoc = JSON.parse(initialDocText);
+      } catch (err: any) {
+        setCreateCollectionError('Invalid JSON in Initial Document: ' + err.message);
+        return;
+      }
+    }
+
+    setCreateCollectionError(null);
+    const res = await createCollection(newCollectionName.trim(), parsedDoc);
+    if (res.success) {
+      setIsCreateCollectionOpen(false);
+      setNewCollectionName('');
+    } else {
+      setCreateCollectionError(res.error || 'Failed to create collection');
+    }
+  };
+
+  const handleSeedSampleData = async () => {
+    setIsSeeding(true);
+    if (dbType === 'mongodb') {
+      await createCollection('users', {
+        name: 'Demo User',
+        email: 'demo@example.com',
+        role: 'engineer',
+        status: 'active',
+        createdAt: new Date()
+      });
+      await createCollection('projects', {
+        title: 'Cloud Analytics Platform',
+        environment: 'production',
+        version: '1.4.0',
+        activeMembers: 8
+      });
+    } else {
+      await createTable('users', [
+        { name: 'id', type: 'INTEGER', isPk: true, notNull: true },
+        { name: 'email', type: 'TEXT', isPk: false, notNull: true },
+        { name: 'created_at', type: 'TIMESTAMP', isPk: false, notNull: true }
+      ]);
+    }
+    setIsSeeding(false);
+  };
+
+  const handleSyncEr = async () => {
+    setIsSyncingEr(true);
+    await syncErDiagram();
+    setIsSyncingEr(false);
+  };
+
   const totalPages = Math.max(1, Math.ceil(tableRows.length / pageSize));
   const paginatedRows = tableRows.slice((currentPage - 1) * pageSize, currentPage * pageSize);
 
   return (
-    <main className="p-8 flex-1 overflow-y-auto">
+    <main className="p-6 md:p-8 flex-1 overflow-y-auto bg-background">
       <div className="flex flex-col gap-6 max-w-7xl mx-auto">
-        {/* Header & Status */}
-        <div className="flex justify-between items-start flex-wrap gap-4">
+        {/* Top Header Bar & Multi-Database Connection Switcher */}
+        <div className="flex justify-between items-start flex-wrap gap-4 bg-card/80 p-4 rounded-xl border border-border backdrop-blur-md shadow-xs">
           <div className="flex flex-col gap-1">
             <div className="flex items-center gap-3">
-              <h1 className="font-bold text-2xl tracking-tight text-foreground">DB Manager</h1>
-              <span className="text-xs font-mono px-2 py-0.5 rounded bg-primary/10 text-primary border border-primary/20">
+              <h1 className="font-bold text-2xl tracking-tight text-foreground flex items-center gap-2">
+                <Database className="size-6 text-primary" />
+                Database Control Plane
+              </h1>
+              <Badge variant="outline" className="font-mono text-xs">
                 {projectId}
-              </span>
+              </Badge>
+              <Badge
+                className={`text-[10px] font-mono uppercase font-bold ${
+                  dbType === 'postgresql'
+                    ? 'bg-sky-500/10 text-sky-500 border-sky-500/30'
+                    : dbType === 'mongodb'
+                    ? 'bg-emerald-500/10 text-emerald-500 border-emerald-500/30'
+                    : dbType === 'redis'
+                    ? 'bg-red-500/10 text-red-500 border-red-500/30'
+                    : 'bg-amber-500/10 text-amber-500 border-amber-500/30'
+                }`}
+              >
+                {dbType}
+              </Badge>
             </div>
-            <p className="text-muted-foreground text-sm">
-              sql.js (WASM SQLite) — schema inspector & interactive query console
+            <p className="text-muted-foreground text-xs">
+              Live schema explorer, multi-dialect query console & automated ER diagram sync
             </p>
           </div>
-          <div className="flex items-center gap-3">
-            <div className="rounded-full border border-border bg-card flex py-2 px-3 items-center gap-2 shadow-sm">
-              <Lock className="text-muted-foreground size-4" />
-              <span className={`rounded-full size-2 ${isIndexed ? 'bg-emerald-500' : 'bg-muted-foreground'}`} />
-              <span className="font-mono text-muted-foreground text-xs font-medium">
-                {isIndexed ? 'SQLite Database Connected' : 'Not Indexed'}
-              </span>
-            </div>
+
+          <div className="flex items-center gap-2.5 flex-wrap">
+            {/* Database Connection Switcher */}
+            <Select value={activeConnectionId} onValueChange={(val) => switchConnection(val)}>
+              <SelectTrigger className="w-56 h-9 text-xs font-medium">
+                <SelectValue placeholder="Select Database">
+                  {activeConnection ? `${activeConnection.name}` : 'Select Database'}
+                </SelectValue>
+              </SelectTrigger>
+              <SelectContent>
+                {connections.map((c) => (
+                  <SelectItem key={c.id} value={c.id}>
+                    <div className="flex items-center justify-between w-full gap-2">
+                      <span className="font-medium">{c.name}</span>
+                      <span className="text-[10px] uppercase text-muted-foreground font-mono">[{c.type}]</span>
+                    </div>
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+
+            {/* Disconnect custom DB if not default SQLite */}
+            {activeConnection && !activeConnection.isDefault && (
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => {
+                  if (confirm(`Disconnect database '${activeConnection.name}'?`)) {
+                    disconnectDatabase(activeConnection.id);
+                  }
+                }}
+                className="h-9 px-2.5 text-xs text-destructive hover:bg-destructive/10 border-border cursor-pointer"
+                title="Disconnect Database"
+              >
+                <Trash2 className="size-3.5" />
+              </Button>
+            )}
+
+            {/* Sync ER Diagram Button */}
             <Button
-              onClick={() => setIsCreateModalOpen(true)}
-              className="bg-primary hover:bg-primary/90 text-primary-foreground gap-2 h-9 text-xs font-medium cursor-pointer"
+              variant="outline"
+              size="sm"
+              onClick={handleSyncEr}
+              disabled={isSyncingEr}
+              className="gap-1.5 h-9 text-xs border-border hover:bg-muted cursor-pointer font-medium"
+              title="Generate Excalidraw ER diagram file in diagrams/ folder"
             >
-              <Plus className="size-3.5" />
-              Create Table
+              {isSyncingEr ? <Loader2 className="size-3.5 animate-spin" /> : <Share2 className="size-3.5 text-primary" />}
+              Sync ER Diagram
+            </Button>
+
+            {/* Create Collection Modal trigger for MongoDB */}
+            {dbType === 'mongodb' ? (
+              <Button
+                size="sm"
+                onClick={() => setIsCreateCollectionOpen(true)}
+                className="gap-1.5 h-9 text-xs font-semibold bg-emerald-600 hover:bg-emerald-500 text-white cursor-pointer"
+              >
+                <FolderPlus className="size-3.5" />
+                + Create Collection
+              </Button>
+            ) : (
+              (dbType === 'sqlite' || dbType === 'postgresql') && (
+                <Button
+                  size="sm"
+                  onClick={() => setIsCreateTableOpen(true)}
+                  className="gap-1.5 h-9 text-xs font-semibold bg-primary hover:bg-primary/90 text-primary-foreground cursor-pointer"
+                >
+                  <Plus className="size-3.5" />
+                  + Create Table
+                </Button>
+              )
+            )}
+
+            {/* Connect External DB Modal trigger */}
+            <Button
+              size="sm"
+              variant="outline"
+              onClick={() => setIsConnectModalOpen(true)}
+              className="gap-1.5 h-9 text-xs font-medium border-primary/40 bg-primary/10 text-primary hover:bg-primary/20 cursor-pointer"
+            >
+              <Server className="size-3.5" />
+              + Connect DB
             </Button>
           </div>
         </div>
+
+        {/* Live Notification Feedback */}
+        {syncMessage && (
+          <div className="p-3 bg-emerald-500/10 border border-emerald-500/30 rounded-xl text-xs text-emerald-500 flex items-center justify-between font-medium">
+            <div className="flex items-center gap-2">
+              <CheckCircle2 className="size-4 shrink-0" />
+              <span>{syncMessage}</span>
+            </div>
+            <span className="font-mono text-[11px] underline">Open in /diagrams</span>
+          </div>
+        )}
+
+        {/* Interactive Query Runner Console */}
+        <Card className="p-4 bg-card border-border shadow-xs">
+          <form onSubmit={handleRunQuery} className="flex flex-col gap-2.5">
+            <div className="flex justify-between items-center">
+              <span className="text-xs font-semibold text-foreground flex items-center gap-1.5">
+                <Code2 className="size-4 text-primary" />
+                {dbType === 'mongodb'
+                  ? `MongoDB Query Console (${activeTable ? `Collection: ${activeTable}` : 'Select a collection'})`
+                  : dbType === 'redis'
+                  ? 'Redis Command Runner'
+                  : 'SQL Query Console'}
+              </span>
+              {queryResult && (
+                <span className="text-xs font-mono text-muted-foreground">
+                  {queryResult.executionTimeMs} ms • {queryResult.rowCount ?? queryResult.affectedRows ?? 0} rows
+                </span>
+              )}
+            </div>
+
+            {dbType === 'mongodb' ? (
+              <div className="flex gap-2">
+                <Select value={mongoOperation} onValueChange={(val: any) => setMongoOperation(val)}>
+                  <SelectTrigger className="w-32 h-9 text-xs font-mono font-bold">
+                    <SelectValue placeholder="find" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="find">find()</SelectItem>
+                    <SelectItem value="count">count()</SelectItem>
+                    <SelectItem value="stats">stats()</SelectItem>
+                  </SelectContent>
+                </Select>
+                <input
+                  type="text"
+                  value={mongoFilter}
+                  onChange={(e) => setMongoFilter(e.target.value)}
+                  placeholder='JSON Filter (e.g. { "status": "active" } or {})'
+                  className="flex-1 bg-background border border-border rounded-lg px-3 py-2 text-xs font-mono text-foreground focus:outline-hidden focus:ring-1 focus:ring-primary"
+                />
+                <Button
+                  type="submit"
+                  disabled={isQueryRunning || !activeTable}
+                  className="bg-primary hover:bg-primary/90 text-primary-foreground gap-2 h-9 text-xs font-semibold shrink-0 cursor-pointer"
+                >
+                  {isQueryRunning ? <Loader2 className="size-3.5 animate-spin" /> : <Play className="size-3.5" />}
+                  Execute
+                </Button>
+              </div>
+            ) : (
+              <div className="flex gap-2">
+                <input
+                  type="text"
+                  value={customQuery}
+                  onChange={(e) => setCustomQuery(e.target.value)}
+                  placeholder={
+                    dbType === 'redis'
+                      ? 'Enter Redis command (e.g. KEYS *, GET user:1, HGETALL stats)'
+                      : 'Enter SQL query (e.g. SELECT * FROM users LIMIT 10;)'
+                  }
+                  className="flex-1 bg-background border border-border rounded-lg px-3 py-2 text-xs font-mono text-foreground focus:outline-hidden focus:ring-1 focus:ring-primary"
+                />
+                <Button
+                  type="submit"
+                  disabled={isQueryRunning}
+                  className="bg-primary hover:bg-primary/90 text-primary-foreground gap-2 h-9 text-xs font-semibold shrink-0 cursor-pointer"
+                >
+                  {isQueryRunning ? <Loader2 className="size-3.5 animate-spin" /> : <Play className="size-3.5" />}
+                  Run Query
+                </Button>
+              </div>
+            )}
+
+            {queryResult?.error && (
+              <div className="p-2.5 bg-destructive/15 border border-destructive/30 rounded text-xs text-destructive flex items-center gap-2">
+                <AlertCircle className="size-4 shrink-0" />
+                <span className="font-mono">{queryResult.error}</span>
+              </div>
+            )}
+          </form>
+        </Card>
 
         {/* Loading State */}
         {isLoading ? (
           <div className="flex flex-col items-center justify-center p-20 gap-3 border border-border border-dashed rounded-xl bg-card/30">
             <Loader2 className="size-8 animate-spin text-primary" />
-            <p className="text-sm text-muted-foreground font-mono">Loading SQLite schema for {projectId}...</p>
-          </div>
-        ) : !isIndexed ? (
-          /* Empty / Unindexed State (Screen 10) */
-          <div className="flex flex-col gap-6">
-            <Card className="border border-border/70 p-12 bg-card/60 flex flex-col items-center justify-center text-center gap-4">
-              <div className="rounded-full bg-muted/60 p-4 text-muted-foreground border border-border">
-                <Database className="size-10" />
-              </div>
-              <div className="flex flex-col gap-1.5 max-w-md">
-                <h3 className="font-bold text-lg text-foreground">No Database Index Found</h3>
-                <p className="text-xs text-muted-foreground leading-relaxed">
-                  Project <span className="font-mono font-semibold text-foreground">"{projectId}"</span> has not been scanned or indexed into SQLite yet. You can create a table or execute queries interactively below.
-                </p>
-              </div>
-              <div className="flex items-center gap-3 mt-2">
-                <Button
-                  onClick={() => setIsCreateModalOpen(true)}
-                  className="bg-primary hover:bg-primary/90 text-primary-foreground gap-2 text-xs font-semibold cursor-pointer"
-                >
-                  <Plus className="size-3.5" />
-                  Create Table
-                </Button>
-                <Button
-                  variant="outline"
-                  onClick={() => {
-                    setCustomQuery('CREATE TABLE IF NOT EXISTS demo (id INTEGER PRIMARY KEY, name TEXT, created_at DATETIME DEFAULT CURRENT_TIMESTAMP);');
-                  }}
-                  className="text-xs border-border cursor-pointer"
-                >
-                  Load DDL Example
-                </Button>
-              </div>
-            </Card>
-
-            {/* Interactive Query Console even in Empty State */}
-            <Card className="p-6 gap-4 bg-card border-border">
-              <CardHeader className="p-0 mb-3 flex flex-row justify-between items-center">
-                <div className="flex items-center gap-2">
-                  <Code2 className="size-4 text-primary" />
-                  <CardTitle className="text-sm font-semibold">Interactive SQL Console</CardTitle>
-                </div>
-                {queryResult && (
-                  <span className="text-xs font-mono text-muted-foreground">
-                    Execution: {queryResult.executionTimeMs} ms
-                  </span>
-                )}
-              </CardHeader>
-              <CardContent className="flex flex-col gap-3 p-0">
-                <form onSubmit={handleRunCustomQuery} className="flex flex-col gap-3">
-                  <textarea
-                    value={customQuery}
-                    onChange={(e) => setCustomQuery(e.target.value)}
-                    rows={3}
-                    placeholder="Enter SQL statement (e.g. CREATE TABLE, SELECT, INSERT)..."
-                    className="w-full bg-background border border-border rounded-lg p-3 text-xs font-mono text-foreground focus:outline-hidden focus:ring-1 focus:ring-primary"
-                  />
-                  <div className="flex justify-between items-center">
-                    <span className="text-[11px] text-muted-foreground font-mono">
-                      Supported: standard SQLite / sql.js SQL syntax
-                    </span>
-                    <Button
-                      type="submit"
-                      disabled={isQueryRunning}
-                      className="bg-primary hover:bg-primary/90 text-primary-foreground gap-2 h-8 text-xs font-semibold cursor-pointer"
-                    >
-                      {isQueryRunning ? <Loader2 className="size-3.5 animate-spin" /> : <Play className="size-3.5" />}
-                      Run Query
-                    </Button>
-                  </div>
-                </form>
-
-                {queryResult?.error && (
-                  <div className="p-3 bg-destructive/15 border border-destructive/30 rounded-lg text-xs text-destructive flex items-center gap-2">
-                    <AlertCircle className="size-4 shrink-0" />
-                    <span className="font-mono">{queryResult.error}</span>
-                  </div>
-                )}
-
-                {queryResult?.success && queryResult.rows && queryResult.rows.length > 0 && (
-                  <div className="mt-2 border border-border rounded-lg overflow-x-auto">
-                    <table className="w-full text-xs font-mono text-left">
-                      <thead className="bg-muted/40 border-b border-border text-muted-foreground">
-                        <tr>
-                          {queryResult.columns?.map((col) => (
-                            <th key={col} className="p-2.5 font-semibold">{col}</th>
-                          ))}
-                        </tr>
-                      </thead>
-                      <tbody className="divide-y divide-border">
-                        {queryResult.rows.map((row, rIdx) => (
-                          <tr key={rIdx} className="hover:bg-muted/20">
-                            {queryResult.columns?.map((col) => (
-                              <td key={col} className="p-2.5 text-foreground">{String(row[col] ?? 'NULL')}</td>
-                            ))}
-                          </tr>
-                        ))}
-                      </tbody>
-                    </table>
-                  </div>
-                )}
-              </CardContent>
-            </Card>
+            <p className="text-sm text-muted-foreground font-mono">
+              Introspecting {dbType.toUpperCase()} schema for {activeConnection?.name || projectId}...
+            </p>
           </div>
         ) : (
-          /* Populated State (Screen 4) */
-          <div className="flex flex-col gap-6">
-            {/* Toolbar Row */}
-            <div className="flex items-center gap-4 flex-wrap">
-              <div className="relative flex-1 min-w-[200px]">
-                <Search className="-translate-y-1/2 text-muted-foreground absolute top-1/2 left-3 size-4" />
-                <Input
-                  placeholder="Filter tables or columns..."
-                  value={searchQuery}
-                  onChange={(e) => setSearchQuery(e.target.value)}
-                  className="pl-9 h-9 text-xs"
-                />
-              </div>
-              <Select value={tableFilter} onValueChange={setTableFilter} defaultValue="all">
-                <SelectTrigger className="w-48 h-9 text-xs">
-                  <SelectValue placeholder="All Tables" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">All Tables ({schema?.tables.length})</SelectItem>
-                  {schema?.tables.map((t) => (
-                    <SelectItem key={t.name} value={t.name}>{t.name}</SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
+          /* Main Workspace Grid */
+          <div className="grid gap-6 grid-cols-1 lg:grid-cols-12 items-start">
+            {/* Left Column: Schema Tree (4 cols) */}
+            <div className="lg:col-span-4 flex flex-col gap-4">
+              <Card className="bg-card border-border">
+                <CardHeader className="p-4 border-b border-border flex flex-row items-center justify-between">
+                  <CardTitle className="text-sm font-semibold flex items-center gap-2">
+                    <TableIcon className="size-4 text-primary" />
+                    {dbType === 'mongodb'
+                      ? `Collections (${filteredCollections.length})`
+                      : dbType === 'redis'
+                      ? `Keys (${filteredKeys.length})`
+                      : `Tables (${filteredTables.length})`}
+                  </CardTitle>
 
-            {/* SQL Console Bar */}
-            <Card className="p-4 bg-card border-border">
-              <form onSubmit={handleRunCustomQuery} className="flex flex-col gap-2.5">
-                <div className="flex justify-between items-center">
-                  <span className="text-xs font-semibold text-foreground flex items-center gap-1.5">
-                    <Code2 className="size-4 text-primary" />
-                    SQL Query Runner
-                  </span>
-                  {queryResult && (
-                    <span className="text-xs font-mono text-muted-foreground">
-                      {queryResult.executionTimeMs} ms • {queryResult.rowCount ?? queryResult.affectedRows ?? 0} results
-                    </span>
+                  {dbType === 'mongodb' ? (
+                    <Button
+                      size="sm"
+                      variant="ghost"
+                      onClick={() => setIsCreateCollectionOpen(true)}
+                      className="h-7 px-2 text-xs text-emerald-500 hover:text-emerald-400 hover:bg-emerald-500/10 cursor-pointer"
+                      title="Add Collection"
+                    >
+                      <Plus className="size-3.5 mr-1" /> Add
+                    </Button>
+                  ) : (
+                    (dbType === 'sqlite' || dbType === 'postgresql') && (
+                      <Button
+                        size="sm"
+                        variant="ghost"
+                        onClick={() => setIsCreateTableOpen(true)}
+                        className="h-7 px-2 text-xs text-primary hover:bg-primary/10 cursor-pointer"
+                        title="Add Table"
+                      >
+                        <Plus className="size-3.5 mr-1" /> Add
+                      </Button>
+                    )
                   )}
-                </div>
-                <div className="flex gap-2">
-                  <input
-                    type="text"
-                    value={customQuery}
-                    onChange={(e) => setCustomQuery(e.target.value)}
-                    placeholder="Enter SQL statement (e.g. SELECT * FROM context_queries LIMIT 10;)"
-                    className="flex-1 bg-background border border-border rounded-lg px-3 py-2 text-xs font-mono text-foreground focus:outline-hidden focus:ring-1 focus:ring-primary"
-                  />
-                  <Button
-                    type="submit"
-                    disabled={isQueryRunning}
-                    className="bg-primary hover:bg-primary/90 text-primary-foreground gap-2 h-9 text-xs font-semibold shrink-0 cursor-pointer"
-                  >
-                    {isQueryRunning ? <Loader2 className="size-3.5 animate-spin" /> : <Play className="size-3.5" />}
-                    Run Query
-                  </Button>
-                </div>
-                {queryResult?.error && (
-                  <div className="p-2.5 bg-destructive/15 border border-destructive/30 rounded text-xs text-destructive flex items-center gap-2">
-                    <AlertCircle className="size-4 shrink-0" />
-                    <span className="font-mono">{queryResult.error}</span>
-                  </div>
-                )}
-              </form>
-            </Card>
+                </CardHeader>
 
-            {/* Two-Column Schema Tree & Table View */}
-            <div className="grid gap-6 grid-cols-1 lg:grid-cols-12 items-start">
-              {/* Left Column: Schema Tree (4 cols) */}
-              <div className="lg:col-span-4 flex flex-col gap-4">
-                <Card className="bg-card">
-                  <CardHeader className="p-4 border-b border-border flex flex-row items-center justify-between">
-                    <CardTitle className="text-sm font-semibold flex items-center gap-2">
-                      <TableIcon className="size-4 text-primary" />
-                      Schema Tables ({filteredTables.length})
-                    </CardTitle>
-                  </CardHeader>
-                  <CardContent className="p-2 flex flex-col gap-1 max-h-[500px] overflow-y-auto">
-                    {filteredTables.map((table) => {
+                <CardContent className="p-2 flex flex-col gap-1 max-h-[480px] overflow-y-auto">
+                  {/* Empty collections / tables prompt in sidebar */}
+                  {!isIndexed && (
+                    <div className="p-4 text-center flex flex-col items-center gap-2">
+                      <p className="text-xs text-muted-foreground">
+                        {dbType === 'mongodb' ? 'No collections found.' : 'No tables found.'}
+                      </p>
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        onClick={handleSeedSampleData}
+                        disabled={isSeeding}
+                        className="text-xs gap-1.5 h-8 border-primary/40 text-primary hover:bg-primary/10 cursor-pointer"
+                      >
+                        {isSeeding ? <Loader2 className="size-3 animate-spin" /> : <Sparkles className="size-3" />}
+                        Seed Sample {dbType === 'mongodb' ? 'Collections' : 'Table'}
+                      </Button>
+                    </div>
+                  )}
+
+                  {/* SQL Tables */}
+                  {dbType !== 'mongodb' &&
+                    dbType !== 'redis' &&
+                    filteredTables.map((table) => {
                       const isActive = activeTable === table.name;
                       return (
-                        <div
-                          key={table.name}
-                          onClick={() => loadTableData(table.name)}
-                          className={`rounded-lg p-3 cursor-pointer transition-all flex flex-col gap-1.5 ${
-                            isActive
-                              ? 'bg-primary/10 border border-primary/40 text-foreground'
-                              : 'hover:bg-muted/40 border border-transparent'
-                          }`}
-                        >
-                          <div className="flex items-center justify-between">
-                            <span className="font-mono text-xs font-bold truncate">
+                        <div key={table.name} className="flex flex-col">
+                          <button
+                            onClick={() => loadTableData(table.name)}
+                            className={`flex items-center justify-between p-2.5 rounded-lg text-xs font-medium transition-colors text-left cursor-pointer ${
+                              isActive
+                                ? 'bg-primary/15 text-primary border border-primary/30'
+                                : 'hover:bg-muted/60 text-foreground'
+                            }`}
+                          >
+                            <span className="font-mono flex items-center gap-2 truncate">
+                              <TableIcon className="size-3.5 opacity-70" />
                               {table.name}
                             </span>
-                            <span className="text-[10px] font-mono px-2 py-0.5 rounded-full bg-muted text-muted-foreground border border-border/50">
+                            <span className="text-[10px] text-muted-foreground font-mono">
                               {table.rowCount} rows
                             </span>
-                          </div>
-                          {/* Column count info */}
-                          <div className="flex items-center gap-2 text-[11px] text-muted-foreground font-mono">
-                            <span>{table.columns.length} columns</span>
-                          </div>
+                          </button>
+
+                          {/* Column details if active */}
+                          {isActive && (
+                            <div className="pl-6 pr-2 py-2 flex flex-col gap-1 border-l-2 border-primary/40 ml-4 my-1 bg-muted/20 rounded-r">
+                              {table.columns.map((col) => (
+                                <div
+                                  key={col.name}
+                                  className="flex items-center justify-between text-[11px] text-muted-foreground font-mono"
+                                >
+                                  <span className="flex items-center gap-1.5">
+                                    {col.pk && <Key className="size-3 text-amber-500" />}
+                                    <span className={col.pk ? 'font-semibold text-foreground' : ''}>
+                                      {col.name}
+                                    </span>
+                                  </span>
+                                  <span className="text-[10px] uppercase opacity-75">{col.type}</span>
+                                </div>
+                              ))}
+                            </div>
+                          )}
                         </div>
                       );
                     })}
-                  </CardContent>
-                </Card>
 
-                {/* Table Column Definitions */}
-                {activeTableSchema && (
-                  <Card className="bg-card p-4">
-                    <h4 className="text-xs font-bold text-foreground mb-3 font-mono">
-                      {activeTableSchema.name} Columns
-                    </h4>
-                    <div className="flex flex-col gap-2 max-h-56 overflow-y-auto">
-                      {activeTableSchema.columns.map((col) => (
-                        <div
-                          key={col.name}
-                          className="flex justify-between items-center text-xs font-mono p-1.5 rounded bg-muted/30 border border-border/40"
-                        >
-                          <div className="flex items-center gap-1.5">
-                            {col.pk && (
-                              <span title="Primary Key">
-                                <Key className="size-3 text-amber-400" />
-                              </span>
-                            )}
-                            <span className="text-foreground">{col.name}</span>
-                          </div>
+                  {/* MongoDB Collections */}
+                  {dbType === 'mongodb' &&
+                    filteredCollections.map((col) => {
+                      const isActive = activeTable === col.name;
+                      return (
+                        <div key={col.name} className="flex flex-col">
+                          <button
+                            onClick={() => loadTableData(col.name)}
+                            className={`flex items-center justify-between p-2.5 rounded-lg text-xs font-medium transition-colors text-left cursor-pointer ${
+                              isActive
+                                ? 'bg-emerald-500/15 text-emerald-500 border border-emerald-500/30 font-semibold'
+                                : 'hover:bg-muted/60 text-foreground'
+                            }`}
+                          >
+                            <span className="font-mono flex items-center gap-2 truncate">
+                              <Database className="size-3.5 opacity-70" />
+                              {col.name}
+                            </span>
+                            <span className="text-[10px] text-muted-foreground font-mono">
+                              {col.count} docs
+                            </span>
+                          </button>
 
-                          <span className="text-[11px] text-muted-foreground uppercase">{col.type}</span>
+                          {isActive && (
+                            <div className="pl-6 pr-2 py-2 flex flex-col gap-1 border-l-2 border-emerald-500/40 ml-4 my-1 bg-muted/20 rounded-r">
+                              {col.fields.map((f) => (
+                                <div
+                                  key={f.name}
+                                  className="flex items-center justify-between text-[11px] text-muted-foreground font-mono"
+                                >
+                                  <span>{f.name}</span>
+                                  <span className="text-[10px] text-emerald-500/80 font-semibold">{f.type}</span>
+                                </div>
+                              ))}
+                            </div>
+                          )}
                         </div>
-                      ))}
-                    </div>
-                  </Card>
-                )}
-              </div>
+                      );
+                    })}
 
-              {/* Right Column: Data Grid (8 cols) */}
-              <div className="lg:col-span-8 flex flex-col gap-4">
-                <Card className="bg-card border-border overflow-hidden">
+                  {/* Redis Keys */}
+                  {dbType === 'redis' &&
+                    filteredKeys.map((k) => (
+                      <div
+                        key={k.key}
+                        className="p-2.5 rounded-lg text-xs font-mono flex items-center justify-between hover:bg-muted/60"
+                      >
+                        <span className="truncate">{k.key}</span>
+                        <Badge variant="outline" className="text-[9px] uppercase">
+                          {k.type}
+                        </Badge>
+                      </div>
+                    ))}
+                </CardContent>
+              </Card>
+            </div>
+
+            {/* Right Column: Live Data Grid / Empty State (8 cols) */}
+            <div className="lg:col-span-8 flex flex-col gap-4">
+              {!isIndexed ? (
+                /* Empty State Helper Card */
+                <Card className="border border-border p-12 bg-card/60 flex flex-col items-center justify-center text-center gap-4">
+                  <div className="rounded-full bg-muted/60 p-4 text-muted-foreground border border-border">
+                    <Database className="size-10 text-primary/70" />
+                  </div>
+                  <div className="flex flex-col gap-1.5 max-w-md">
+                    <h3 className="font-bold text-lg text-foreground">Database Connected</h3>
+                    <p className="text-xs text-muted-foreground leading-relaxed">
+                      Connected to <span className="font-mono font-semibold text-foreground">"{activeConnection?.name || projectId}"</span>. No tables or collections exist yet.
+                    </p>
+                  </div>
+                  <div className="flex items-center gap-3 mt-2">
+                    <Button
+                      onClick={handleSeedSampleData}
+                      disabled={isSeeding}
+                      className="bg-primary hover:bg-primary/90 text-primary-foreground gap-2 text-xs font-semibold cursor-pointer"
+                    >
+                      {isSeeding ? <Loader2 className="size-3.5 animate-spin" /> : <Sparkles className="size-3.5" />}
+                      Seed Sample {dbType === 'mongodb' ? 'Collections' : 'Tables'}
+                    </Button>
+                    {dbType === 'mongodb' ? (
+                      <Button
+                        variant="outline"
+                        onClick={() => setIsCreateCollectionOpen(true)}
+                        className="text-xs border-border cursor-pointer gap-2"
+                      >
+                        <FolderPlus className="size-3.5" />
+                        + Create Collection
+                      </Button>
+                    ) : (
+                      <Button
+                        variant="outline"
+                        onClick={() => setIsCreateTableOpen(true)}
+                        className="text-xs border-border cursor-pointer gap-2"
+                      >
+                        <Plus className="size-3.5" />
+                        + Create Table
+                      </Button>
+                    )}
+                  </div>
+                </Card>
+              ) : (
+                /* Populated Data Grid */
+                <Card className="bg-card border-border shadow-xs overflow-hidden">
                   <CardHeader className="p-4 border-b border-border flex flex-row items-center justify-between">
-                    <div className="flex items-center gap-2">
-                      <h3 className="font-mono text-sm font-bold text-foreground">
-                        {activeTable || 'Table Data'}
-                      </h3>
-                      {activeTableSchema && (
-                        <span className="text-xs font-mono text-muted-foreground">
-                          ({tableRows.length} loaded)
-                        </span>
+                    <div className="flex items-center gap-3">
+                      <CardTitle className="text-sm font-semibold font-mono flex items-center gap-2">
+                        {activeTable || 'Select Table/Collection'}
+                      </CardTitle>
+                      {tableRows.length > 0 && (
+                        <Badge variant="secondary" className="text-[10px] font-mono">
+                          {tableRows.length} loaded
+                        </Badge>
                       )}
                     </div>
-                    {isQueryRunning && <Loader2 className="size-4 animate-spin text-primary" />}
                   </CardHeader>
 
                   <CardContent className="p-0 overflow-x-auto">
                     {tableRows.length === 0 ? (
-                      <div className="p-12 text-center text-xs text-muted-foreground font-mono">
-                        No rows found in this table.
+                      <div className="p-12 text-center text-muted-foreground text-xs flex flex-col items-center gap-2">
+                        <TableIcon className="size-8 opacity-40" />
+                        <span>No records found in this table/collection.</span>
                       </div>
                     ) : (
-                      <table className="w-full text-xs font-mono text-left">
-                        <thead className="bg-muted/50 border-b border-border text-muted-foreground select-none">
-                          <tr>
+                      <table className="w-full text-left text-xs border-collapse">
+                        <thead>
+                          <tr className="border-b border-border bg-muted/40 text-muted-foreground font-mono text-[11px]">
                             {tableColumns.map((col) => (
-                              <th key={col} className="p-3 font-semibold whitespace-nowrap">
+                              <th key={col} className="p-3 font-semibold truncate max-w-[200px]">
                                 {col}
                               </th>
                             ))}
                           </tr>
                         </thead>
-                        <tbody className="divide-y divide-border">
-                          {paginatedRows.map((row, rIdx) => (
-                            <tr key={rIdx} className="hover:bg-muted/20 transition-colors">
+                        <tbody className="divide-y divide-border/60">
+                          {paginatedRows.map((row, idx) => (
+                            <tr key={idx} className="hover:bg-muted/30 transition-colors font-mono text-[11px]">
                               {tableColumns.map((col) => (
-                                <td key={col} className="p-3 text-foreground whitespace-nowrap max-w-xs truncate">
+                                <td key={col} className="p-3 text-foreground truncate max-w-[240px]">
                                   {typeof row[col] === 'object' && row[col] !== null
                                     ? JSON.stringify(row[col])
                                     : String(row[col] ?? 'NULL')}
@@ -438,126 +693,193 @@ export const DbManagerPage: React.FC<DbManagerPageProps> = ({ projectId = 'acme-
                   </CardContent>
 
                   {/* Pagination Footer */}
-                  {tableRows.length > 0 && (
-                    <CardFooter className="p-3 border-t border-border flex justify-between items-center text-xs font-mono text-muted-foreground">
-                      <span>
+                  {tableRows.length > pageSize && (
+                    <CardFooter className="p-3 border-t border-border flex items-center justify-between">
+                      <span className="text-xs text-muted-foreground">
                         Page {currentPage} of {totalPages}
                       </span>
                       <div className="flex items-center gap-2">
                         <Button
                           variant="outline"
                           size="sm"
-                          disabled={currentPage <= 1}
+                          disabled={currentPage === 1}
                           onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
-                          className="h-7 text-xs px-2"
+                          className="h-8 px-3 text-xs"
                         >
-                          <ChevronLeft className="size-3.5 mr-1" /> Prev
+                          Previous
                         </Button>
                         <Button
                           variant="outline"
                           size="sm"
-                          disabled={currentPage >= totalPages}
+                          disabled={currentPage === totalPages}
                           onClick={() => setCurrentPage((p) => Math.min(totalPages, p + 1))}
-                          className="h-7 text-xs px-2"
+                          className="h-8 px-3 text-xs"
                         >
-                          Next <ChevronRight className="size-3.5 ml-1" />
+                          Next
                         </Button>
                       </div>
                     </CardFooter>
                   )}
                 </Card>
-              </div>
+              )}
             </div>
           </div>
         )}
 
-        {/* Create Table Modal */}
-        {isCreateModalOpen && (
-          <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-xs p-4 animate-in fade-in duration-150">
-            <div className="bg-card border border-border rounded-xl shadow-2xl w-full max-w-lg overflow-hidden flex flex-col">
-              <div className="flex justify-between items-center p-5 border-b border-border">
-                <div className="flex items-center gap-2.5">
-                  <div className="rounded-md bg-primary/10 p-1.5 text-primary">
-                    <TableIcon className="size-5" />
-                  </div>
-                  <h2 className="font-bold text-base text-foreground">Create SQLite Table</h2>
-                </div>
+        {/* Modal: Connect External Database */}
+        <ConnectDbModal
+          isOpen={isConnectModalOpen}
+          onClose={() => setIsConnectModalOpen(false)}
+          onConnect={connectDatabase}
+        />
+
+        {/* Modal: Create MongoDB Collection */}
+        {isCreateCollectionOpen && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-xs p-4">
+            <div className="bg-card border border-border w-full max-w-md rounded-xl shadow-2xl p-5 space-y-4 animate-in fade-in zoom-in-95">
+              <div className="flex items-center justify-between border-b border-border pb-3">
+                <h3 className="text-sm font-semibold text-foreground flex items-center gap-2">
+                  <FolderPlus className="size-4 text-emerald-500" />
+                  Create MongoDB Collection
+                </h3>
                 <button
-                  type="button"
-                  onClick={() => setIsCreateModalOpen(false)}
-                  className="text-muted-foreground hover:text-foreground p-1 rounded-md transition-colors cursor-pointer"
+                  onClick={() => setIsCreateCollectionOpen(false)}
+                  className="p-1 rounded text-muted-foreground hover:text-foreground hover:bg-muted cursor-pointer"
                 >
-                  <X className="size-5" />
+                  <X className="size-4" />
                 </button>
               </div>
 
-              <form onSubmit={handleCreateSubmit} className="p-6 flex flex-col gap-4">
-                {createError && (
-                  <div className="p-3 bg-destructive/15 border border-destructive/30 rounded-lg text-xs text-destructive flex items-center gap-2 font-medium">
-                    <AlertCircle className="size-4 shrink-0" />
-                    <span>{createError}</span>
-                  </div>
-                )}
-
-                <div className="flex flex-col gap-1.5">
-                  <label className="text-xs font-semibold text-foreground">Table Name *</label>
-                  <Input
-                    placeholder="e.g. users, products, logs"
-                    value={newTableName}
-                    onChange={(e) => setNewTableName(e.target.value)}
+              <form onSubmit={handleCreateCollectionSubmit} className="space-y-3.5">
+                <div>
+                  <label className="text-xs font-semibold text-foreground mb-1 block">Collection Name</label>
+                  <input
+                    type="text"
+                    value={newCollectionName}
+                    onChange={(e) => setNewCollectionName(e.target.value)}
+                    placeholder="e.g. users, orders, logs"
+                    className="w-full bg-background border border-border rounded-lg px-3 py-2 text-xs font-mono text-foreground focus:outline-hidden focus:ring-1 focus:ring-primary"
                     required
-                    className="text-xs font-mono h-9"
                   />
                 </div>
 
-                <div className="flex flex-col gap-2">
-                  <div className="flex justify-between items-center">
+                <div>
+                  <label className="text-xs font-semibold text-foreground mb-1 block">
+                    Initial Document (JSON) <span className="text-muted-foreground font-normal">(Optional)</span>
+                  </label>
+                  <textarea
+                    value={initialDocText}
+                    onChange={(e) => setInitialDocText(e.target.value)}
+                    rows={4}
+                    className="w-full bg-background border border-border rounded-lg p-2.5 text-xs font-mono text-foreground focus:outline-hidden focus:ring-1 focus:ring-primary resize-none"
+                  />
+                </div>
+
+                {createCollectionError && (
+                  <div className="p-2 bg-destructive/15 border border-destructive/30 rounded text-xs text-destructive flex items-center gap-1.5">
+                    <AlertCircle className="size-4 shrink-0" />
+                    <span>{createCollectionError}</span>
+                  </div>
+                )}
+
+                <div className="flex justify-end gap-2 pt-2">
+                  <Button
+                    type="button"
+                    variant="outline"
+                    onClick={() => setIsCreateCollectionOpen(false)}
+                    className="text-xs h-8"
+                  >
+                    Cancel
+                  </Button>
+                  <Button
+                    type="submit"
+                    className="text-xs h-8 font-semibold bg-emerald-600 hover:bg-emerald-500 text-white cursor-pointer"
+                  >
+                    Create Collection
+                  </Button>
+                </div>
+              </form>
+            </div>
+          </div>
+        )}
+
+        {/* Modal: Create SQL Table */}
+        {isCreateTableOpen && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-xs p-4">
+            <div className="bg-card border border-border w-full max-w-lg rounded-xl shadow-2xl p-5 space-y-4 animate-in fade-in zoom-in-95">
+              <div className="flex items-center justify-between border-b border-border pb-3">
+                <h3 className="text-sm font-semibold text-foreground flex items-center gap-2">
+                  <Plus className="size-4 text-primary" />
+                  Create Table in {activeConnection?.name || 'Local Database'}
+                </h3>
+                <button
+                  onClick={() => setIsCreateTableOpen(false)}
+                  className="p-1 rounded text-muted-foreground hover:text-foreground hover:bg-muted cursor-pointer"
+                >
+                  <X className="size-4" />
+                </button>
+              </div>
+
+              <form onSubmit={handleCreateTableSubmit} className="space-y-3.5">
+                <div>
+                  <label className="text-xs font-semibold text-foreground mb-1 block">Table Name</label>
+                  <input
+                    type="text"
+                    value={newTableName}
+                    onChange={(e) => setNewTableName(e.target.value)}
+                    placeholder="e.g. customers, products"
+                    className="w-full bg-background border border-border rounded-lg px-3 py-2 text-xs font-mono text-foreground focus:outline-hidden focus:ring-1 focus:ring-primary"
+                    required
+                  />
+                </div>
+
+                <div className="space-y-2">
+                  <div className="flex items-center justify-between">
                     <label className="text-xs font-semibold text-foreground">Columns</label>
                     <button
                       type="button"
                       onClick={handleAddColumnField}
-                      className="text-xs text-primary hover:underline font-semibold cursor-pointer"
+                      className="text-[11px] text-primary hover:underline font-semibold cursor-pointer"
                     >
                       + Add Column
                     </button>
                   </div>
 
-                  <div className="flex flex-col gap-2 max-h-48 overflow-y-auto pr-1">
+                  <div className="max-h-48 overflow-y-auto space-y-2 pr-1">
                     {colsList.map((col, idx) => (
-                      <div key={idx} className="flex items-center gap-2">
-                        <Input
-                          placeholder="Column name"
+                      <div key={idx} className="flex items-center gap-2 bg-muted/30 p-2 rounded-lg border border-border">
+                        <input
+                          type="text"
                           value={col.name}
                           onChange={(e) => {
-                            const updated = [...colsList];
-                            updated[idx].name = e.target.value;
-                            setColsList(updated);
+                            const val = e.target.value;
+                            setColsList((prev) => prev.map((c, i) => (i === idx ? { ...c, name: val } : c)));
                           }}
-                          className="text-xs font-mono h-8 flex-1"
+                          placeholder="Column name"
+                          className="flex-1 bg-background border border-border rounded px-2 py-1 text-xs font-mono"
                         />
                         <select
                           value={col.type}
                           onChange={(e) => {
-                            const updated = [...colsList];
-                            updated[idx].type = e.target.value;
-                            setColsList(updated);
+                            const val = e.target.value;
+                            setColsList((prev) => prev.map((c, i) => (i === idx ? { ...c, type: val } : c)));
                           }}
-                          className="bg-background border border-border rounded text-xs px-2 h-8 font-mono text-foreground"
+                          className="bg-background border border-border rounded px-2 py-1 text-xs font-mono"
                         >
                           <option value="INTEGER">INTEGER</option>
                           <option value="TEXT">TEXT</option>
+                          <option value="VARCHAR(255)">VARCHAR</option>
                           <option value="REAL">REAL</option>
-                          <option value="BLOB">BLOB</option>
                           <option value="BOOLEAN">BOOLEAN</option>
+                          <option value="TIMESTAMP">TIMESTAMP</option>
                         </select>
-                        <label className="flex items-center gap-1 text-[11px] text-muted-foreground font-mono cursor-pointer">
+                        <label className="flex items-center gap-1 text-[10px] text-muted-foreground font-mono">
                           <input
                             type="checkbox"
                             checked={col.isPk}
                             onChange={(e) => {
-                              const updated = [...colsList];
-                              updated[idx].isPk = e.target.checked;
-                              setColsList(updated);
+                              const val = e.target.checked;
+                              setColsList((prev) => prev.map((c, i) => (i === idx ? { ...c, isPk: val } : c)));
                             }}
                           />
                           PK
@@ -567,18 +889,25 @@ export const DbManagerPage: React.FC<DbManagerPageProps> = ({ projectId = 'acme-
                   </div>
                 </div>
 
-                <div className="flex justify-end items-center gap-3 pt-4 border-t border-border mt-2">
+                {createTableError && (
+                  <div className="p-2 bg-destructive/15 border border-destructive/30 rounded text-xs text-destructive flex items-center gap-1.5">
+                    <AlertCircle className="size-4 shrink-0" />
+                    <span>{createTableError}</span>
+                  </div>
+                )}
+
+                <div className="flex justify-end gap-2 pt-2">
                   <Button
                     type="button"
                     variant="outline"
-                    onClick={() => setIsCreateModalOpen(false)}
-                    className="h-9 text-xs"
+                    onClick={() => setIsCreateTableOpen(false)}
+                    className="text-xs h-8"
                   >
                     Cancel
                   </Button>
                   <Button
                     type="submit"
-                    className="bg-primary hover:bg-primary/90 text-primary-foreground h-9 text-xs font-semibold cursor-pointer"
+                    className="text-xs h-8 font-semibold bg-primary hover:bg-primary/90 text-primary-foreground cursor-pointer"
                   >
                     Create Table
                   </Button>
@@ -591,3 +920,5 @@ export const DbManagerPage: React.FC<DbManagerPageProps> = ({ projectId = 'acme-
     </main>
   );
 };
+
+export default DbManagerPage;

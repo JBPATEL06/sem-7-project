@@ -1,0 +1,89 @@
+{
+  "type": "excalidraw",
+  "version": 2,
+  "source": "antigravity-db-manager",
+  "elements": [
+    {
+      "id": "er-table-0",
+      "type": "rectangle",
+      "x": 100,
+      "y": 100,
+      "width": 240,
+      "height": 128,
+      "backgroundColor": "#1e293b",
+      "strokeColor": "#38bdf8",
+      "strokeWidth": 2,
+      "fillStyle": "solid",
+      "roundness": {
+        "type": 3
+      }
+    },
+    {
+      "id": "text-0",
+      "type": "text",
+      "x": 112,
+      "y": 112,
+      "text": "[ USERS ]\n🔑 id: UUID\n  email: VARCHAR(255)\n  created_at: TIMESTAMP",
+      "fontSize": 14,
+      "fontFamily": 3,
+      "textAlign": "left",
+      "strokeColor": "#f8fafc"
+    },
+    {
+      "id": "er-table-1",
+      "type": "rectangle",
+      "x": 380,
+      "y": 100,
+      "width": 240,
+      "height": 128,
+      "backgroundColor": "#1e293b",
+      "strokeColor": "#38bdf8",
+      "strokeWidth": 2,
+      "fillStyle": "solid",
+      "roundness": {
+        "type": 3
+      }
+    },
+    {
+      "id": "text-1",
+      "type": "text",
+      "x": 392,
+      "y": 112,
+      "text": "[ POSTS ]\n🔑 id: SERIAL\n  user_id: UUID\n  title: VARCHAR(255)",
+      "fontSize": 14,
+      "fontFamily": 3,
+      "textAlign": "left",
+      "strokeColor": "#f8fafc"
+    },
+    {
+      "id": "er-table-2",
+      "type": "rectangle",
+      "x": 660,
+      "y": 100,
+      "width": 240,
+      "height": 128,
+      "backgroundColor": "#1e293b",
+      "strokeColor": "#38bdf8",
+      "strokeWidth": 2,
+      "fillStyle": "solid",
+      "roundness": {
+        "type": 3
+      }
+    },
+    {
+      "id": "text-2",
+      "type": "text",
+      "x": 672,
+      "y": 112,
+      "text": "[ COMMENTS ]\n🔑 id: SERIAL\n  post_id: INTEGER\n  body: TEXT",
+      "fontSize": 14,
+      "fontFamily": 3,
+      "textAlign": "left",
+      "strokeColor": "#f8fafc"
+    }
+  ],
+  "appState": {
+    "viewBackgroundColor": "#0f172a",
+    "gridSize": 20
+  }
+}

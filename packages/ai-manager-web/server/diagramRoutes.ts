@@ -1,4 +1,6 @@
 import { Router, Response } from 'express';
+import fs from 'fs';
+import path from 'path';
 import { JsonStore } from './utils/JsonStore.js';
 import { localOrAuth, AuthRequest, getIsMongoConnected } from './auth.js';
 import { logActivity } from './dashboardRoutes.js';
@@ -25,6 +27,77 @@ export interface Diagram {
 
 export const diagramRouter = Router();
 const diagramStore = new JsonStore<Diagram>('diagrams.json');
+
+/**
+ * Finds the project workspace root directory reliably
+ */
+export function getWorkspaceRootDir(): string {
+  if (fs.existsSync(path.resolve(process.cwd(), '.git')) || fs.existsSync(path.resolve(process.cwd(), 'packages'))) {
+    return process.cwd();
+  }
+  const oneUp = path.resolve(process.cwd(), '..');
+  if (fs.existsSync(path.resolve(oneUp, '.git')) || fs.existsSync(path.resolve(oneUp, 'packages'))) {
+    return oneUp;
+  }
+  const twoUp = path.resolve(process.cwd(), '..', '..');
+  if (fs.existsSync(path.resolve(twoUp, '.git')) || fs.existsSync(path.resolve(twoUp, 'packages'))) {
+    return twoUp;
+  }
+  return process.cwd();
+}
+
+/**
+ * Clean slug generator for diagram filenames
+ */
+export function getDiagramSlug(name: string): string {
+  return name.toLowerCase().replace(/[^a-z0-9]+/g, '_').replace(/^_+|_+$/g, '') || 'untitled_diagram';
+}
+
+/**
+ * Synchronizes diagram directly to project root diagrams/ directory
+ */
+export function syncDiagramToDisk(diagram: Diagram): string {
+  try {
+    const rootDir = getWorkspaceRootDir();
+    const targetDir = path.join(rootDir, 'diagrams');
+    if (!fs.existsSync(targetDir)) {
+      fs.mkdirSync(targetDir, { recursive: true });
+    }
+    const slug = getDiagramSlug(diagram.name);
+    const filePath = path.join(targetDir, `${slug}.excalidraw`);
+    const data = {
+      type: 'excalidraw',
+      version: 2,
+      source: 'https://ai-manager.local',
+      name: diagram.name,
+      elements: diagram.elements || [],
+      appState: diagram.appState || {},
+      files: diagram.files || {}
+    };
+    fs.writeFileSync(filePath, JSON.stringify(data, null, 2), 'utf-8');
+    return `diagrams/${slug}.excalidraw`;
+  } catch (e) {
+    console.error('[Diagrams] Disk sync error:', e);
+    return `diagrams/${getDiagramSlug(diagram.name)}.excalidraw`;
+  }
+}
+
+/**
+ * Removes deleted or renamed diagram file from disk
+ */
+export function deleteDiagramFromDisk(name: string) {
+  try {
+    const rootDir = getWorkspaceRootDir();
+    const targetDir = path.join(rootDir, 'diagrams');
+    const slug = getDiagramSlug(name);
+    const filePath = path.join(targetDir, `${slug}.excalidraw`);
+    if (fs.existsSync(filePath)) {
+      fs.unlinkSync(filePath);
+    }
+  } catch (e) {
+    console.error('[Diagrams] Disk delete error:', e);
+  }
+}
 
 async function getDiagramsFromDb(projectId?: string, userId?: string, isAdmin: boolean = false): Promise<Diagram[]> {
   if (getIsMongoConnected()) {
@@ -96,9 +169,17 @@ diagramRouter.get('/', localOrAuth, async (req: AuthRequest, res: Response): Pro
     const userId = req.user?.sub;
     const diagramsList = await getDiagramsFromDb(projectId, userId, isAdmin);
 
+    const diagramsWithPaths = diagramsList.map((d) => {
+      const relPath = syncDiagramToDisk(d);
+      return {
+        ...d,
+        filePath: relPath
+      };
+    });
+
     res.status(200).json({
-      diagrams: diagramsList,
-      total: diagramsList.length
+      diagrams: diagramsWithPaths,
+      total: diagramsWithPaths.length
     });
   } catch (err: any) {
     console.error('[diagrams/list] Error:', err.message);
@@ -173,6 +254,7 @@ diagramRouter.post('/', localOrAuth, async (req: AuthRequest, res: Response): Pr
     }
 
     const created = await diagramStore.create(newDiagram);
+    const relPath = syncDiagramToDisk(newDiagram);
 
     try {
       logActivity({
@@ -187,7 +269,10 @@ diagramRouter.post('/', localOrAuth, async (req: AuthRequest, res: Response): Pr
 
     res.status(201).json({
       message: 'Diagram created successfully.',
-      diagram: created
+      diagram: {
+        ...created,
+        filePath: relPath
+      }
     });
   } catch (err: any) {
     console.error('[diagrams/create] Error:', err.message);
@@ -217,6 +302,10 @@ diagramRouter.put('/:id', localOrAuth, async (req: AuthRequest, res: Response): 
       return;
     }
 
+    if (name !== undefined && name !== existing.name) {
+      deleteDiagramFromDisk(existing.name);
+    }
+
     const updates: Partial<Diagram> = {
       updatedAt: new Date().toISOString()
     };
@@ -236,10 +325,15 @@ diagramRouter.put('/:id', localOrAuth, async (req: AuthRequest, res: Response): 
     }
 
     const updated = await diagramStore.update(id, updates);
+    const fullUpdated: Diagram = updated || { ...existing, ...updates };
+    const relPath = syncDiagramToDisk(fullUpdated);
 
     res.status(200).json({
       message: 'Diagram updated successfully.',
-      diagram: updated || { ...existing, ...updates }
+      diagram: {
+        ...fullUpdated,
+        filePath: relPath
+      }
     });
   } catch (err: any) {
     console.error('[diagrams/update] Error:', err.message);
@@ -276,6 +370,7 @@ diagramRouter.delete('/:id', localOrAuth, async (req: AuthRequest, res: Response
     }
 
     const deleted = await diagramStore.delete(id);
+    deleteDiagramFromDisk(existing.name);
 
     try {
       logActivity({

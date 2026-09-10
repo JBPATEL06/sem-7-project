@@ -1,0 +1,500 @@
+{
+  "schemaVersion": "2.0",
+  "generator": "AI-Manager Penpot Layout Spec Bridge",
+  "exportedAt": "2026-09-10T12:15:53.651Z",
+  "name": "Generated: hey genrate some design \n...",
+  "description": "Generated Penpot Layout Spec for prompt: \"hey genrate some design \n\"",
+  "theme": {
+    "primaryColor": "#7c3aed",
+    "backgroundColor": "#090d16",
+    "surfaceColor": "#131b2e",
+    "textColor": "#f8fafc",
+    "accentColor": "#10b981",
+    "borderRadius": 12
+  },
+  "board": {
+    "id": "board-saas-1",
+    "name": "Analytics Dashboard (1440 x 900)",
+    "x": 0,
+    "y": 0,
+    "width": 1440,
+    "height": 900,
+    "fills": [
+      {
+        "fillColor": "#090d16",
+        "fillOpacity": 1
+      }
+    ],
+    "shapes": [
+      {
+        "id": "comp-sidebar",
+        "name": "Navigation Sidebar",
+        "type": "frame",
+        "x": 0,
+        "y": 1,
+        "width": 259,
+        "height": 899,
+        "borderRadius": 0,
+        "fills": [
+          {
+            "fillColor": "#0d1322"
+          }
+        ],
+        "strokes": [
+          {
+            "strokeColor": "#1e293b",
+            "strokeWidth": 1
+          }
+        ],
+        "layout": "flex",
+        "flexDirection": "column",
+        "gap": 16,
+        "padding": 24,
+        "children": [
+          {
+            "id": "logo",
+            "name": "App Logo",
+            "type": "text",
+            "x": 24,
+            "y": 24,
+            "width": 212,
+            "height": 32,
+            "borderRadius": 0,
+            "fills": [
+              {
+                "fillColor": "#1e293b",
+                "fillOpacity": 1
+              }
+            ],
+            "strokes": [],
+            "text": "⚡ AI Manager",
+            "fontSize": 20,
+            "fontWeight": "bold",
+            "color": "#7c3aed",
+            "layout": "none",
+            "children": []
+          },
+          {
+            "id": "nav-1",
+            "name": "Nav Item Active",
+            "type": "rect",
+            "x": 24,
+            "y": 72,
+            "width": 212,
+            "height": 40,
+            "borderRadius": 8,
+            "fills": [
+              {
+                "fillColor": "#7c3aed33"
+              }
+            ],
+            "strokes": [],
+            "text": "📊 Overview",
+            "fontSize": 14,
+            "color": "#f8fafc",
+            "layout": "none",
+            "children": []
+          },
+          {
+            "id": "nav-2",
+            "name": "Nav Item",
+            "type": "rect",
+            "x": 24,
+            "y": 120,
+            "width": 212,
+            "height": 40,
+            "borderRadius": 0,
+            "fills": [
+              {
+                "fillColor": "#1e293b",
+                "fillOpacity": 1
+              }
+            ],
+            "strokes": [],
+            "text": "🗄️ Database CI/CD",
+            "fontSize": 14,
+            "color": "#94a3b8",
+            "layout": "none",
+            "children": []
+          },
+          {
+            "id": "nav-3",
+            "name": "Nav Item",
+            "type": "rect",
+            "x": 24,
+            "y": 168,
+            "width": 212,
+            "height": 40,
+            "borderRadius": 0,
+            "fills": [
+              {
+                "fillColor": "#1e293b",
+                "fillOpacity": 1
+              }
+            ],
+            "strokes": [],
+            "text": "🌿 Git Visualizer",
+            "fontSize": 14,
+            "color": "#94a3b8",
+            "layout": "none",
+            "children": []
+          },
+          {
+            "id": "nav-4",
+            "name": "Nav Item",
+            "type": "rect",
+            "x": 24,
+            "y": 216,
+            "width": 212,
+            "height": 40,
+            "borderRadius": 0,
+            "fills": [
+              {
+                "fillColor": "#1e293b",
+                "fillOpacity": 1
+              }
+            ],
+            "strokes": [],
+            "text": "🎨 Penpot Specs",
+            "fontSize": 14,
+            "color": "#94a3b8",
+            "layout": "none",
+            "children": []
+          },
+          {
+            "id": "nav-5",
+            "name": "Nav Item",
+            "type": "rect",
+            "x": 24,
+            "y": 264,
+            "width": 212,
+            "height": 40,
+            "borderRadius": 0,
+            "fills": [
+              {
+                "fillColor": "#1e293b",
+                "fillOpacity": 1
+              }
+            ],
+            "strokes": [],
+            "text": "⚙️ Settings",
+            "fontSize": 14,
+            "color": "#94a3b8",
+            "layout": "none",
+            "children": []
+          }
+        ]
+      },
+      {
+        "id": "comp-header",
+        "name": "Top Header Bar",
+        "type": "frame",
+        "x": 260,
+        "y": 0,
+        "width": 1180,
+        "height": 72,
+        "borderRadius": 0,
+        "fills": [
+          {
+            "fillColor": "#0d1322"
+          }
+        ],
+        "strokes": [
+          {
+            "strokeColor": "#1e293b",
+            "strokeWidth": 1
+          }
+        ],
+        "layout": "flex",
+        "flexDirection": "row",
+        "padding": 20,
+        "children": [
+          {
+            "id": "page-title",
+            "name": "Dashboard Title",
+            "type": "text",
+            "x": 280,
+            "y": 24,
+            "width": 300,
+            "height": 28,
+            "borderRadius": 0,
+            "fills": [
+              {
+                "fillColor": "#1e293b",
+                "fillOpacity": 1
+              }
+            ],
+            "strokes": [],
+            "text": "Platform Overview & Health",
+            "fontSize": 18,
+            "fontWeight": "600",
+            "color": "#f8fafc",
+            "layout": "none",
+            "children": []
+          },
+          {
+            "id": "user-badge",
+            "name": "User Profile Pill",
+            "type": "rect",
+            "x": 1300,
+            "y": 20,
+            "width": 120,
+            "height": 32,
+            "borderRadius": 99,
+            "fills": [
+              {
+                "fillColor": "#10b98122"
+              }
+            ],
+            "strokes": [],
+            "text": "Enterprise Admin",
+            "fontSize": 12,
+            "color": "#10b981",
+            "layout": "none",
+            "children": []
+          }
+        ]
+      },
+      {
+        "id": "kpi-grid",
+        "name": "Metrics Grid (4-Cards)",
+        "type": "frame",
+        "x": 292,
+        "y": 104,
+        "width": 1116,
+        "height": 120,
+        "borderRadius": 0,
+        "fills": [
+          {
+            "fillColor": "#1e293b",
+            "fillOpacity": 1
+          }
+        ],
+        "strokes": [],
+        "layout": "flex",
+        "flexDirection": "row",
+        "gap": 20,
+        "children": [
+          {
+            "id": "kpi-1",
+            "name": "Active Projects KPI",
+            "type": "rect",
+            "x": 292,
+            "y": 104,
+            "width": 264,
+            "height": 120,
+            "borderRadius": 12,
+            "fills": [
+              {
+                "fillColor": "#131b2e"
+              }
+            ],
+            "strokes": [
+              {
+                "strokeColor": "#1e293b",
+                "strokeWidth": 1
+              }
+            ],
+            "text": "Active Projects\n8 Projects",
+            "fontSize": 14,
+            "layout": "none",
+            "children": []
+          },
+          {
+            "id": "kpi-2",
+            "name": "Schema Tables KPI",
+            "type": "rect",
+            "x": 576,
+            "y": 104,
+            "width": 264,
+            "height": 120,
+            "borderRadius": 12,
+            "fills": [
+              {
+                "fillColor": "#131b2e"
+              }
+            ],
+            "strokes": [
+              {
+                "strokeColor": "#1e293b",
+                "strokeWidth": 1
+              }
+            ],
+            "text": "Database Tables\n64 Tables",
+            "fontSize": 14,
+            "layout": "none",
+            "children": []
+          },
+          {
+            "id": "kpi-3",
+            "name": "QA Health Score",
+            "type": "rect",
+            "x": 860,
+            "y": 104,
+            "width": 264,
+            "height": 120,
+            "borderRadius": 12,
+            "fills": [
+              {
+                "fillColor": "#131b2e"
+              }
+            ],
+            "strokes": [
+              {
+                "strokeColor": "#10b98144",
+                "strokeWidth": 1
+              }
+            ],
+            "text": "QA Health Score\n99.4% Passing",
+            "fontSize": 14,
+            "layout": "none",
+            "children": []
+          },
+          {
+            "id": "kpi-4",
+            "name": "AST Functions",
+            "type": "rect",
+            "x": 1144,
+            "y": 104,
+            "width": 264,
+            "height": 120,
+            "borderRadius": 12,
+            "fills": [
+              {
+                "fillColor": "#131b2e"
+              }
+            ],
+            "strokes": [
+              {
+                "strokeColor": "#1e293b",
+                "strokeWidth": 1
+              }
+            ],
+            "text": "Indexed Functions\n1,420 Symbols",
+            "fontSize": 14,
+            "layout": "none",
+            "children": []
+          }
+        ]
+      },
+      {
+        "id": "comp-chart",
+        "name": "Activity Chart Canvas Frame",
+        "type": "rect",
+        "x": 1008,
+        "y": 76,
+        "width": 720,
+        "height": 320,
+        "borderRadius": 12,
+        "fills": [
+          {
+            "fillColor": "#131b2e"
+          }
+        ],
+        "strokes": [
+          {
+            "strokeColor": "#1e293b",
+            "strokeWidth": 1
+          }
+        ],
+        "text": "📈 Database Query Throughput (ops/sec)",
+        "layout": "none",
+        "children": []
+      },
+      {
+        "id": "comp-status-panel",
+        "name": "System Status Feed",
+        "type": "frame",
+        "x": 1032,
+        "y": 248,
+        "width": 376,
+        "height": 320,
+        "borderRadius": 12,
+        "fills": [
+          {
+            "fillColor": "#131b2e"
+          }
+        ],
+        "strokes": [
+          {
+            "strokeColor": "#1e293b",
+            "strokeWidth": 1
+          }
+        ],
+        "layout": "none",
+        "padding": 20,
+        "children": [
+          {
+            "id": "status-title",
+            "name": "Title",
+            "type": "text",
+            "x": 1052,
+            "y": 268,
+            "width": 200,
+            "height": 24,
+            "borderRadius": 0,
+            "fills": [
+              {
+                "fillColor": "#1e293b",
+                "fillOpacity": 1
+              }
+            ],
+            "strokes": [],
+            "text": "Live Diagnostic Status",
+            "fontSize": 16,
+            "fontWeight": "bold",
+            "color": "#f8fafc",
+            "layout": "none",
+            "children": []
+          },
+          {
+            "id": "status-sub",
+            "name": "Details",
+            "type": "text",
+            "x": 1052,
+            "y": 310,
+            "width": 336,
+            "height": 120,
+            "borderRadius": 0,
+            "fills": [
+              {
+                "fillColor": "#1e293b",
+                "fillOpacity": 1
+              }
+            ],
+            "strokes": [],
+            "text": "🟢 MongoDB Atlas: Connected\n🟢 SQLite Runner: Operational\n🟢 simple-git: Synced",
+            "fontSize": 13,
+            "color": "#94a3b8",
+            "layout": "none",
+            "children": []
+          }
+        ]
+      },
+      {
+        "id": "comp-table",
+        "name": "Recent Migrations Table",
+        "type": "rect",
+        "x": 292,
+        "y": 592,
+        "width": 1116,
+        "height": 270,
+        "borderRadius": 12,
+        "fills": [
+          {
+            "fillColor": "#131b2e"
+          }
+        ],
+        "strokes": [
+          {
+            "strokeColor": "#1e293b",
+            "strokeWidth": 1
+          }
+        ],
+        "text": "Database Migrations & Branches",
+        "layout": "none",
+        "children": []
+      }
+    ]
+  }
+}

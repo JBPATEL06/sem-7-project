@@ -54,14 +54,20 @@ app.use('/api/screens', screenRouter);
 app.use('/api', contextRouter);
 
 
+app.use('/api', (req, res) => {
+  res.status(404).json({ error: `API route ${req.method} ${req.originalUrl} not found.` });
+});
+
+// Global API error handler
+app.use((err: any, _req: express.Request, res: express.Response, _next: express.NextFunction) => {
+  console.error('[ai-manager-web] Uncaught Server Error:', err);
+  res.status(500).json({ error: err.message || 'Internal Server Error' });
+});
+
 const distPath = path.resolve(__dirname, '../dist');
 app.use(express.static(distPath));
 
-app.get('*', (req, res) => {
-  if (req.path.startsWith('/api')) {
-    res.status(404).json({ error: 'API endpoint not found.' });
-    return;
-  }
+app.get('*', (_req, res) => {
   res.sendFile(path.join(distPath, 'index.html'));
 });
 

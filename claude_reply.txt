@@ -1,23 +1,36 @@
-# Storage Locations for Diagrams and Figma / Penpot Files
+# Why "No Tables or Collections Found" Appeared and How We Fixed the UX
 
-Diagrams and Figma / Penpot design files are stored in two layers (Cloud Database + Local Disk Mirror):
-
----
-
-### 1. Primary Cloud Database (MongoDB Atlas)
-Both are persisted in real-time to your connected MongoDB Atlas cluster (`cluster0.cgdh1pm.mongodb.net/ai_manager`):
-- **Diagrams**: Stored in the `diagrams` collection (`DiagramModel`) — stores Excalidraw element trees, geometries, arrows, text, coordinates, and canvas state.
-- **Figma / Penpot Screens**: Stored in the `screens` collection (`ScreenModel`) — stores design artboard specifications, component trees, layouts, geometry coordinates, fills, and styling tokens.
+### 1. Why Did That Screen Appear?
+1. **The Database Was Empty**: You connected to `mongodb://localhost:27017/ai_manager`, which is a fresh local database with **0 collections**.
+2. **The Full-Page Empty State UX Bug**: When a database had 0 tables or collections, `DbManagerPage` was previously replacing the *entire page* with the large empty state card, hiding:
+   - The **Top Header** (preventing you from switching back to SQLite or other databases).
+   - The **Query Console** (preventing you from running MongoDB queries or creating collections).
+   - Showing an irrelevant **"+ Create Table"** (SQL) button instead of **"+ Create Collection"** (MongoDB).
 
 ---
 
-### 2. Local Workspace Disk Files (Offline & Backup Mirror)
-Whenever a diagram or screen is created or updated, a mirrored backup is also written locally to the `.ai-manager` folder:
-- **Diagrams File**: `packages/ai-manager-web/.ai-manager/diagrams.json`
-- **Figma / Penpot Screens File**: `packages/ai-manager-web/.ai-manager/screens.json`
+### 2. What We Have Built & Fixed
+
+1. **Top Header & Switcher Always Active**:
+   - The Database Switcher dropdown (`Local SQLite`, `Local Mongo`, `Supabase`, etc.), engine badge, Disconnect button, and **"+ Create Collection"** button now stay permanently at the top.
+2. **MongoDB Query Console Always Active**:
+   - The JSON query runner with `find()`, `count()`, and `stats()` is now always visible so you can execute queries on any database.
+3. **Dedicated "+ Create Collection" Modal**:
+   - Added a modal to create new MongoDB collections with optional initial JSON documents.
+4. **1-Click "Seed Sample Collections" Action**:
+   - If a database is empty, you can click **"Seed Sample Collections"** to automatically insert demo collections (`users`, `projects`) and immediately explore their documents.
+5. **Backend `POST /api/db/create-collection` Endpoint**:
+   - Built backend route and verified live collection creation and querying.
 
 ---
 
-### 3. File Exports Available
-- **Diagrams**: Can be downloaded as `.excalidraw` JSON files, `.png` images, or `.svg` vector files from the Diagram Studio toolbar.
-- **Figma / Penpot Screens**: Can be downloaded as official Penpot Plugin Schema 2.0 JSON manifests via the **Export** button, or copied as React + Tailwind TSX code from the **Code & AST** tab.
+### 3. Live Verification
+- Created `users` collection in `Local Mongo`:
+  ```json
+  { "name": "Demo Admin", "email": "admin@local.workspace", "role": "admin" }
+  ```
+- Introspected schema: **1 collection (`users`), 1 document**.
+- Executed `find({})` query: returned document in **1.47ms**.
+- Production build: `npm run build` passed with **0 errors**.
+
+Refresh your browser (`localhost:5173/db-manager`) to see the updated database control plane with the `users` collection and interactive console.

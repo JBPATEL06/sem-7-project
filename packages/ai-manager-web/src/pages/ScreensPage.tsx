@@ -138,6 +138,9 @@ export function ScreensPage({ selectedProject }: { selectedProject?: { id: strin
   const [newScreenName, setNewScreenName] = useState('');
   const [selectedTemplateKey, setSelectedTemplateKey] = useState('saas-dashboard');
   const [copiedCode, setCopiedCode] = useState(false);
+  const [copiedFilePath, setCopiedFilePath] = useState(false);
+  const [editingLayerId, setEditingLayerId] = useState<string | null>(null);
+  const [editingLayerName, setEditingLayerName] = useState<string>('');
   const [layerSearch, setLayerSearch] = useState('');
   const [collapsedNodes, setCollapsedNodes] = useState<Record<string, boolean>>({});
   const [hiddenNodes, setHiddenNodes] = useState<Record<string, boolean>>({});
@@ -1073,6 +1076,19 @@ export function ${screen.name.replace(/[^a-zA-Z0-9]/g, '')}Layout() {
   };
 
   // Render Layer Tree Node
+  const handleStartRename = (comp: PenpotComponent, e: React.MouseEvent) => {
+    e.stopPropagation();
+    setEditingLayerId(comp.id);
+    setEditingLayerName(comp.name);
+  };
+
+  const handleSaveLayerName = (compId: string) => {
+    if (editingLayerName.trim()) {
+      updateComponent(compId, { name: editingLayerName.trim() });
+    }
+    setEditingLayerId(null);
+  };
+
   const renderLayerTreeNode = (comp: PenpotComponent, depth: number = 0) => {
     const isSelected = selectedCompId === comp.id;
     const isCollapsed = collapsedNodes[comp.id];
@@ -1121,7 +1137,31 @@ export function ${screen.name.replace(/[^a-zA-Z0-9]/g, '')}Layout() {
             {comp.type === 'input' && <Search className="w-3.5 h-3.5 text-slate-400 flex-shrink-0" />}
             {comp.type === 'badge' && <Shield className="w-3.5 h-3.5 text-teal-500 flex-shrink-0" />}
 
-            <span className="truncate">{comp.name}</span>
+            {editingLayerId === comp.id ? (
+              <input
+                type="text"
+                value={editingLayerName}
+                autoFocus
+                onClick={(e) => e.stopPropagation()}
+                onChange={(e) => setEditingLayerName(e.target.value)}
+                onBlur={() => handleSaveLayerName(comp.id)}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter') handleSaveLayerName(comp.id);
+                  if (e.key === 'Escape') setEditingLayerId(null);
+                }}
+                className={`px-1 py-0.5 text-xs rounded border outline-none font-medium ${
+                  isLight ? 'bg-white border-violet-500 text-slate-900' : 'bg-slate-900 border-violet-500 text-white'
+                }`}
+              />
+            ) : (
+              <span
+                onDoubleClick={(e) => handleStartRename(comp, e)}
+                className="truncate cursor-text hover:underline decoration-dotted"
+                title="Double-click to rename layer"
+              >
+                {comp.name}
+              </span>
+            )}
           </div>
 
           <div className="flex items-center space-x-1 opacity-0 group-hover:opacity-100 transition-opacity">
@@ -1195,6 +1235,33 @@ export function ${screen.name.replace(/[^a-zA-Z0-9]/g, '')}Layout() {
           <span className={`text-[10px] font-mono ${isLight ? 'text-slate-500 bg-slate-100 border-slate-200' : 'text-slate-400 bg-slate-900 border-slate-800'} border px-1.5 py-0.5 rounded`}>
             {currentScreen ? `${currentScreen.board.width} × ${currentScreen.board.height}` : '1440 × 900'}
           </span>
+
+          {/* Repo File Path Badge with 1-Click Copy */}
+          {currentScreen && (() => {
+            const screenSlug = currentScreen.name.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, '') || 'untitled';
+            const relPath = `ui/${screenSlug}.penpot.json`;
+            return (
+              <button
+                type="button"
+                onClick={() => {
+                  navigator.clipboard.writeText(relPath);
+                  setCopiedFilePath(true);
+                  setTimeout(() => setCopiedFilePath(false), 2000);
+                }}
+                className={`hidden md:flex items-center space-x-1.5 px-2 py-0.5 rounded-md text-[11px] font-mono border transition-all cursor-pointer ${
+                  copiedFilePath
+                    ? 'bg-emerald-500/20 text-emerald-400 border-emerald-500/40'
+                    : isLight
+                    ? 'bg-slate-100 hover:bg-slate-200 text-slate-600 border-slate-200'
+                    : 'bg-slate-900/80 hover:bg-slate-800 text-slate-400 hover:text-slate-200 border-slate-800'
+                }`}
+                title="Click to copy repo file path"
+              >
+                <span>📁 {relPath}</span>
+                {copiedFilePath ? <Check className="w-3 h-3 text-emerald-400" /> : <Copy className="w-3 h-3 opacity-60" />}
+              </button>
+            );
+          })()}
         </div>
 
         {/* View Switcher (Design vs Code) & Right Inspector Toggle */}

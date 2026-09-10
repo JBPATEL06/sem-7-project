@@ -94,6 +94,27 @@
   - **Infinite Canvas & Board Workspace (Figma & Miro Style)**:
     - **Penpot Specs Studio (`ScreensPage.tsx`)**: 16,000px × 10,000px vast infinite field with seamless tiled dot grid pattern, 360-degree freehand panning, auto-centering on screen selection (`centerArtboard`), and `Shift + 1` / `Shift + 0` quick center view shortcuts.
     - **Diagram Studio (`DiagramsPage.tsx`)**: Edge-to-edge full viewport infinite Excalidraw board with **Fit View** (`Maximize2`) auto-framing action.
+  - **Modular Git Branches Deployed to GitHub (`https://github.com/JBPATEL06/sem-7-project`)**:
+    - `coreWrokingFigma`: Penpot / Figma Specs studio codebase.
+    - `coreWrokingDiagram`: Excalidraw diagram canvas codebase.
+    - `coreWrokingGit`: Git View & History Visualizer codebase.
+  - **Direct Workspace File Persistence & UI Polish**:
+    - **Local Persistence Folders**: Created root `ui/` and `diagrams/` folders storing native files (`ui/<screen_slug>.penpot.json` in Penpot Schema 2.0 and `diagrams/<diagram_slug>.excalidraw` in Excalidraw JSON format) accessible directly by local AI agents (Antigravity), CLI tools, or native desktop apps.
+    - **Transparent File Path Badges**: Studio headers display repo file path badges (`📁 ui/...` and `📁 diagrams/...`) with 1-click clipboard copy.
+    - **Semantic Names & Inline Renaming**: Replaced random IDs with clean human-readable names and enabled double-click inline renaming in the Penpot Layers tree.
+  - **Multi-Database Control Plane & Live Engine Drivers (SQL & NoSQL)**:
+    - **Drivers Built**:
+      - PostgreSQL / Supabase (`pg` Pool with latency testing, column & index introspection via `information_schema`, parameterized query execution).
+      - MongoDB Community & Atlas (`mongoose` with connection pooling, document sampling schema inference, and JSON query runner for `find`/`count`/`stats`).
+      - Redis & Valkey (`ioredis` with live key scanner `SCAN`, data type detection `TYPE`, TTL inspection, and command runner).
+      - SQLite & LibSQL (`sql.js` WASM engine with table creation, schema inspection, and live SQL execution).
+    - **API Surface**: `POST /api/db/connect`, `GET /api/db/connections`, `DELETE /api/db/connections/:id`, `GET /api/db/schema`, `POST /api/db/query`, `POST /api/db/sync-er-diagram`, `POST /api/db/create-table`.
+    - **Frontend Studio (`/db-manager`)**:
+      - Multi-database switcher with dialect badges (PostgreSQL, MongoDB, Redis, SQLite).
+      - `ConnectDbModal` with quick presets (Supabase, Local Postgres Docker, MongoDB Community, Redis Server) and live latency ping test.
+      - Dynamic schema tree adapting to relational tables, MongoDB collections, or Redis key namespaces.
+      - Multi-dialect query console (SQL editor for Postgres/SQLite, JSON query runner for MongoDB, and CLI command prompt for Redis).
+      - Automated ER Diagram Sync generating native `.excalidraw` scenes in `diagrams/<db_name>_er_diagram.excalidraw`.
 
 ## In Progress / Unwired Interactive Features (Mock/Static Only)
 The following buttons and interactive controls render visually but are not yet wired to live backend services:

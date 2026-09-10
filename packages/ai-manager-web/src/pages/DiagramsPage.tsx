@@ -48,6 +48,7 @@ export const DiagramsPage: React.FC<DiagramsPageProps> = ({ projectId = 'acme-ap
   const [newDiagramType, setNewDiagramType] = useState<Diagram['type']>('architecture');
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
   const [saveSuccess, setSaveSuccess] = useState(false);
+  const [copiedFilePath, setCopiedFilePath] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   // Sync active diagram data to canvas when switching diagrams
@@ -301,6 +302,25 @@ export const DiagramsPage: React.FC<DiagramsPageProps> = ({ projectId = 'acme-ap
               Infinite Excalidraw architecture, ER diagrams, and system flows
             </p>
           </div>
+
+          {/* Repo File Path Badge with 1-Click Copy */}
+          <div
+            onClick={() => {
+              const slug = activeDiagram ? activeDiagram.name.toLowerCase().replace(/[^a-z0-9]+/g, '_').replace(/^_+|_+$/g, '') : 'system_architecture';
+              navigator.clipboard.writeText(`diagrams/${slug}.excalidraw`);
+              setCopiedFilePath(true);
+              setTimeout(() => setCopiedFilePath(false), 2000);
+            }}
+            title="Click to copy repository file path"
+            className={`flex items-center space-x-1.5 text-[11px] font-mono px-2.5 py-1 rounded-lg border cursor-pointer transition-all ${
+              copiedFilePath
+                ? 'bg-emerald-500/10 border-emerald-500/30 text-emerald-500 font-semibold'
+                : 'bg-muted/60 hover:bg-muted border-border text-foreground'
+            }`}
+          >
+            <span>📁 diagrams/{activeDiagram ? activeDiagram.name.toLowerCase().replace(/[^a-z0-9]+/g, '_').replace(/^_+|_+$/g, '') : 'system_architecture'}.excalidraw</span>
+            {copiedFilePath ? <FileCheck className="size-3 text-emerald-500" /> : <Download className="size-3 opacity-60 hover:opacity-100" />}
+          </div>
         </div>
 
         <div className="flex items-center gap-2 flex-wrap">
@@ -312,8 +332,10 @@ export const DiagramsPage: React.FC<DiagramsPageProps> = ({ projectId = 'acme-ap
               if (found) setActiveDiagram(found);
             }}
           >
-            <SelectTrigger className="w-[190px] text-xs h-8">
-              <SelectValue placeholder={activeDiagram ? activeDiagram.name : 'Select Diagram'} />
+            <SelectTrigger className="w-[210px] text-xs h-8">
+              <SelectValue placeholder="Select Diagram">
+                {activeDiagram ? `${activeDiagram.name} (${activeDiagram.type})` : 'Select Diagram'}
+              </SelectValue>
             </SelectTrigger>
             <SelectContent>
               {diagrams.map((d) => (

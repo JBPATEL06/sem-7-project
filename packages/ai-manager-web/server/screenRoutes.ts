@@ -1,4 +1,6 @@
 import { Router, Response } from 'express';
+import fs from 'fs';
+import path from 'path';
 import { ScreenModel } from './models/index.js';
 import { localOrAuth, AuthRequest, getIsMongoConnected } from './auth.js';
 import { JsonStore } from './utils/JsonStore.js';
@@ -96,11 +98,11 @@ export const SCREEN_TEMPLATES: Record<string, Omit<ScreenLayoutSpec, 'id' | 'pro
           gap: 16,
           children: [
             { id: 'logo', name: 'App Logo', type: 'text', text: '⚡ AI Manager', fontSize: 20, fontWeight: 'bold', color: '#7c3aed', x: 24, y: 24, width: 212, height: 32 },
-            { id: 'nav-1', name: 'Nav Item Active', type: 'button', text: '📊 Overview', fontSize: 14, color: '#f8fafc', fills: [{ fillColor: '#7c3aed33' }], borderRadius: 8, x: 24, y: 72, width: 212, height: 40 },
-            { id: 'nav-2', name: 'Nav Item', type: 'button', text: '🗄️ Database CI/CD', fontSize: 14, color: '#94a3b8', x: 24, y: 120, width: 212, height: 40 },
-            { id: 'nav-3', name: 'Nav Item', type: 'button', text: '🌿 Git Visualizer', fontSize: 14, color: '#94a3b8', x: 24, y: 168, width: 212, height: 40 },
-            { id: 'nav-4', name: 'Nav Item', type: 'button', text: '🎨 Penpot Specs', fontSize: 14, color: '#94a3b8', x: 24, y: 216, width: 212, height: 40 },
-            { id: 'nav-5', name: 'Nav Item', type: 'button', text: '⚙️ Settings', fontSize: 14, color: '#94a3b8', x: 24, y: 264, width: 212, height: 40 }
+            { id: 'nav-1', name: 'Nav Item: Overview', type: 'button', text: '📊 Overview', fontSize: 14, color: '#f8fafc', fills: [{ fillColor: '#7c3aed33' }], borderRadius: 8, x: 24, y: 72, width: 212, height: 40 },
+            { id: 'nav-2', name: 'Nav Item: Database CI/CD', type: 'button', text: '🗄️ Database CI/CD', fontSize: 14, color: '#94a3b8', x: 24, y: 120, width: 212, height: 40 },
+            { id: 'nav-3', name: 'Nav Item: Git Visualizer', type: 'button', text: '🌿 Git Visualizer', fontSize: 14, color: '#94a3b8', x: 24, y: 168, width: 212, height: 40 },
+            { id: 'nav-4', name: 'Nav Item: Penpot Specs', type: 'button', text: '🎨 Penpot Specs', fontSize: 14, color: '#94a3b8', x: 24, y: 216, width: 212, height: 40 },
+            { id: 'nav-5', name: 'Nav Item: Settings', type: 'button', text: '⚙️ Settings', fontSize: 14, color: '#94a3b8', x: 24, y: 264, width: 212, height: 40 }
           ]
         },
         {
@@ -321,6 +323,69 @@ export const SCREEN_TEMPLATES: Record<string, Omit<ScreenLayoutSpec, 'id' | 'pro
 };
 
 /**
+ * Finds the project workspace root directory reliably
+ */
+export function getWorkspaceRootDir(): string {
+  if (fs.existsSync(path.resolve(process.cwd(), '.git')) || fs.existsSync(path.resolve(process.cwd(), 'packages'))) {
+    return process.cwd();
+  }
+  const oneUp = path.resolve(process.cwd(), '..');
+  if (fs.existsSync(path.resolve(oneUp, '.git')) || fs.existsSync(path.resolve(oneUp, 'packages'))) {
+    return oneUp;
+  }
+  const twoUp = path.resolve(process.cwd(), '..', '..');
+  if (fs.existsSync(path.resolve(twoUp, '.git')) || fs.existsSync(path.resolve(twoUp, 'packages'))) {
+    return twoUp;
+  }
+  return process.cwd();
+}
+
+/**
+ * Clean slug generator for workspace filenames
+ */
+export function getScreenSlug(name: string): string {
+  return name.toLowerCase().replace(/[^a-z0-9]+/g, '_').replace(/^_+|_+$/g, '') || 'untitled_screen';
+}
+
+/**
+ * Synchronizes screen specification directly to project root ui/ directory
+ */
+export function syncScreenToDisk(spec: ScreenLayoutSpec): string {
+  try {
+    const rootDir = getWorkspaceRootDir();
+    const targetDir = path.join(rootDir, 'ui');
+    if (!fs.existsSync(targetDir)) {
+      fs.mkdirSync(targetDir, { recursive: true });
+    }
+    const slug = getScreenSlug(spec.name);
+    const filePath = path.join(targetDir, `${slug}.penpot.json`);
+    const manifest = generatePenpotManifest(spec);
+    fs.writeFileSync(filePath, JSON.stringify(manifest, null, 2), 'utf-8');
+    return `ui/${slug}.penpot.json`;
+  } catch (e) {
+    console.error('[Screens] Disk sync error:', e);
+    return `ui/${getScreenSlug(spec.name)}.penpot.json`;
+  }
+}
+
+/**
+ * Removes deleted or renamed screen file from disk
+ */
+export function deleteScreenFromDisk(name: string) {
+  try {
+    const rootDir = getWorkspaceRootDir();
+    const targetDir = path.join(rootDir, 'ui');
+    const slug = getScreenSlug(name);
+    const filePath = path.join(targetDir, `${slug}.penpot.json`);
+    if (fs.existsSync(filePath)) {
+      fs.unlinkSync(filePath);
+    }
+  } catch (e) {
+    console.error('[Screens] Disk delete error:', e);
+  }
+}
+
+/**
  * Transforms layout components into official Penpot Plugin JSON Manifest
  */
 export function generatePenpotManifest(spec: ScreenLayoutSpec) {
@@ -372,8 +437,14 @@ function mapComponentToPenpotShape(c: PenpotComponent): any {
  * Simple Rule-Based AI Layout Spec Generator
  */
 export function generateLayoutFromPrompt(prompt: string, projectName: string = 'Workspace'): ScreenLayoutSpec {
-  const p = prompt.toLowerCase();
+  const p = prompt.trim().toLowerCase();
   const id = `screen_${Date.now()}_${Math.random().toString(36).slice(2, 7)}`;
+
+  // Create human-readable clean name from prompt
+  const rawWords = prompt.trim().replace(/[^a-zA-Z0-9\s-_]/g, '').split(/\s+/).filter(Boolean);
+  const cleanTitle = rawWords.length > 0
+    ? rawWords.map(w => w.charAt(0).toUpperCase() + w.slice(1)).slice(0, 4).join(' ')
+    : 'Custom Dashboard';
 
   if (p.includes('auth') || p.includes('login') || p.includes('signup') || p.includes('register')) {
     const template = SCREEN_TEMPLATES['auth-portal'];
@@ -382,7 +453,7 @@ export function generateLayoutFromPrompt(prompt: string, projectName: string = '
       id,
       projectId: 'global',
       userId: 'system',
-      name: `Generated: Auth Portal (${prompt.slice(0, 30)}...)`,
+      name: `${cleanTitle} Auth Portal`,
       createdAt: new Date().toISOString(),
       updatedAt: new Date().toISOString()
     };
@@ -395,7 +466,7 @@ export function generateLayoutFromPrompt(prompt: string, projectName: string = '
       id,
       projectId: 'global',
       userId: 'system',
-      name: `Generated: Kanban Workflow (${prompt.slice(0, 30)}...)`,
+      name: `${cleanTitle} Kanban Board`,
       createdAt: new Date().toISOString(),
       updatedAt: new Date().toISOString()
     };
@@ -408,8 +479,8 @@ export function generateLayoutFromPrompt(prompt: string, projectName: string = '
     id,
     projectId: 'global',
     userId: 'system',
-    name: `Generated: ${prompt.slice(0, 35)}...`,
-    description: `Generated Penpot Layout Spec for prompt: "${prompt}"`,
+    name: cleanTitle,
+    description: `Layout specification for ${cleanTitle}`,
     createdAt: new Date().toISOString(),
     updatedAt: new Date().toISOString()
   };
@@ -485,17 +556,24 @@ screenRouter.get('/', localOrAuth, async (req: AuthRequest, res: Response) => {
 
     return res.json({
       success: true,
-      screens: screens.map((s: any) => ({
-        id: s.id,
-        projectId: s.projectId,
-        userId: s.userId,
-        name: s.name,
-        description: s.description || '',
-        board: s.layout || s.board,
-        theme: s.theme || SCREEN_TEMPLATES['saas-dashboard'].theme,
-        createdAt: s.createdAt,
-        updatedAt: s.updatedAt
-      }))
+      screens: screens.map((s: any) => {
+        const spec: ScreenLayoutSpec = {
+          id: s.id,
+          projectId: s.projectId,
+          userId: s.userId,
+          name: s.name,
+          description: s.description || '',
+          board: s.layout || s.board,
+          theme: s.theme || SCREEN_TEMPLATES['saas-dashboard'].theme,
+          createdAt: s.createdAt,
+          updatedAt: s.updatedAt
+        };
+        const relPath = syncScreenToDisk(spec);
+        return {
+          ...spec,
+          filePath: relPath
+        };
+      })
     });
   } catch (err: any) {
     console.error('Error fetching screens:', err);
@@ -546,10 +624,14 @@ screenRouter.post('/generate', localOrAuth, async (req: AuthRequest, res: Respon
     } catch (err) {}
 
     await localScreenStore.create(spec);
+    const relPath = syncScreenToDisk(spec);
 
     return res.status(201).json({
       success: true,
-      screen: spec
+      screen: {
+        ...spec,
+        filePath: relPath
+      }
     });
   } catch (err: any) {
     console.error('Error generating screen:', err);
@@ -659,10 +741,14 @@ screenRouter.post('/', localOrAuth, async (req: AuthRequest, res: Response) => {
     } catch (err) {}
 
     await localScreenStore.create(fullSpec);
+    const relPath = syncScreenToDisk(fullSpec);
 
     return res.status(201).json({
       success: true,
-      screen: fullSpec
+      screen: {
+        ...fullSpec,
+        filePath: relPath
+      }
     });
   } catch (err: any) {
     console.error('Error creating screen:', err);
@@ -692,6 +778,10 @@ screenRouter.put('/:id', localOrAuth, async (req: AuthRequest, res: Response) =>
     // Ownership check
     if (user && user.role !== 'admin' && existing.userId && existing.userId !== user.sub) {
       return res.status(403).json({ error: 'Forbidden: Access denied to update this layout spec' });
+    }
+
+    if (name !== undefined && name !== existing.name) {
+      deleteScreenFromDisk(existing.name);
     }
 
     const updatedSpec: ScreenLayoutSpec = {
@@ -724,10 +814,14 @@ screenRouter.put('/:id', localOrAuth, async (req: AuthRequest, res: Response) =>
     } catch (err) {}
 
     await localScreenStore.update(id, updatedSpec);
+    const relPath = syncScreenToDisk(updatedSpec);
 
     return res.json({
       success: true,
-      screen: updatedSpec
+      screen: {
+        ...updatedSpec,
+        filePath: relPath
+      }
     });
   } catch (err: any) {
     console.error('Error updating screen:', err);
@@ -762,6 +856,7 @@ screenRouter.delete('/:id', localOrAuth, async (req: AuthRequest, res: Response)
       await ScreenModel.deleteOne({ id });
     }
     await localScreenStore.delete(id);
+    deleteScreenFromDisk(existing.name);
 
     return res.json({
       success: true,
