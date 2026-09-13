@@ -35,7 +35,20 @@ export default defineConfig({
     proxy: {
       '/api': {
         target: 'http://localhost:3000',
-        changeOrigin: true
+        changeOrigin: true,
+        configure: (proxy, _options) => {
+          proxy.on('error', (_err, _req, res) => {
+            if (!res.headersSent) {
+              res.writeHead(503, {
+                'Content-Type': 'application/json'
+              });
+              res.end(JSON.stringify({
+                error: 'Backend Express server is starting up or temporarily offline.',
+                code: 'SERVICE_UNAVAILABLE'
+              }));
+            }
+          });
+        }
       }
     }
   }

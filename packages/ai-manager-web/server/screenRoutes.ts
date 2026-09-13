@@ -488,11 +488,99 @@ export function generateLayoutFromPrompt(prompt: string, projectName: string = '
 
 export const screenRouter = Router();
 
+export async function syncDiskScreensToStore(projectId: string = 'acme-api', userId: string = 'usr_admin_default'): Promise<void> {
+  try {
+    const rootDir = getWorkspaceRootDir();
+    const targetDir = path.join(rootDir, 'ui');
+    if (!fs.existsSync(targetDir)) return;
+
+    const files = fs.readdirSync(targetDir).filter((f) => f.endsWith('.penpot.json'));
+    const existingList = await localScreenStore.getAll();
+    const existingSlugs = new Set(existingList.map((s) => getScreenSlug(s.name)));
+
+    for (const filename of files) {
+      const slug = filename.replace(/\.penpot\.json$/, '');
+      if (existingSlugs.has(slug)) continue;
+
+      const filePath = path.join(targetDir, filename);
+      let contentRaw = '';
+      try {
+        contentRaw = fs.readFileSync(filePath, 'utf-8');
+      } catch {
+        continue;
+      }
+
+      let parsed: any = {};
+      try {
+        parsed = JSON.parse(contentRaw);
+      } catch {
+        parsed = {};
+      }
+
+      const name = parsed.name || slug.replace(/_/g, ' ').replace(/\b\w/g, (c: string) => c.toUpperCase());
+      const boardData = parsed.board || {
+        id: `board_${slug}`,
+        name: `${name} Board`,
+        x: 0,
+        y: 0,
+        width: 1440,
+        height: 900,
+        background: '#090d16',
+        components: []
+      };
+
+      const newSpec: ScreenLayoutSpec = {
+        id: `screen_disk_${slug}`,
+        projectId,
+        userId,
+        name,
+        description: parsed.description || 'Auto-indexed from ui/ workspace folder',
+        board: {
+          id: boardData.id || `board_${slug}`,
+          name: boardData.name || `${name} Board`,
+          x: boardData.x || 0,
+          y: boardData.y || 0,
+          width: boardData.width || 1440,
+          height: boardData.height || 900,
+          background: boardData.background || (boardData.fills?.[0]?.fillColor) || '#090d16',
+          components: boardData.components || boardData.shapes || []
+        },
+        theme: parsed.theme || SCREEN_TEMPLATES['saas-dashboard'].theme,
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString()
+      };
+
+      if (getIsMongoConnected()) {
+        try {
+          await ScreenModel.create({
+            id: newSpec.id,
+            projectId: newSpec.projectId,
+            userId: newSpec.userId,
+            name: newSpec.name,
+            description: newSpec.description,
+            layout: newSpec.board,
+            components: newSpec.board.components
+          });
+        } catch {}
+      }
+      await localScreenStore.create(newSpec);
+      existingSlugs.add(slug);
+    }
+  } catch (err: any) {
+    console.error('[Screens] Disk auto-index error:', err.message);
+  }
+}
+
 // GET /api/screens - List all screens for active user
 screenRouter.get('/', localOrAuth, async (req: AuthRequest, res: Response) => {
   try {
     const user = req.user;
     const { projectId } = req.query;
+    const targetProjId = typeof projectId === 'string' ? projectId : 'acme-api';
+    const targetUserId = user?.sub || 'usr_admin_default';
+
+    // Auto-discover any .penpot.json layout specs in ui/ directory on disk
+    await syncDiskScreensToStore(targetProjId, targetUserId);
 
     let screens: any[] = [];
 

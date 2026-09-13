@@ -1,7 +1,8 @@
 {
   "type": "excalidraw",
   "version": 2,
-  "source": "antigravity-db-manager",
+  "source": "https://ai-manager.local",
+  "name": "Sample Db Er Diagram",
   "elements": [
     {
       "id": "er-table-0",
@@ -85,5 +86,6 @@
   "appState": {
     "viewBackgroundColor": "#0f172a",
     "gridSize": 20
-  }
+  },
+  "files": {}
 }

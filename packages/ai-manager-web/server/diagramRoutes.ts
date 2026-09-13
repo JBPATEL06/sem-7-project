@@ -160,13 +160,82 @@ async function getDiagramByIdFromDb(id: string): Promise<Diagram | null> {
   return await diagramStore.getById(id);
 }
 
+export async function syncDiskDiagramsToStore(projectId: string = 'acme-api', userId: string = 'usr_admin_default'): Promise<void> {
+  try {
+    const rootDir = getWorkspaceRootDir();
+    const targetDir = path.join(rootDir, 'diagrams');
+    if (!fs.existsSync(targetDir)) return;
+
+    const files = fs.readdirSync(targetDir).filter((f) => f.endsWith('.excalidraw'));
+    const existingList = await diagramStore.getAll();
+    const existingSlugs = new Set(existingList.map((d) => getDiagramSlug(d.name)));
+
+    for (const filename of files) {
+      const slug = filename.replace(/\.excalidraw$/, '');
+      if (existingSlugs.has(slug)) continue;
+
+      const filePath = path.join(targetDir, filename);
+      let contentRaw = '';
+      try {
+        contentRaw = fs.readFileSync(filePath, 'utf-8');
+      } catch {
+        continue;
+      }
+
+      let parsed: any = {};
+      try {
+        parsed = JSON.parse(contentRaw);
+      } catch {
+        parsed = {};
+      }
+
+      const name = parsed.name || slug.replace(/_/g, ' ').replace(/\b\w/g, (c: string) => c.toUpperCase());
+      const type = slug.includes('er_diagram')
+        ? 'er_diagram'
+        : slug.includes('flow') || slug.includes('architecture')
+        ? 'architecture'
+        : 'scratchpad';
+
+      const newDiagram: Diagram = {
+        id: `diag_disk_${slug}`,
+        projectId,
+        userId,
+        name,
+        description: 'Auto-indexed from diagrams/ workspace folder',
+        type,
+        elements: Array.isArray(parsed.elements) ? parsed.elements : [],
+        appState: parsed.appState || { viewBackgroundColor: '#1e1e24', theme: 'dark' },
+        files: parsed.files || {},
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString()
+      };
+
+      if (getIsMongoConnected()) {
+        try {
+          await DiagramModel.create(newDiagram);
+        } catch {}
+      }
+      await diagramStore.create(newDiagram);
+      existingSlugs.add(slug);
+    }
+  } catch (err: any) {
+    console.error('[Diagrams] Disk auto-index error:', err.message);
+  }
+}
+
 // --------------------------------------------------------------------------
 // 1. GET /api/diagrams — List diagrams (Filtered by user session, Admin sees all)
+// --------------------------------------------------------------------------
 diagramRouter.get('/', localOrAuth, async (req: AuthRequest, res: Response): Promise<void> => {
   try {
-    const projectId = req.query.projectId as string | undefined;
+    const rawProjectId = req.query.projectId as string | undefined;
+    const projectId = rawProjectId || 'acme-api';
     const isAdmin = req.user?.role === 'admin';
-    const userId = req.user?.sub;
+    const userId = req.user?.sub || 'usr_admin_default';
+
+    // Auto-discover any .excalidraw files in diagrams/ directory on disk
+    await syncDiskDiagramsToStore(projectId, userId);
+
     const diagramsList = await getDiagramsFromDb(projectId, userId, isAdmin);
 
     const diagramsWithPaths = diagramsList.map((d) => {

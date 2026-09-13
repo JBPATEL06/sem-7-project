@@ -1,0 +1,53 @@
+{
+  "type": "excalidraw",
+  "version": 2,
+  "source": "https://ai-manager.local",
+  "name": "acme-api_er_diagram",
+  "elements": [
+    {
+      "type": "rectangle",
+      "x": 100,
+      "y": 100,
+      "width": 240,
+      "height": 120,
+      "backgroundColor": "#3b82f620",
+      "strokeColor": "#3b82f6",
+      "strokeWidth": 2,
+      "roughness": 1,
+      "borderRadius": 8
+    },
+    {
+      "type": "text",
+      "x": 116,
+      "y": 116,
+      "text": "TABLE: erer\n------------------\n🔑 id: INTEGER\n  name: TEXT",
+      "fontSize": 13,
+      "fontFamily": 3
+    },
+    {
+      "type": "rectangle",
+      "x": 400,
+      "y": 100,
+      "width": 240,
+      "height": 120,
+      "backgroundColor": "#10b98120",
+      "strokeColor": "#10b981",
+      "strokeWidth": 2,
+      "roughness": 1,
+      "borderRadius": 8
+    },
+    {
+      "type": "text",
+      "x": 416,
+      "y": 116,
+      "text": "TABLE: ererer\n------------------\n🔑 id: INTEGER\n  name: TEXT",
+      "fontSize": 13,
+      "fontFamily": 3
+    }
+  ],
+  "appState": {
+    "viewBackgroundColor": "#1e1e24",
+    "theme": "dark"
+  },
+  "files": {}
+}

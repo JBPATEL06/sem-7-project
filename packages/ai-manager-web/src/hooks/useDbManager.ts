@@ -69,6 +69,17 @@ export interface QueryResult {
   error?: string;
 }
 
+export interface QueryHistoryEntry {
+  id: string;
+  query: string;
+  dbType?: string;
+  rowCount?: number;
+  executionTimeMs?: number;
+  success: boolean;
+  timestamp: string;
+  connectionId: string;
+}
+
 async function apiFetch<T = any>(url: string, options: RequestInit = {}): Promise<{ ok: boolean; status: number; data?: T; error?: string }> {
   const token = localStorage.getItem('ai_manager_token');
   const headers: Record<string, string> = {
@@ -97,7 +108,7 @@ async function apiFetch<T = any>(url: string, options: RequestInit = {}): Promis
 
 export function useDbManager(projectId: string = 'acme-api') {
   const [connections, setConnections] = useState<DbConnection[]>([]);
-  const [activeConnectionId, setActiveConnectionId] = useState<string>(`conn_sqlite_${projectId}`);
+  const [activeConnectionId, setActiveConnectionId] = useState<string>('');
   const [schema, setSchema] = useState<SchemaResponse | null>(null);
   const [activeTable, setActiveTable] = useState<string | null>(null);
   const [tableRows, setTableRows] = useState<any[]>([]);
@@ -107,6 +118,30 @@ export function useDbManager(projectId: string = 'acme-api') {
   const [queryResult, setQueryResult] = useState<QueryResult | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [syncMessage, setSyncMessage] = useState<string | null>(null);
+  const [queryHistory, setQueryHistory] = useState<QueryHistoryEntry[]>(() => {
+    try {
+      const stored = localStorage.getItem(`ai_manager_qh_${projectId}`);
+      return stored ? JSON.parse(stored) : [];
+    } catch {
+      return [];
+    }
+  });
+
+  // G4: Persist query history to localStorage (capped at 20 per project)
+  const appendQueryHistory = (entry: Omit<QueryHistoryEntry, 'id' | 'timestamp'>) => {
+    setQueryHistory(prev => {
+      const newEntry: QueryHistoryEntry = {
+        ...entry,
+        id: `qh_${Date.now()}`,
+        timestamp: new Date().toISOString()
+      };
+      const updated = [newEntry, ...prev].slice(0, 20);
+      try {
+        localStorage.setItem(`ai_manager_qh_${projectId}`, JSON.stringify(updated));
+      } catch {}
+      return updated;
+    });
+  };
 
   // 1. Fetch configured connections
   const fetchConnections = useCallback(async () => {
@@ -244,6 +279,16 @@ export function useDbManager(projectId: string = 'acme-api') {
           setTableRows(data.rows || []);
         }
 
+        // G4: Record to query history
+        appendQueryHistory({
+          query: queryText,
+          dbType: data.dbType,
+          rowCount: data.rowCount,
+          executionTimeMs: data.executionTimeMs,
+          success: data.success,
+          connectionId: activeConnectionId
+        });
+
         // If mutation query, refresh schema tree
         if (queryText && !/^\s*(SELECT|PRAGMA|EXPLAIN|KEYS|GET|find)/i.test(queryText)) {
           await fetchSchema();
@@ -287,9 +332,13 @@ export function useDbManager(projectId: string = 'acme-api') {
       );
 
       if (res.ok && res.data?.success) {
+        const newId = res.data.connection.id;
+        try {
+          localStorage.setItem(`ai_manager_active_conn_${projectId}`, newId);
+        } catch {}
         await fetchConnections();
-        setActiveConnectionId(res.data.connection.id);
-        await fetchSchema(res.data.connection.id);
+        setActiveConnectionId(newId);
+        await fetchSchema(newId);
         return { success: true, latencyMs: res.data.latencyMs };
       }
       return { success: false, error: res.data?.error || res.error || 'Connection failed' };
@@ -305,9 +354,13 @@ export function useDbManager(projectId: string = 'acme-api') {
         method: 'DELETE'
       });
       if (res.ok) {
+        const fallbackId = `conn_sqlite_${projectId}`;
+        try {
+          localStorage.setItem(`ai_manager_active_conn_${projectId}`, fallbackId);
+        } catch {}
         await fetchConnections();
-        setActiveConnectionId(`conn_sqlite_${projectId}`);
-        await fetchSchema(`conn_sqlite_${projectId}`);
+        setActiveConnectionId(fallbackId);
+        await fetchSchema(fallbackId);
         return { success: true };
       }
       return { success: false };
@@ -384,11 +437,31 @@ export function useDbManager(projectId: string = 'acme-api') {
     }
   };
 
-  // Initial load
+  // Initial load: fetch available connections without auto-selecting any database
   useEffect(() => {
-    fetchConnections();
-    fetchSchema(`conn_sqlite_${projectId}`);
-  }, [fetchConnections, fetchSchema, projectId]);
+    let isMounted = true;
+    const init = async () => {
+      try {
+        const res = await apiFetch<{ success: boolean; connections: DbConnection[] }>(
+          `/api/db/connections?projectId=${encodeURIComponent(projectId)}`
+        );
+        if (res.ok && res.data?.connections && isMounted) {
+          setConnections(res.data.connections);
+        }
+      } catch (err) {
+        console.error('[useDbManager] Connection fetch error:', err);
+      } finally {
+        if (isMounted) {
+          setIsLoading(false);
+        }
+      }
+    };
+
+    init();
+    return () => {
+      isMounted = false;
+    };
+  }, [projectId]);
 
   // Reload table data on table change
   useEffect(() => {
@@ -399,7 +472,49 @@ export function useDbManager(projectId: string = 'acme-api') {
 
   const switchConnection = async (connId: string) => {
     setActiveConnectionId(connId);
+    setActiveTable(null);
+    setQueryResult(null);
+    setTableRows([]);
+    setTableColumns([]);
+    try {
+      localStorage.setItem(`ai_manager_active_conn_${projectId}`, connId);
+    } catch {}
     await fetchSchema(connId);
+  };
+
+  // G5: Download query results as CSV or JSON
+  const downloadResults = (format: 'csv' | 'json', rows: any[], columns: string[], filename = 'query_results') => {
+    if (!rows || rows.length === 0) return;
+    let content = '';
+    let mimeType = '';
+    if (format === 'json') {
+      content = JSON.stringify(rows, null, 2);
+      mimeType = 'application/json';
+      filename += '.json';
+    } else {
+      const header = columns.join(',');
+      const body = rows.map(row =>
+        columns.map(col => {
+          const val = row[col] ?? '';
+          const str = String(val);
+          return str.includes(',') || str.includes('"') || str.includes('\n')
+            ? `"${str.replace(/"/g, '""')}"`
+            : str;
+        }).join(',')
+      ).join('\n');
+      content = `${header}\n${body}`;
+      mimeType = 'text/csv';
+      filename += '.csv';
+    }
+    const blob = new Blob([content], { type: mimeType });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = filename;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
   };
 
   return {
@@ -414,6 +529,7 @@ export function useDbManager(projectId: string = 'acme-api') {
     queryResult,
     error,
     syncMessage,
+    queryHistory,
     switchConnection,
     refetchSchema: () => fetchSchema(activeConnectionId),
     loadTableData,
@@ -422,6 +538,7 @@ export function useDbManager(projectId: string = 'acme-api') {
     disconnectDatabase,
     syncErDiagram,
     createTable,
-    createCollection
+    createCollection,
+    downloadResults
   };
 }

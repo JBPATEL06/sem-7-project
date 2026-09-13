@@ -1,0 +1,42 @@
+{
+  "type": "excalidraw",
+  "version": 2,
+  "source": "https://ai-manager.local",
+  "name": "Jeel Bhanderi",
+  "elements": [
+    {
+      "id": "F7d7_fEABIvsAX24kI4eb",
+      "type": "rectangle",
+      "x": 437.60003662109375,
+      "y": 122.50001525878906,
+      "width": 164,
+      "height": 138.39999389648438,
+      "angle": 0,
+      "strokeColor": "#1e1e1e",
+      "backgroundColor": "transparent",
+      "fillStyle": "solid",
+      "strokeWidth": 2,
+      "strokeStyle": "solid",
+      "roughness": 1,
+      "opacity": 100,
+      "groupIds": [],
+      "frameId": null,
+      "roundness": {
+        "type": 3
+      },
+      "seed": 155893781,
+      "version": 27,
+      "versionNonce": 1442500565,
+      "isDeleted": false,
+      "boundElements": null,
+      "updated": 1789070666653,
+      "link": null,
+      "locked": false
+    }
+  ],
+  "appState": {
+    "viewBackgroundColor": "#ffffff",
+    "theme": "dark"
+  },
+  "files": {}
+}

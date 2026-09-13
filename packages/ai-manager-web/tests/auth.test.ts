@@ -4,7 +4,7 @@ import http from 'http';
 import { authRouter, verifyToken, generateToken } from '../server/auth.js';
 import { projectsRouter } from '../server/projects.js';
 
-const PORT = 3019;
+let PORT = 0;
 let server: http.Server;
 
 beforeAll(async () => {
@@ -14,7 +14,10 @@ beforeAll(async () => {
   app.use('/api/projects', projectsRouter);
 
   await new Promise<void>((resolve) => {
-    server = app.listen(PORT, () => resolve());
+    server = app.listen(0, () => {
+      PORT = (server.address() as any).port;
+      resolve();
+    });
   });
 });
 
@@ -42,11 +45,12 @@ describe('Local-First Auth & Projects Test Suite', () => {
   });
 
   it('3. POST /api/projects creates a new project with Not indexed status and — metrics', async () => {
+    const testSlug = `test-local-proj-${Date.now()}`;
     const res = await fetch(`http://localhost:${PORT}/api/projects`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
-        projectId: 'test-local-proj',
+        projectId: testSlug,
         projectName: 'Test Local Project',
         description: 'Test description',
         rootDir: '~/dev/test-local-proj'
@@ -55,7 +59,7 @@ describe('Local-First Auth & Projects Test Suite', () => {
 
     const data = await res.json();
     expect(res.status).toBe(201);
-    expect(data.project.projectId).toBe('test-local-proj');
+    expect(data.project.projectId).toBe(testSlug);
     expect(data.project.status).toBe('Not indexed');
     expect(data.project.files).toBe('—');
     expect(data.project.dbSize).toBe('—');

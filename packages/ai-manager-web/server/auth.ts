@@ -433,7 +433,7 @@ export function requireAdmin(req: AuthRequest, res: Response, next: NextFunction
   });
 }
 
-export function localOrAuth(req: AuthRequest, _res: Response, next: NextFunction): void {
+export function localOrAuth(req: AuthRequest, res: Response, next: NextFunction): void {
   const authHeader = req.headers.authorization;
   if (authHeader && authHeader.startsWith('Bearer ')) {
     const token = authHeader.substring(7);
@@ -442,9 +442,20 @@ export function localOrAuth(req: AuthRequest, _res: Response, next: NextFunction
       req.user = payload;
       return next();
     } catch {
-      // Fall through to local fallback
+      // Token provided but invalid
+      if (process.env.NODE_ENV === 'production') {
+        res.status(401).json({ error: 'Invalid or expired session token.' });
+        return;
+      }
     }
   }
+
+  // Strictly restrict unauthenticated admin fallback to non-production local dev
+  if (process.env.NODE_ENV === 'production') {
+    res.status(401).json({ error: 'Unauthorized. Token missing or invalid header.' });
+    return;
+  }
+
   req.user = {
     sub: 'local-dev-user',
     email: 'bhanderijeel8@gmail.com',

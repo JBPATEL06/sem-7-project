@@ -47,6 +47,7 @@ export const DbManagerPage: React.FC<DbManagerPageProps> = ({ projectId = 'acme-
     queryResult,
     error,
     syncMessage,
+    queryHistory,
     switchConnection,
     refetchSchema,
     loadTableData,
@@ -55,7 +56,8 @@ export const DbManagerPage: React.FC<DbManagerPageProps> = ({ projectId = 'acme-
     disconnectDatabase,
     syncErDiagram,
     createTable,
-    createCollection
+    createCollection,
+    downloadResults
   } = useDbManager(projectId);
 
   const [searchQuery, setSearchQuery] = useState('');
@@ -64,6 +66,7 @@ export const DbManagerPage: React.FC<DbManagerPageProps> = ({ projectId = 'acme-
   const [mongoOperation, setMongoOperation] = useState<'find' | 'count' | 'stats'>('find');
   const [mongoFilter, setMongoFilter] = useState<string>('{}');
   const [currentPage, setCurrentPage] = useState(1);
+  const [showHistory, setShowHistory] = useState(false);
   const pageSize = 12;
 
   // Modals state
@@ -89,6 +92,27 @@ export const DbManagerPage: React.FC<DbManagerPageProps> = ({ projectId = 'acme-
 
   const activeConnection = connections.find((c) => c.id === activeConnectionId);
   const dbType = schema?.dbType || activeConnection?.type || 'sqlite';
+
+  // Auto-sync default console query text when database engine or active table changes
+  React.useEffect(() => {
+    if (dbType === 'mongodb') {
+      setCustomQuery('{}');
+    } else if (dbType === 'redis') {
+      setCustomQuery('KEYS *');
+    } else if (dbType === 'postgresql' || dbType === 'supabase') {
+      if (activeTable) {
+        setCustomQuery(`SELECT * FROM "${activeTable}" LIMIT 50;`);
+      } else {
+        setCustomQuery(`SELECT table_name FROM information_schema.tables WHERE table_schema = 'public';`);
+      }
+    } else {
+      if (activeTable) {
+        setCustomQuery(`SELECT * FROM "${activeTable}" LIMIT 50;`);
+      } else {
+        setCustomQuery(`SELECT * FROM sqlite_master;`);
+      }
+    }
+  }, [dbType, activeTable, activeConnectionId]);
 
   const totalCollections = schema?.collections?.length || 0;
   const totalTables = schema?.tables?.length || 0;
@@ -178,32 +202,6 @@ export const DbManagerPage: React.FC<DbManagerPageProps> = ({ projectId = 'acme-
     } else {
       setCreateCollectionError(res.error || 'Failed to create collection');
     }
-  };
-
-  const handleSeedSampleData = async () => {
-    setIsSeeding(true);
-    if (dbType === 'mongodb') {
-      await createCollection('users', {
-        name: 'Demo User',
-        email: 'demo@example.com',
-        role: 'engineer',
-        status: 'active',
-        createdAt: new Date()
-      });
-      await createCollection('projects', {
-        title: 'Cloud Analytics Platform',
-        environment: 'production',
-        version: '1.4.0',
-        activeMembers: 8
-      });
-    } else {
-      await createTable('users', [
-        { name: 'id', type: 'INTEGER', isPk: true, notNull: true },
-        { name: 'email', type: 'TEXT', isPk: false, notNull: true },
-        { name: 'created_at', type: 'TIMESTAMP', isPk: false, notNull: true }
-      ]);
-    }
-    setIsSeeding(false);
   };
 
   const handleSyncEr = async () => {
@@ -474,23 +472,33 @@ export const DbManagerPage: React.FC<DbManagerPageProps> = ({ projectId = 'acme-
                   )}
                 </CardHeader>
 
-                <CardContent className="p-2 flex flex-col gap-1 max-h-[480px] overflow-y-auto">
-                  {/* Empty collections / tables prompt in sidebar */}
+                <CardContent className="p-2 flex flex-col gap-1 max-h-[480px] overflow-y-auto">                  {/* Empty collections / tables prompt in sidebar */}
                   {!isIndexed && (
                     <div className="p-4 text-center flex flex-col items-center gap-2">
                       <p className="text-xs text-muted-foreground">
                         {dbType === 'mongodb' ? 'No collections found.' : 'No tables found.'}
                       </p>
-                      <Button
-                        size="sm"
-                        variant="outline"
-                        onClick={handleSeedSampleData}
-                        disabled={isSeeding}
-                        className="text-xs gap-1.5 h-8 border-primary/40 text-primary hover:bg-primary/10 cursor-pointer"
-                      >
-                        {isSeeding ? <Loader2 className="size-3 animate-spin" /> : <Sparkles className="size-3" />}
-                        Seed Sample {dbType === 'mongodb' ? 'Collections' : 'Table'}
-                      </Button>
+                      {dbType === 'mongodb' ? (
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          onClick={() => setIsCreateCollectionOpen(true)}
+                          className="text-xs gap-1.5 h-8 border-emerald-500/40 text-emerald-500 hover:bg-emerald-500/10 cursor-pointer"
+                        >
+                          <Plus className="size-3" />
+                          + Create Collection
+                        </Button>
+                      ) : (
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          onClick={() => setIsCreateTableOpen(true)}
+                          className="text-xs gap-1.5 h-8 border-primary/40 text-primary hover:bg-primary/10 cursor-pointer"
+                        >
+                          <Plus className="size-3" />
+                          + Create Table
+                        </Button>
+                      )}
                     </div>
                   )}
 
@@ -600,7 +608,27 @@ export const DbManagerPage: React.FC<DbManagerPageProps> = ({ projectId = 'acme-
 
             {/* Right Column: Live Data Grid / Empty State (8 cols) */}
             <div className="lg:col-span-8 flex flex-col gap-4">
-              {!isIndexed ? (
+              {!activeConnectionId ? (
+                /* No Database Selected State */
+                <Card className="border border-border p-12 bg-card/60 flex flex-col items-center justify-center text-center gap-4">
+                  <div className="rounded-full bg-muted/60 p-4 text-muted-foreground border border-border">
+                    <Database className="size-10 text-primary/70" />
+                  </div>
+                  <div className="flex flex-col gap-1.5 max-w-md">
+                    <h3 className="font-bold text-lg text-foreground">No Database Selected</h3>
+                    <p className="text-xs text-muted-foreground leading-relaxed">
+                      Select a database service from the dropdown above to inspect schema, or link an external PostgreSQL, MongoDB, or Redis instance.
+                    </p>
+                  </div>
+                  <Button
+                    onClick={() => setIsConnectModalOpen(true)}
+                    className="bg-primary hover:bg-primary/90 text-primary-foreground gap-2 text-xs font-semibold cursor-pointer mt-2"
+                  >
+                    <Plus className="size-3.5" />
+                    + Connect Database
+                  </Button>
+                </Card>
+              ) : !isIndexed ? (
                 /* Empty State Helper Card */
                 <Card className="border border-border p-12 bg-card/60 flex flex-col items-center justify-center text-center gap-4">
                   <div className="rounded-full bg-muted/60 p-4 text-muted-foreground border border-border">
@@ -613,33 +641,30 @@ export const DbManagerPage: React.FC<DbManagerPageProps> = ({ projectId = 'acme-
                     </p>
                   </div>
                   <div className="flex items-center gap-3 mt-2">
-                    <Button
-                      onClick={handleSeedSampleData}
-                      disabled={isSeeding}
-                      className="bg-primary hover:bg-primary/90 text-primary-foreground gap-2 text-xs font-semibold cursor-pointer"
-                    >
-                      {isSeeding ? <Loader2 className="size-3.5 animate-spin" /> : <Sparkles className="size-3.5" />}
-                      Seed Sample {dbType === 'mongodb' ? 'Collections' : 'Tables'}
-                    </Button>
                     {dbType === 'mongodb' ? (
                       <Button
-                        variant="outline"
                         onClick={() => setIsCreateCollectionOpen(true)}
-                        className="text-xs border-border cursor-pointer gap-2"
+                        className="bg-emerald-600 hover:bg-emerald-500 text-white gap-2 text-xs font-semibold cursor-pointer"
                       >
-                        <FolderPlus className="size-3.5" />
+                        <Plus className="size-3.5" />
                         + Create Collection
                       </Button>
                     ) : (
                       <Button
-                        variant="outline"
                         onClick={() => setIsCreateTableOpen(true)}
-                        className="text-xs border-border cursor-pointer gap-2"
+                        className="bg-primary hover:bg-primary/90 text-primary-foreground gap-2 text-xs font-semibold cursor-pointer"
                       >
                         <Plus className="size-3.5" />
                         + Create Table
                       </Button>
                     )}
+                    <Button
+                      variant="outline"
+                      onClick={() => setIsConnectModalOpen(true)}
+                      className="border-border hover:bg-muted text-xs font-medium cursor-pointer"
+                    >
+                      + Connect DB
+                    </Button>
                   </div>
                 </Card>
               ) : (
@@ -656,6 +681,29 @@ export const DbManagerPage: React.FC<DbManagerPageProps> = ({ projectId = 'acme-
                         </Badge>
                       )}
                     </div>
+                    {/* G5: Export buttons */}
+                    {tableRows.length > 0 && tableColumns.length > 0 && (
+                      <div className="flex items-center gap-1.5">
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => downloadResults('csv', tableRows, tableColumns, activeTable || 'export')}
+                          className="h-7 px-2.5 text-[11px] gap-1.5 font-mono border-border hover:bg-muted cursor-pointer"
+                          title="Export as CSV"
+                        >
+                          <Download className="size-3" /> CSV
+                        </Button>
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => downloadResults('json', tableRows, tableColumns, activeTable || 'export')}
+                          className="h-7 px-2.5 text-[11px] gap-1.5 font-mono border-border hover:bg-muted cursor-pointer"
+                          title="Export as JSON"
+                        >
+                          <Download className="size-3" /> JSON
+                        </Button>
+                      </div>
+                    )}
                   </CardHeader>
 
                   <CardContent className="p-0 overflow-x-auto">
@@ -723,6 +771,51 @@ export const DbManagerPage: React.FC<DbManagerPageProps> = ({ projectId = 'acme-
                 </Card>
               )}
             </div>
+          </div>
+        )}
+
+        {/* G4: Query History Panel */}
+        {queryHistory.length > 0 && (
+          <div className="bg-card border border-border rounded-xl shadow-xs overflow-hidden">
+            <div
+              className="flex items-center justify-between p-3 cursor-pointer hover:bg-muted/40 transition-colors"
+              onClick={() => setShowHistory(h => !h)}
+            >
+              <div className="flex items-center gap-2">
+                <Code2 className="size-4 text-primary" />
+                <span className="text-sm font-semibold text-foreground">Query History</span>
+                <Badge variant="secondary" className="text-[10px] font-mono">{queryHistory.length}</Badge>
+              </div>
+              <span className="text-xs text-muted-foreground">{showHistory ? '▲ Collapse' : '▼ Expand'}</span>
+            </div>
+            {showHistory && (
+              <div className="border-t border-border divide-y divide-border/60 max-h-60 overflow-y-auto">
+                {queryHistory.map(entry => (
+                  <div
+                    key={entry.id}
+                    className="flex items-start gap-3 p-3 hover:bg-muted/30 transition-colors cursor-pointer group"
+                    onClick={() => setCustomQuery(entry.query)}
+                    title="Click to load into query console"
+                  >
+                    <Badge
+                      className={`text-[10px] font-mono shrink-0 mt-0.5 ${
+                        entry.success
+                          ? 'bg-emerald-500/10 text-emerald-400 border-emerald-500/30'
+                          : 'bg-destructive/10 text-destructive border-destructive/30'
+                      }`}
+                    >
+                      {entry.success ? 'OK' : 'ERR'}
+                    </Badge>
+                    <div className="flex-1 min-w-0">
+                      <p className="text-xs font-mono text-foreground truncate">{entry.query}</p>
+                      <p className="text-[10px] text-muted-foreground mt-0.5">
+                        {entry.rowCount ?? 0} rows · {entry.executionTimeMs ?? 0}ms · {new Date(entry.timestamp).toLocaleTimeString()}
+                      </p>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
           </div>
         )}
 

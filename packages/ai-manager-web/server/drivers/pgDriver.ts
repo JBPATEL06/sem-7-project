@@ -25,11 +25,35 @@ export class PgDriver {
         ssl: uri.includes('supabase') || uri.includes('neon.tech') || uri.includes('aws') || uri.includes('sslmode=require')
           ? { rejectUnauthorized: false }
           : false,
+        max: 10,
+        idleTimeoutMillis: 30000,
         connectionTimeoutMillis: 8000
       });
       this.pools.set(uri, pool);
     }
     return this.pools.get(uri)!;
+  }
+
+  // Close and evict a single connection pool by URI
+  public static async closePool(uri: string): Promise<void> {
+    const pool = this.pools.get(uri);
+    if (pool) {
+      try {
+        await pool.end();
+      } catch {}
+      this.pools.delete(uri);
+      console.log(`[PgDriver] Pool for ${uri.slice(0, 15)}... closed.`);
+    }
+  }
+
+  // G6: Graceful shutdown — end all pg pools
+  public static async closeAll(): Promise<void> {
+    const closers = Array.from(this.pools.values()).map(pool => {
+      try { return pool.end(); } catch { return Promise.resolve(); }
+    });
+    await Promise.allSettled(closers);
+    this.pools.clear();
+    console.log('[PgDriver] All pools ended.');
   }
 
   public static async testConnection(uri: string): Promise<{ success: boolean; latencyMs: number; error?: string }> {
@@ -90,7 +114,8 @@ export class PgDriver {
         // 3. Approximate row count
         let rowCount = 0;
         try {
-          const countRes = await client.query(`SELECT COUNT(*) as count FROM "${tableName}"`);
+          const safeTblName = tableName.replace(/"/g, '""');
+          const countRes = await client.query(`SELECT COUNT(*) as count FROM "${safeTblName}"`);
           rowCount = parseInt(countRes.rows[0]?.count || '0', 10);
         } catch {
           rowCount = 0;

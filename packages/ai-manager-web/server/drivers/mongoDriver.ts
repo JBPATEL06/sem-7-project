@@ -15,11 +15,34 @@ export class MongoDriver {
     if (!this.connections.has(uri) || this.connections.get(uri)!.readyState !== 1) {
       const conn = await mongoose.createConnection(uri, {
         serverSelectionTimeoutMS: 8000,
-        connectTimeoutMS: 8000
+        connectTimeoutMS: 8000,
+        maxPoolSize: 10,
+        socketTimeoutMS: 45000
       }).asPromise();
       this.connections.set(uri, conn);
     }
     return this.connections.get(uri)!;
+  }
+
+  // Close and evict a single connection by URI
+  public static async closeConnection(uri: string): Promise<void> {
+    const conn = this.connections.get(uri);
+    if (conn) {
+      try {
+        await conn.close();
+      } catch {}
+      this.connections.delete(uri);
+      console.log(`[MongoDriver] Connection for ${uri.slice(0, 15)}... closed.`);
+    }
+  }
+
+  public static async closeAll(): Promise<void> {
+    for (const conn of this.connections.values()) {
+      try {
+        await conn.close();
+      } catch {}
+    }
+    this.connections.clear();
   }
 
   public static async testConnection(uri: string): Promise<{ success: boolean; latencyMs: number; error?: string }> {
@@ -54,6 +77,8 @@ export class MongoDriver {
 
       try {
         count = await col.estimatedDocumentCount();
+        const stats = await db.command({ collStats: colName });
+        sizeBytes = stats.size || 0;
         const indexes = await col.indexes();
         indexNames = indexes.map(idx => idx.name || '').filter((n): n is string => Boolean(n));
       } catch {
@@ -96,10 +121,15 @@ export class MongoDriver {
     const col = db.collection(collectionName);
     const start = performance.now();
 
-    let filter: any = {};
-    if (filterStr && filterStr.trim()) {
+    let filter: Record<string, any> = {};
+    if (typeof filterStr === 'object' && filterStr !== null && !Array.isArray(filterStr)) {
+      filter = filterStr;
+    } else if (typeof filterStr === 'string' && filterStr.trim()) {
       try {
-        filter = JSON.parse(filterStr);
+        const parsed = JSON.parse(filterStr);
+        if (typeof parsed === 'object' && parsed !== null && !Array.isArray(parsed)) {
+          filter = parsed;
+        }
       } catch {
         filter = {};
       }

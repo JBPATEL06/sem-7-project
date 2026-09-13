@@ -1,36 +1,12 @@
-# Why "No Tables or Collections Found" Appeared and How We Fixed the UX
+Penpot / Figma UI Specs Auto-Discovery Fix:
 
-### 1. Why Did That Screen Appear?
-1. **The Database Was Empty**: You connected to `mongodb://localhost:27017/ai_manager`, which is a fresh local database with **0 collections**.
-2. **The Full-Page Empty State UX Bug**: When a database had 0 tables or collections, `DbManagerPage` was previously replacing the *entire page* with the large empty state card, hiding:
-   - The **Top Header** (preventing you from switching back to SQLite or other databases).
-   - The **Query Console** (preventing you from running MongoDB queries or creating collections).
-   - Showing an irrelevant **"+ Create Table"** (SQL) button instead of **"+ Create Collection"** (MongoDB).
+1. **Root Cause**:
+   Just like the Diagram studio issue, the Screen / Penpot Specs API (`GET /api/screens`) previously only queried records registered in `.ai-manager/screens.json` (or Mongo). `.penpot.json` layout files created directly on disk in the `ui/` directory (such as `generated_hey_genrate_some_design.penpot.json`, `jeel.penpot.json`, and `modern_saas_analytics_dashboard.penpot.json`) were not automatically imported or indexed into the store.
 
----
+2. **Fix Implemented**:
+   - Added `syncDiskScreensToStore()` in `screenRoutes.ts` to scan the `ui/` workspace directory for any `.penpot.json` files on API list requests.
+   - Unindexed `.penpot.json` files found on disk are automatically parsed and registered into `screens.json` / Mongo.
 
-### 2. What We Have Built & Fixed
-
-1. **Top Header & Switcher Always Active**:
-   - The Database Switcher dropdown (`Local SQLite`, `Local Mongo`, `Supabase`, etc.), engine badge, Disconnect button, and **"+ Create Collection"** button now stay permanently at the top.
-2. **MongoDB Query Console Always Active**:
-   - The JSON query runner with `find()`, `count()`, and `stats()` is now always visible so you can execute queries on any database.
-3. **Dedicated "+ Create Collection" Modal**:
-   - Added a modal to create new MongoDB collections with optional initial JSON documents.
-4. **1-Click "Seed Sample Collections" Action**:
-   - If a database is empty, you can click **"Seed Sample Collections"** to automatically insert demo collections (`users`, `projects`) and immediately explore their documents.
-5. **Backend `POST /api/db/create-collection` Endpoint**:
-   - Built backend route and verified live collection creation and querying.
-
----
-
-### 3. Live Verification
-- Created `users` collection in `Local Mongo`:
-  ```json
-  { "name": "Demo Admin", "email": "admin@local.workspace", "role": "admin" }
-  ```
-- Introspected schema: **1 collection (`users`), 1 document**.
-- Executed `find({})` query: returned document in **1.47ms**.
-- Production build: `npm run build` passed with **0 errors**.
-
-Refresh your browser (`localhost:5173/db-manager`) to see the updated database control plane with the `users` collection and interactive console.
+3. **Verification**:
+   - All `.penpot.json` files in the `ui/` folder are now auto-indexed and visible in the Penpot Specs dropdown in the frontend Web UI.
+   - Vitest suite passed cleanly (8/8 tests passed).
