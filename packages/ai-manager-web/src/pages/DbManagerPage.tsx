@@ -26,7 +26,9 @@ import {
   RefreshCw,
   Share2,
   FolderPlus,
-  Sparkles
+  Sparkles,
+  Upload,
+  FileCode
 } from 'lucide-react';
 import { Badge } from '../components/ui/badge';
 
@@ -57,7 +59,9 @@ export const DbManagerPage: React.FC<DbManagerPageProps> = ({ projectId = 'acme-
     syncErDiagram,
     createTable,
     createCollection,
-    downloadResults
+    downloadResults,
+    exportSchema,
+    importSchema
   } = useDbManager(projectId);
 
   const [searchQuery, setSearchQuery] = useState('');
@@ -73,7 +77,15 @@ export const DbManagerPage: React.FC<DbManagerPageProps> = ({ projectId = 'acme-
   const [isConnectModalOpen, setIsConnectModalOpen] = useState(false);
   const [isCreateTableOpen, setIsCreateTableOpen] = useState(false);
   const [isCreateCollectionOpen, setIsCreateCollectionOpen] = useState(false);
+  const [isImportModalOpen, setIsImportModalOpen] = useState(false);
   const [isSeeding, setIsSeeding] = useState(false);
+
+  // Export / Import state
+  const [isExporting, setIsExporting] = useState(false);
+  const [importText, setImportText] = useState('');
+  const [importFormat, setImportFormat] = useState<'sql' | 'json'>('sql');
+  const [importError, setImportError] = useState<string | null>(null);
+  const [isImporting, setIsImporting] = useState(false);
 
   // Create Table Form
   const [newTableName, setNewTableName] = useState('');
@@ -92,6 +104,36 @@ export const DbManagerPage: React.FC<DbManagerPageProps> = ({ projectId = 'acme-
 
   const activeConnection = connections.find((c) => c.id === activeConnectionId);
   const dbType = schema?.dbType || activeConnection?.type || 'sqlite';
+
+  const handleExportSchema = async (format: 'sql' | 'json' = 'sql') => {
+    setIsExporting(true);
+    try {
+      await exportSchema(format);
+    } finally {
+      setIsExporting(false);
+    }
+  };
+
+  const handleImportSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!importText.trim()) {
+      setImportError('Please provide SQL script or JSON schema to import.');
+      return;
+    }
+    setImportError(null);
+    setIsImporting(true);
+    try {
+      const res = await importSchema(importText, importFormat);
+      if (res.success) {
+        setIsImportModalOpen(false);
+        setImportText('');
+      } else {
+        setImportError(res.error || 'Import failed.');
+      }
+    } finally {
+      setIsImporting(false);
+    }
+  };
 
   // Auto-sync default console query text when database engine or active table changes
   React.useEffect(() => {
@@ -294,6 +336,31 @@ export const DbManagerPage: React.FC<DbManagerPageProps> = ({ projectId = 'acme-
             >
               {isSyncingEr ? <Loader2 className="size-3.5 animate-spin" /> : <Share2 className="size-3.5 text-primary" />}
               Sync ER Diagram
+            </Button>
+
+            {/* Export Schema Button */}
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => handleExportSchema('sql')}
+              disabled={isExporting}
+              className="gap-1.5 h-9 text-xs border-border hover:bg-muted cursor-pointer font-medium"
+              title="Export Schema as SQL DDL (.sql)"
+            >
+              {isExporting ? <Loader2 className="size-3.5 animate-spin" /> : <Download className="size-3.5 text-sky-400" />}
+              Export DDL
+            </Button>
+
+            {/* Import Schema Button */}
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => setIsImportModalOpen(true)}
+              className="gap-1.5 h-9 text-xs border-border hover:bg-muted cursor-pointer font-medium"
+              title="Import SQL DDL or JSON schema"
+            >
+              <Upload className="size-3.5 text-amber-400" />
+              Import Schema
             </Button>
 
             {/* Create Collection Modal trigger for MongoDB */}
@@ -1009,9 +1076,96 @@ export const DbManagerPage: React.FC<DbManagerPageProps> = ({ projectId = 'acme-
             </div>
           </div>
         )}
+        {/* Modal: Import Schema */}
+        {isImportModalOpen && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-xs p-4">
+            <div className="bg-card border border-border w-full max-w-lg rounded-xl shadow-2xl p-5 space-y-4 animate-in fade-in zoom-in-95">
+              <div className="flex items-center justify-between border-b border-border pb-3">
+                <h3 className="text-sm font-semibold text-foreground flex items-center gap-2">
+                  <Upload className="size-4 text-amber-500" />
+                  Import Schema into {activeConnection?.name || 'Local Database'}
+                </h3>
+                <button
+                  onClick={() => {
+                    setIsImportModalOpen(false);
+                    setImportError(null);
+                  }}
+                  className="p-1 rounded text-muted-foreground hover:text-foreground hover:bg-muted cursor-pointer"
+                >
+                  <X className="size-4" />
+                </button>
+              </div>
+
+              <form onSubmit={handleImportSubmit} className="space-y-3.5">
+                <div className="flex items-center justify-between">
+                  <label className="text-xs font-semibold text-foreground">Schema Script / Payload</label>
+                  <div className="flex items-center gap-2 text-xs font-mono">
+                    <button
+                      type="button"
+                      onClick={() => setImportFormat('sql')}
+                      className={`px-2 py-0.5 rounded cursor-pointer ${importFormat === 'sql' ? 'bg-primary text-primary-foreground font-semibold' : 'bg-muted text-muted-foreground'}`}
+                    >
+                      SQL DDL
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setImportFormat('json')}
+                      className={`px-2 py-0.5 rounded cursor-pointer ${importFormat === 'json' ? 'bg-primary text-primary-foreground font-semibold' : 'bg-muted text-muted-foreground'}`}
+                    >
+                      JSON
+                    </button>
+                  </div>
+                </div>
+
+                <textarea
+                  value={importText}
+                  onChange={(e) => setImportText(e.target.value)}
+                  rows={8}
+                  placeholder={
+                    importFormat === 'sql'
+                      ? 'CREATE TABLE IF NOT EXISTS inventory (\n  id INTEGER PRIMARY KEY,\n  item_name TEXT NOT NULL,\n  qty INTEGER DEFAULT 0\n);'
+                      : '{\n  "tables": [\n    {\n      "name": "inventory",\n      "columns": [{ "name": "id", "type": "INTEGER", "pk": true }, { "name": "item_name", "type": "TEXT" }]\n    }\n  ]\n}'
+                  }
+                  className="w-full bg-background border border-border rounded-lg p-3 text-xs font-mono text-foreground focus:outline-hidden focus:ring-1 focus:ring-primary resize-none"
+                  required
+                />
+
+                {importError && (
+                  <div className="p-2.5 bg-destructive/15 border border-destructive/30 rounded-lg text-xs text-destructive flex items-center gap-1.5">
+                    <AlertCircle className="size-4 shrink-0" />
+                    <span>{importError}</span>
+                  </div>
+                )}
+
+                <div className="flex justify-end gap-2 pt-2">
+                  <Button
+                    type="button"
+                    variant="outline"
+                    onClick={() => {
+                      setIsImportModalOpen(false);
+                      setImportError(null);
+                    }}
+                    className="text-xs h-8"
+                  >
+                    Cancel
+                  </Button>
+                  <Button
+                    type="submit"
+                    disabled={isImporting}
+                    className="text-xs h-8 font-semibold bg-amber-600 hover:bg-amber-500 text-white cursor-pointer gap-1.5"
+                  >
+                    {isImporting ? <Loader2 className="size-3.5 animate-spin" /> : <Upload className="size-3.5" />}
+                    Import Schema
+                  </Button>
+                </div>
+              </form>
+            </div>
+          </div>
+        )}
       </div>
     </main>
   );
 };
 
 export default DbManagerPage;
+

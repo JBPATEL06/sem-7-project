@@ -3,7 +3,6 @@ import {
   Home,
   LayoutGrid,
   Database,
-  FlaskConical,
   ShieldCheck,
   GitBranch,
   GitCommitHorizontal,
@@ -30,7 +29,6 @@ export type NavRoute =
   | 'db-manager'
   | 'diagrams'
   | 'screens'
-  | 'validator'
   | 'qa'
   | 'flow-audit'
   | 'git-view'
@@ -87,7 +85,6 @@ export const Layout: React.FC<LayoutProps> = ({
     { id: 'db-manager', label: 'DB Manager', icon: Database },
     { id: 'diagrams', label: 'Diagrams', icon: Layers },
     { id: 'screens', label: 'Penpot Specs', icon: Monitor },
-    { id: 'validator', label: 'Validator', icon: FlaskConical },
     { id: 'qa', label: 'QA', icon: ShieldCheck },
     { id: 'flow-audit', label: 'Flow Audit', icon: GitBranch },
     { id: 'git-view', label: 'Git View', icon: GitCommitHorizontal },

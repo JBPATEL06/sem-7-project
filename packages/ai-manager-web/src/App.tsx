@@ -7,7 +7,6 @@ import { OnboardingPage } from './pages/OnboardingPage';
 import { DashboardPage } from './pages/DashboardPage';
 import { ProjectsPage } from './pages/ProjectsPage';
 import { DbManagerPage } from './pages/DbManagerPage';
-import { ValidatorPage } from './pages/ValidatorPage';
 import { QaPage } from './pages/QaPage';
 import { FlowAuditPage } from './pages/FlowAuditPage';
 import { GitViewPage } from './pages/GitViewPage';
@@ -30,7 +29,6 @@ const AppContent: React.FC = () => {
         'dashboard',
         'projects',
         'db-manager',
-        'validator',
         'qa',
         'flow-audit',
         'git-view',
@@ -115,8 +113,6 @@ const AppContent: React.FC = () => {
         );
       case 'db-manager':
         return <DbManagerPage projectId={selectedProject} />;
-      case 'validator':
-        return <ValidatorPage />;
       case 'qa':
         return <QaPage projectId={selectedProject} />;
       case 'flow-audit':

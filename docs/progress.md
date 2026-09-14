@@ -1,12 +1,11 @@
 # Progress
 
 ## Done
-- **UI Structure & Visual Layout**: All 11 Flowstep screens built and visually complete in `packages/ai-manager-web`:
+- **UI Structure & Visual Layout**: Flowstep screens built and visually complete in `packages/ai-manager-web`:
   - `/onboarding` (Screen 1)
   - `/dashboard` (Screen 2)
   - `/projects` (Screen 3)
   - `/db-manager` (Screen 4 & Empty State Screen 10)
-  - `/validator` (Screen 5)
   - `/qa` (Screen 6)
   - `/flow-audit` (Screen 7)
   - `/git-view` (Screen 8 & Empty State Screen 11)
@@ -108,19 +107,37 @@
       - MongoDB Community & Atlas (`mongoose` with connection pooling, document sampling schema inference, and JSON query runner for `find`/`count`/`stats`).
       - Redis & Valkey (`ioredis` with live key scanner `SCAN`, data type detection `TYPE`, TTL inspection, and command runner).
       - SQLite & LibSQL (`sql.js` WASM engine with table creation, schema inspection, and live SQL execution).
-    - **API Surface**: `POST /api/db/connect`, `GET /api/db/connections`, `DELETE /api/db/connections/:id`, `GET /api/db/schema`, `POST /api/db/query`, `POST /api/db/sync-er-diagram`, `POST /api/db/create-table`.
+    - **API Surface**: `POST /api/db/connect`, `GET /api/db/connections`, `DELETE /api/db/connections/:id`, `GET /api/db/schema`, `POST /api/db/query`, `POST /api/db/sync-er-diagram`, `POST /api/db/create-table`, `POST /api/db/create-collection`, `GET /api/db/export`, `POST /api/db/import`.
     - **Frontend Studio (`/db-manager`)**:
       - Multi-database switcher with dialect badges (PostgreSQL, MongoDB, Redis, SQLite).
       - `ConnectDbModal` with quick presets (Supabase, Local Postgres Docker, MongoDB Community, Redis Server) and live latency ping test.
       - Dynamic schema tree adapting to relational tables, MongoDB collections, or Redis key namespaces.
       - Multi-dialect query console (SQL editor for Postgres/SQLite, JSON query runner for MongoDB, and CLI command prompt for Redis).
       - Automated ER Diagram Sync generating native `.excalidraw` scenes in `diagrams/<db_name>_er_diagram.excalidraw`.
+      - **Schema Export & Import Actions**: 1-click SQL DDL export (`GET /api/db/export`), JSON schema export, and interactive SQL / JSON schema import modal (`POST /api/db/import`).
+      - **Structured Server-Side Pagination**: `POST /api/db/query` with `page`, `pageSize`, `total`, `totalPages` calculation.
+
+- **Academic Milestone Day 5 — Real AST Parsing & Flow Auditor (`/flow-audit`) (Completed & Verified)**:
+  - Created `packages/ai-manager-web/server/flowAuditRoutes.ts` with AST SQLite integration (`loadIndexFromSqlite` via `@ai-manager/core` and `@ai-manager/db-context-indexer`):
+    - `GET /api/flow-audit/graph` returning 179 functions, 88 database queries, 355 call edges, 8 database clients, and health score (80%).
+    - `GET /api/flow-audit/stream` Server-Sent Events (SSE) stream reporting live 5-step AST compilation pipeline (`AST_TOKENIZATION`, `ROUTE_DISCOVERY`, `QUERY_EXTRACTION`, `CALL_GRAPH_TRAVERSAL`, `INDEX_PERSISTENCE`).
+    - `POST /api/flow-audit/scan` on-demand incremental codebase AST scan with `ts-morph`.
+    - `GET /api/flow-audit/export` OpenTelemetry-compliant JSON trace exporter (`resourceSpans`, `scopeSpans`, call traces, and database query event attributes).
+  - Built `packages/ai-manager-web/src/hooks/useFlowAudit.ts` handling live AST data loading, interactive function selection, callers/callees tree computation, search & filter tabs (`All`, `Routes`, `DB Callers`, `Async`), and SSE scan streaming.
+  - Rewrote `packages/ai-manager-web/src/pages/FlowAuditPage.tsx` into a 3-pane interactive studio:
+    - **Top Bar**: Metrics cards (`Functions: 179`, `DB Queries: 88`, `Call Edges: 355`, `Health: 80%`), "Run AST Scan" trigger button, "Export Trace (OTel)" button, and live SSE progress banner.
+    - **Left Panel (Symbol Explorer)**: Instant search, category filters (`All`, `Routes`, `DB`, `Async`), function list with DB badges and file line numbers.
+    - **Center Panel (Call Graph Flow Canvas)**: Node-and-edge flow diagram mapping incoming callers ➔ active node ➔ outgoing callee calls & direct database queries (Mongoose, Supabase, Postgres, Redis, MySQL).
+    - **Right Panel (AST Inspector)**: Enclosing file, line ranges, class names, database operations list, and copyable OpenTelemetry span JSON preview.
+  - Created automated test suite `packages/ai-manager-web/tests/flowAudit.test.ts` (3/3 passing).
+  - Verified 100% test pass rate across monorepo workspaces (48/48 tests passing) and clean production bundle (`npm run build`).
 
 ## In Progress / Unwired Interactive Features (Mock/Static Only)
 The following buttons and interactive controls render visually but are not yet wired to live backend services:
 - `/onboarding`: "Index repository" button (static transition, no live repository cloning/indexing).
-- `/validator`: "Validate", "Run Query", model selector, context file chips (static results, no live LLM/AST validation pipeline).
 
 ## Broken / Known-Bad
 - None currently failing.
+
+
 

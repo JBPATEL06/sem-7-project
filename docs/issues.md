@@ -5,4 +5,5 @@
 
 ## Known Gaps
 - `/projects/:id` project detail view is not yet implemented (project cards intentionally inert).
-- Query execution in `/validator` and schema loader in `/db-manager` use mock schema responses until backend SQLite loader is wired.
+- `/validator` LLM query execution blocked until external LLM credentials configured.
+

@@ -437,7 +437,7 @@ export function useDbManager(projectId: string = 'acme-api') {
     }
   };
 
-  // Initial load: fetch available connections without auto-selecting any database
+  // Initial load: fetch available connections and auto-select active/default connection
   useEffect(() => {
     let isMounted = true;
     const init = async () => {
@@ -446,7 +446,15 @@ export function useDbManager(projectId: string = 'acme-api') {
           `/api/db/connections?projectId=${encodeURIComponent(projectId)}`
         );
         if (res.ok && res.data?.connections && isMounted) {
-          setConnections(res.data.connections);
+          const conns = res.data.connections;
+          setConnections(conns);
+
+          const savedConnId = localStorage.getItem(`ai_manager_active_conn_${projectId}`);
+          const targetConn = conns.find(c => c.id === savedConnId) || conns.find(c => c.isDefault) || conns[0];
+          if (targetConn) {
+            setActiveConnectionId(targetConn.id);
+            fetchSchema(targetConn.id);
+          }
         }
       } catch (err) {
         console.error('[useDbManager] Connection fetch error:', err);
@@ -461,7 +469,7 @@ export function useDbManager(projectId: string = 'acme-api') {
     return () => {
       isMounted = false;
     };
-  }, [projectId]);
+  }, [projectId, fetchSchema]);
 
   // Reload table data on table change
   useEffect(() => {
@@ -517,6 +525,65 @@ export function useDbManager(projectId: string = 'acme-api') {
     URL.revokeObjectURL(url);
   };
 
+  // 10. Export schema (SQL DDL or JSON)
+  const exportSchema = async (format: 'sql' | 'json' = 'sql') => {
+    try {
+      const res = await apiFetch<{ success: boolean; format: string; ddl?: string; fileName?: string; schema?: any; error?: string }>(
+        `/api/db/export?projectId=${encodeURIComponent(projectId)}&connectionId=${encodeURIComponent(activeConnectionId || '')}&format=${format}`
+      );
+      if (res.ok && res.data?.success) {
+        let content = '';
+        let filename = res.data.fileName || `${projectId}_schema.${format}`;
+        let mimeType = format === 'json' ? 'application/json' : 'text/plain';
+
+        if (format === 'json') {
+          content = JSON.stringify(res.data.schema || res.data, null, 2);
+        } else {
+          content = res.data.ddl || '';
+        }
+
+        const blob = new Blob([content], { type: mimeType });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = filename;
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        URL.revokeObjectURL(url);
+        return { success: true, fileName: filename };
+      }
+      return { success: false, error: res.data?.error || res.error || 'Failed to export schema' };
+    } catch (err: any) {
+      return { success: false, error: err.message };
+    }
+  };
+
+  // 11. Import schema (SQL script or JSON)
+  const importSchema = async (content: string, format: 'sql' | 'json' = 'sql') => {
+    try {
+      const res = await apiFetch<{ success: boolean; message?: string; statementsExecuted?: number; error?: string }>(
+        '/api/db/import',
+        {
+          method: 'POST',
+          body: JSON.stringify({
+            projectId,
+            connectionId: activeConnectionId,
+            format,
+            content
+          })
+        }
+      );
+      if (res.ok && res.data?.success) {
+        await fetchSchema();
+        return { success: true, message: res.data.message };
+      }
+      return { success: false, error: res.data?.error || res.error || 'Failed to import schema' };
+    } catch (err: any) {
+      return { success: false, error: err.message || 'Import error' };
+    }
+  };
+
   return {
     connections,
     activeConnectionId,
@@ -539,6 +606,9 @@ export function useDbManager(projectId: string = 'acme-api') {
     syncErDiagram,
     createTable,
     createCollection,
-    downloadResults
+    downloadResults,
+    exportSchema,
+    importSchema
   };
 }
+

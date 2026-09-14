@@ -1,12 +1,48 @@
-Penpot / Figma UI Specs Auto-Discovery Fix:
+# What is Flow Audit?
 
-1. **Root Cause**:
-   Just like the Diagram studio issue, the Screen / Penpot Specs API (`GET /api/screens`) previously only queried records registered in `.ai-manager/screens.json` (or Mongo). `.penpot.json` layout files created directly on disk in the `ui/` directory (such as `generated_hey_genrate_some_design.penpot.json`, `jeel.penpot.json`, and `modern_saas_analytics_dashboard.penpot.json`) were not automatically imported or indexed into the store.
+**Flow Audit** (`/flow-audit`) is the **AST (Abstract Syntax Tree) Code Intelligence & Call Graph Visualizer** of the AI Manager platform.
 
-2. **Fix Implemented**:
-   - Added `syncDiskScreensToStore()` in `screenRoutes.ts` to scan the `ui/` workspace directory for any `.penpot.json` files on API list requests.
-   - Unindexed `.penpot.json` files found on disk are automatically parsed and registered into `screens.json` / Mongo.
+It performs static analysis on your TypeScript and JavaScript source code to construct a comprehensive map of how API routes, functions, and database queries connect to each other.
 
-3. **Verification**:
-   - All `.penpot.json` files in the `ui/` folder are now auto-indexed and visible in the Penpot Specs dropdown in the frontend Web UI.
-   - Vitest suite passed cleanly (8/8 tests passed).
+---
+
+## 1. What Problem Does Flow Audit Solve?
+
+In modern web applications:
+- It is difficult to know which API endpoint touches which database tables or MongoDB collections.
+- Database queries are often buried several function calls deep (transitive dependencies).
+- When altering a database schema or refactoring a function, developers risk breaking hidden callers.
+
+**Flow Audit solves this by statically inspecting the entire codebase without needing to run the code**, generating a searchable call graph and tracking every database operation from endpoint to disk.
+
+---
+
+## 2. Key Capabilities & Features
+
+### 🔍 1. Multi-Dialect Database Query Extraction
+Flow Audit inspects code for query operations across:
+- **MongoDB / Mongoose**: `.find()`, `.create()`, `.updateOne()`, `.aggregate()`, `.deleteMany()`
+- **PostgreSQL / Supabase / SQL**: `SELECT`, `INSERT`, `UPDATE`, `pg.query()`, `.from('table')`
+- **Redis / Valkey**: `client.get()`, `client.set()`, `client.del()`, `client.pipeline()`
+- **SQLite / LibSQL**: `db.exec()`, `db.prepare()`, `sql.js` WASM queries
+- **Firebase / Firestore**: `.collection()`, `.doc()`, `.get()`
+
+### 🔄 2. Transitive Call-Graph Traversal
+If `GET /api/users` calls `userService.getUser()`, which in turn calls `dbDriver.findUser()`, Flow Audit traces the entire chain and marks `GET /api/users` as **Touching the `users` table transitively**.
+
+### 📊 3. The 3-Pane Interactive Studio (`/flow-audit`)
+1. **Symbol Explorer (Left)**:
+   - Filter functions by category: `All`, `Routes`, `DB Callers`, `Async`.
+   - Instant search across function names, classes, and source files.
+2. **Call Graph Canvas (Center)**:
+   - Visual flow mapping: `Incoming Callers` ➔ `Selected Function` ➔ `Outgoing Callees & Database Operations`.
+3. **AST Inspector (Right)**:
+   - File path, start & end line numbers, class name, and direct database queries.
+   - OpenTelemetry span preview.
+
+### 📡 4. Live Incremental AST Scanning (SSE)
+- Built with `ts-morph` and the `@ai-manager/db-context-indexer` engine.
+- Runs on-demand incremental scans and streams real-time progress via **Server-Sent Events (SSE)** through 5 compilation phases (`AST_TOKENIZATION` ➔ `ROUTE_DISCOVERY` ➔ `QUERY_EXTRACTION` ➔ `CALL_GRAPH_TRAVERSAL` ➔ `INDEX_PERSISTENCE`).
+
+### 🛡️ 5. OpenTelemetry (OTel) Export
+- Generates standard OpenTelemetry-compliant JSON trace spans (`resourceSpans`, `scopeSpans`) ready for import into observability platforms (Datadog, Jaeger, Grafana Tempo).

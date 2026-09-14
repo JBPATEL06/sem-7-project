@@ -20,6 +20,7 @@ import { adminRouter } from './adminRoutes.js';
 import { gitRouter } from './gitRoutes.js';
 import { diagramRouter } from './diagramRoutes.js';
 import { screenRouter } from './screenRoutes.js';
+import { flowAuditRouter } from './flowAuditRoutes.js';
 import contextRouter from './contextRoutes.js';
 import { PgDriver } from './drivers/pgDriver.js';
 import { RedisDriver } from './drivers/redisDriver.js';
@@ -33,15 +34,28 @@ const __dirname = path.dirname(__filename);
 const app = express();
 const PORT = process.env.PORT || 3000;
 
+const isProd = process.env.NODE_ENV === 'production';
+const allowedOrigins = process.env.ALLOWED_ORIGINS
+  ? process.env.ALLOWED_ORIGINS.split(',').map((s) => s.trim())
+  : ['http://localhost:5173', 'http://localhost:3000', 'http://127.0.0.1:5173', 'http://127.0.0.1:3000'];
+
 app.disable('x-powered-by');
 app.use(helmet({
   contentSecurityPolicy: false
 }));
 app.use(cors({
-  origin: '*',
+  origin: isProd
+    ? (origin, callback) => {
+        if (!origin || allowedOrigins.includes(origin)) {
+          callback(null, true);
+        } else {
+          callback(new Error('Blocked by CORS policy'));
+        }
+      }
+    : '*',
   credentials: true
 }));
-app.use(express.json());
+app.use(express.json({ limit: '10mb' }));
 
 app.use('/api/auth', authRouter);
 app.use('/api/admin', adminRouter);
@@ -54,17 +68,31 @@ app.use('/api/qa', qaRouter);
 app.use('/api/git', gitRouter);
 app.use('/api/diagrams', diagramRouter);
 app.use('/api/screens', screenRouter);
+app.use('/api/flow-audit', flowAuditRouter);
 app.use('/api', contextRouter);
 
 
+// G3: Global 404 handler for API routes
 app.use('/api', (req, res) => {
-  res.status(404).json({ error: `API route ${req.method} ${req.originalUrl} not found.` });
+  res.status(404).json({ success: false, error: `API route ${req.method} ${req.path} not found.` });
 });
 
-// Global API error handler
+// G3: Global API error handler — suppresses internal stack traces and sanitizes filesystem paths
 app.use((err: any, _req: express.Request, res: express.Response, _next: express.NextFunction) => {
   console.error('[ai-manager-web] Uncaught Server Error:', err);
-  res.status(500).json({ error: err.message || 'Internal Server Error' });
+  const statusCode = Number(err.status || err.statusCode) || 500;
+  const rawMsg = err.message || 'Internal Server Error';
+  const safeMessage = isProd && statusCode === 500
+    ? 'Internal Server Error'
+    : String(rawMsg)
+        .replace(/[a-zA-Z]:\\[^\s:;,]+/g, '[redacted_path]')
+        .replace(/\/[a-zA-Z0-9_\-\.\/]+\/[a-zA-Z0-9_\-\.]+/g, '[redacted_path]')
+        .replace(/:[^\s@]+@/g, ':•••@');
+
+  res.status(statusCode).json({
+    success: false,
+    error: safeMessage
+  });
 });
 
 const distPath = path.resolve(__dirname, '../dist');

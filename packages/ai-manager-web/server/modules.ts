@@ -51,34 +51,6 @@ modulesRouter.get('/hub', localOrAuth, async (_req: AuthRequest, res: Response):
   }
 });
 
-// GET /api/modules/validator — Live design system inspection
-modulesRouter.get('/validator', localOrAuth, async (_req: AuthRequest, res: Response): Promise<void> => {
-  try {
-    const cssPath = path.resolve('src/index.css');
-    let cssText = '';
-    if (fs.existsSync(cssPath)) {
-      cssText = fs.readFileSync(cssPath, 'utf8');
-    }
-
-    const hasDarkTheme = cssText.includes('[data-theme="dark"]');
-    const hasLightTheme = cssText.includes('[data-theme="light"]');
-
-    res.status(200).json({
-      matchRate: hasDarkTheme && hasLightTheme ? '100%' : '94%',
-      screensCount: 9,
-      variancesCount: 0,
-      designSystem: 'Obsidian Dark / Slate Light',
-      tokens: [
-        { token: '--background (dark)', figmaVal: '#0B0D14', codeVal: '#0B0D14', status: 'MATCH' },
-        { token: '--background (light)', figmaVal: '#F8FAFC', codeVal: '#F8FAFC', status: 'MATCH' },
-        { token: '--primary', figmaVal: '#7C3AED', codeVal: '#7C3AED', status: 'MATCH' }
-      ]
-    });
-  } catch (err: any) {
-    res.status(500).json({ error: `Validator error: ${err.message}` });
-  }
-});
-
 // GET /api/modules/qa — Live Vitest test file parser
 modulesRouter.get('/qa', localOrAuth, async (_req: AuthRequest, res: Response): Promise<void> => {
   try {

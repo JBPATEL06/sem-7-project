@@ -70,6 +70,7 @@ export class RedisDriver {
   }
 
   // G3 fix: use SCAN cursor instead of KEYS * to avoid blocking prod Redis (max 100 keys)
+  // Audit fix: use client.pipeline() to batch TYPE, TTL, and value previews in 2 roundtrips
   public static async getSchema(uri: string): Promise<RedisKeyInfo[]> {
     const client = this.getClient(uri);
     if (client.status === 'wait') {
@@ -89,34 +90,70 @@ export class RedisDriver {
       }
     } while (cursor !== '0' && collectedKeys.length < MAX_KEYS);
 
-    const result: RedisKeyInfo[] = [];
+    if (collectedKeys.length === 0) {
+      return [];
+    }
 
+    // Step 1: Batch TYPE and TTL queries via Pipeline
+    const metaPipeline = client.pipeline();
     for (const key of collectedKeys) {
-      const type = await client.type(key);
-      const ttl = await client.ttl(key);
-      let valuePreview = '';
+      metaPipeline.type(key);
+      metaPipeline.ttl(key);
+    }
+    const metaResults = await metaPipeline.exec();
 
-      try {
+    const keysMeta: Array<{ key: string; type: string; ttl: number }> = [];
+    for (let i = 0; i < collectedKeys.length; i++) {
+      const key = collectedKeys[i];
+      const typeRes = metaResults ? metaResults[i * 2] : null;
+      const ttlRes = metaResults ? metaResults[i * 2 + 1] : null;
+
+      const rawType = (typeRes && !typeRes[0] ? String(typeRes[1]) : 'none').toLowerCase();
+      const rawTtl = ttlRes && !ttlRes[0] ? Number(ttlRes[1]) : -1;
+
+      keysMeta.push({ key, type: rawType, ttl: rawTtl });
+    }
+
+    // Step 2: Batch Preview Queries via Pipeline
+    const previewPipeline = client.pipeline();
+    for (const item of keysMeta) {
+      if (item.type === 'string') {
+        previewPipeline.get(item.key);
+      } else if (item.type === 'hash') {
+        previewPipeline.hlen(item.key);
+      } else if (item.type === 'list') {
+        previewPipeline.llen(item.key);
+      } else if (item.type === 'set') {
+        previewPipeline.scard(item.key);
+      } else if (item.type === 'zset') {
+        previewPipeline.zcard(item.key);
+      } else {
+        previewPipeline.ping();
+      }
+    }
+    const previewResults = await previewPipeline.exec();
+
+    const result: RedisKeyInfo[] = [];
+    for (let i = 0; i < keysMeta.length; i++) {
+      const { key, type, ttl } = keysMeta[i];
+      const previewRes = previewResults ? previewResults[i] : null;
+      let valuePreview = '—';
+
+      if (previewRes && !previewRes[0]) {
+        const val = previewRes[1];
         if (type === 'string') {
-          const val = await client.get(key);
-          valuePreview = val ? (val.length > 60 ? val.slice(0, 60) + '...' : val) : '';
+          valuePreview = typeof val === 'string' ? (val.length > 60 ? val.slice(0, 60) + '...' : val) : String(val);
         } else if (type === 'hash') {
-          const count = await client.hlen(key);
-          valuePreview = `{ ${count} fields }`;
+          valuePreview = `{ ${val} fields }`;
         } else if (type === 'list') {
-          const len = await client.llen(key);
-          valuePreview = `[ ${len} items ]`;
+          valuePreview = `[ ${val} items ]`;
         } else if (type === 'set') {
-          const card = await client.scard(key);
-          valuePreview = `( ${card} members )`;
+          valuePreview = `( ${val} members )`;
         } else if (type === 'zset') {
-          const card = await client.zcard(key);
-          valuePreview = `{ ${card} sorted members }`;
+          valuePreview = `{ ${val} sorted members }`;
         } else {
-          valuePreview = type;
+          valuePreview = type.toUpperCase();
         }
-      } catch {
-        valuePreview = '—';
       }
 
       result.push({

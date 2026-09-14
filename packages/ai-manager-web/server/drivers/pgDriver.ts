@@ -74,67 +74,68 @@ export class PgDriver {
     const client = await pool.connect();
 
     try {
-      // 1. Get all public user tables
-      const tablesRes = await client.query(`
-        SELECT table_name 
-        FROM information_schema.tables 
-        WHERE table_schema = 'public' 
-          AND table_type = 'BASE TABLE'
-        ORDER BY table_name;
+      // 1. Get all public user tables and their columns in a single joined query
+      const colsRes = await client.query(`
+        SELECT 
+          c.table_name,
+          c.column_name,
+          c.data_type,
+          c.is_nullable,
+          c.column_default,
+          CASE WHEN pk.column_name IS NOT NULL THEN true ELSE false END AS is_pk
+        FROM information_schema.columns c
+        JOIN information_schema.tables t 
+          ON c.table_name = t.table_name 
+          AND c.table_schema = t.table_schema
+        LEFT JOIN (
+          SELECT ku.table_name, ku.column_name
+          FROM information_schema.table_constraints tc
+          JOIN information_schema.key_column_usage ku
+            ON tc.constraint_name = ku.constraint_name
+            AND tc.table_schema = ku.table_schema
+          WHERE tc.constraint_type = 'PRIMARY KEY'
+            AND tc.table_schema = 'public'
+        ) pk ON c.column_name = pk.column_name AND c.table_name = pk.table_name
+        WHERE c.table_schema = 'public' 
+          AND t.table_type = 'BASE TABLE'
+        ORDER BY c.table_name, c.ordinal_position;
       `);
 
-      const tables: PgTableSchema[] = [];
+      // 2. Fetch approximate row counts for all tables in a single query
+      const rowCountsRes = await client.query(`
+        SELECT relname AS table_name, COALESCE(n_live_tup, 0) AS row_count
+        FROM pg_stat_user_tables
+        WHERE schemaname = 'public';
+      `);
 
-      for (const row of tablesRes.rows) {
+      const rowCountMap = new Map<string, number>();
+      for (const r of rowCountsRes.rows) {
+        rowCountMap.set(r.table_name, parseInt(r.row_count || '0', 10));
+      }
+
+      // 3. Group columns by table
+      const tablesMap = new Map<string, PgTableSchema>();
+
+      for (const row of colsRes.rows) {
         const tableName = row.table_name;
-
-        // 2. Get columns and primary key constraints
-        const colsRes = await client.query(`
-          SELECT 
-            c.column_name,
-            c.data_type,
-            c.is_nullable,
-            c.column_default,
-            CASE WHEN pk.column_name IS NOT NULL THEN true ELSE false END AS is_pk
-          FROM information_schema.columns c
-          LEFT JOIN (
-            SELECT ku.column_name, ku.table_name
-            FROM information_schema.table_constraints tc
-            JOIN information_schema.key_column_usage ku
-              ON tc.constraint_name = ku.constraint_name
-              AND tc.table_schema = ku.table_schema
-            WHERE tc.constraint_type = 'PRIMARY KEY'
-              AND tc.table_schema = 'public'
-              AND tc.table_name = $1
-          ) pk ON c.column_name = pk.column_name AND c.table_name = pk.table_name
-          WHERE c.table_schema = 'public' AND c.table_name = $1
-          ORDER BY c.ordinal_position;
-        `, [tableName]);
-
-        // 3. Approximate row count
-        let rowCount = 0;
-        try {
-          const safeTblName = tableName.replace(/"/g, '""');
-          const countRes = await client.query(`SELECT COUNT(*) as count FROM "${safeTblName}"`);
-          rowCount = parseInt(countRes.rows[0]?.count || '0', 10);
-        } catch {
-          rowCount = 0;
+        if (!tablesMap.has(tableName)) {
+          tablesMap.set(tableName, {
+            name: tableName,
+            rowCount: rowCountMap.get(tableName) ?? 0,
+            columns: []
+          });
         }
 
-        tables.push({
-          name: tableName,
-          rowCount,
-          columns: colsRes.rows.map((col: any) => ({
-            name: col.column_name,
-            type: col.data_type,
-            notNull: col.is_nullable === 'NO',
-            dfltValue: col.column_default,
-            pk: col.is_pk
-          }))
+        tablesMap.get(tableName)!.columns.push({
+          name: row.column_name,
+          type: row.data_type,
+          notNull: row.is_nullable === 'NO',
+          dfltValue: row.column_default,
+          pk: row.is_pk
         });
       }
 
-      return tables;
+      return Array.from(tablesMap.values());
     } finally {
       client.release();
     }

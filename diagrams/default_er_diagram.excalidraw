@@ -1,0 +1,33 @@
+{
+  "type": "excalidraw",
+  "version": 2,
+  "source": "https://ai-manager.local",
+  "name": "default_er_diagram",
+  "elements": [
+    {
+      "type": "rectangle",
+      "x": 100,
+      "y": 100,
+      "width": 240,
+      "height": 122,
+      "backgroundColor": "#3b82f620",
+      "strokeColor": "#3b82f6",
+      "strokeWidth": 2,
+      "roughness": 1,
+      "borderRadius": 8
+    },
+    {
+      "type": "text",
+      "x": 116,
+      "y": 116,
+      "text": "TABLE: test_users\n------------------\n  id: INTEGER\n  email: TEXT\n  created_at: TEXT",
+      "fontSize": 13,
+      "fontFamily": 3
+    }
+  ],
+  "appState": {
+    "viewBackgroundColor": "#1e1e24",
+    "theme": "dark"
+  },
+  "files": {}
+}

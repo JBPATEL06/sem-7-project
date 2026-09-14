@@ -11,14 +11,14 @@ const CREDS_FILE = path.resolve(process.cwd(), '.ai-manager/credentials.enc');
 const DBS_DIR = path.resolve(process.cwd(), '.ai-manager/dbs');
 const PROJECTS_FILE = path.resolve(process.cwd(), '.ai-manager/projects.json');
 
-interface StoredCredentials {
+export interface StoredCredentials {
   groq?: string;
   github?: string;
   openai?: string;
   updatedAt?: string;
 }
 
-function loadDecryptedCredentials(): StoredCredentials {
+export function loadDecryptedCredentials(): StoredCredentials {
   try {
     if (fs.existsSync(CREDS_FILE)) {
       const encryptedData = fs.readFileSync(CREDS_FILE, 'utf-8');
