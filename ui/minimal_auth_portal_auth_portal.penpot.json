@@ -1,0 +1,318 @@
+{
+  "schemaVersion": "2.0",
+  "generator": "AI-Manager Penpot Layout Spec Bridge",
+  "exportedAt": "2026-09-14T11:10:30.317Z",
+  "name": "Minimal Auth Portal Auth Portal",
+  "description": "Modified with AI: Appended Metric KPI Card",
+  "theme": {
+    "primaryColor": "#7c3aed",
+    "backgroundColor": "#090d16",
+    "surfaceColor": "#131b2e",
+    "textColor": "#f8fafc",
+    "accentColor": "#10b981",
+    "borderRadius": 12
+  },
+  "board": {
+    "id": "board_screen_stitch_1789384230247_iwk5b",
+    "name": "Minimal Auth Portal Auth Portal Canvas",
+    "x": 0,
+    "y": 0,
+    "width": 1440,
+    "height": 900,
+    "fills": [
+      {
+        "fillColor": "#090d16",
+        "fillOpacity": 1
+      }
+    ],
+    "shapes": [
+      {
+        "id": "auth-card-1789384230247",
+        "name": "Auth Modal Card",
+        "type": "frame",
+        "x": 500,
+        "y": 160,
+        "width": 440,
+        "height": 580,
+        "borderRadius": 16,
+        "fills": [
+          {
+            "fillColor": "#131b2e"
+          }
+        ],
+        "strokes": [
+          {
+            "strokeColor": "#1e293b",
+            "strokeWidth": 1
+          }
+        ],
+        "layout": "none",
+        "padding": 32,
+        "children": [
+          {
+            "id": "auth-logo",
+            "name": "Brand Logo",
+            "type": "text",
+            "x": 32,
+            "y": 32,
+            "width": 376,
+            "height": 32,
+            "borderRadius": 0,
+            "fills": [
+              {
+                "fillColor": "#1e293b",
+                "fillOpacity": 1
+              }
+            ],
+            "strokes": [],
+            "text": "🔐 Secure SSO Portal",
+            "fontSize": 22,
+            "fontWeight": "bold",
+            "color": "#7c3aed",
+            "layout": "none",
+            "children": []
+          },
+          {
+            "id": "auth-sub",
+            "name": "Subtitle",
+            "type": "text",
+            "x": 32,
+            "y": 68,
+            "width": 376,
+            "height": 24,
+            "borderRadius": 0,
+            "fills": [
+              {
+                "fillColor": "#1e293b",
+                "fillOpacity": 1
+              }
+            ],
+            "strokes": [],
+            "text": "Enter your enterprise credentials to access workspace",
+            "fontSize": 13,
+            "color": "#94a3b8",
+            "layout": "none",
+            "children": []
+          },
+          {
+            "id": "auth-sso-btn",
+            "name": "GitHub SSO Button",
+            "type": "rect",
+            "x": 32,
+            "y": 110,
+            "width": 376,
+            "height": 44,
+            "borderRadius": 8,
+            "fills": [
+              {
+                "fillColor": "#1e293b"
+              }
+            ],
+            "strokes": [
+              {
+                "strokeColor": "#1e293b",
+                "strokeWidth": 1
+              }
+            ],
+            "text": "❖ Sign in with GitHub",
+            "fontSize": 14,
+            "fontWeight": "600",
+            "color": "#f8fafc",
+            "layout": "none",
+            "children": []
+          },
+          {
+            "id": "auth-div",
+            "name": "Or Divider",
+            "type": "text",
+            "x": 32,
+            "y": 170,
+            "width": 376,
+            "height": 20,
+            "borderRadius": 0,
+            "fills": [
+              {
+                "fillColor": "#1e293b",
+                "fillOpacity": 1
+              }
+            ],
+            "strokes": [],
+            "text": "———————— or continue with email ————————",
+            "fontSize": 11,
+            "color": "#94a3b8",
+            "layout": "none",
+            "children": []
+          },
+          {
+            "id": "auth-email-lbl",
+            "name": "Email Label",
+            "type": "text",
+            "x": 32,
+            "y": 204,
+            "width": 376,
+            "height": 20,
+            "borderRadius": 0,
+            "fills": [
+              {
+                "fillColor": "#1e293b",
+                "fillOpacity": 1
+              }
+            ],
+            "strokes": [],
+            "text": "Work Email Address",
+            "fontSize": 12,
+            "fontWeight": "600",
+            "color": "#f8fafc",
+            "layout": "none",
+            "children": []
+          },
+          {
+            "id": "auth-email-input",
+            "name": "Email Input",
+            "type": "rect",
+            "x": 32,
+            "y": 228,
+            "width": 376,
+            "height": 44,
+            "borderRadius": 8,
+            "fills": [
+              {
+                "fillColor": "#0c111d"
+              }
+            ],
+            "strokes": [
+              {
+                "strokeColor": "#1e293b",
+                "strokeWidth": 1
+              }
+            ],
+            "text": "alex.developer@company.io",
+            "fontSize": 13,
+            "color": "#f8fafc",
+            "layout": "none",
+            "children": []
+          },
+          {
+            "id": "auth-pwd-lbl",
+            "name": "Password Label",
+            "type": "text",
+            "x": 32,
+            "y": 290,
+            "width": 376,
+            "height": 20,
+            "borderRadius": 0,
+            "fills": [
+              {
+                "fillColor": "#1e293b",
+                "fillOpacity": 1
+              }
+            ],
+            "strokes": [],
+            "text": "Password",
+            "fontSize": 12,
+            "fontWeight": "600",
+            "color": "#f8fafc",
+            "layout": "none",
+            "children": []
+          },
+          {
+            "id": "auth-pwd-input",
+            "name": "Password Input",
+            "type": "rect",
+            "x": 32,
+            "y": 314,
+            "width": 376,
+            "height": 44,
+            "borderRadius": 8,
+            "fills": [
+              {
+                "fillColor": "#0c111d"
+              }
+            ],
+            "strokes": [
+              {
+                "strokeColor": "#1e293b",
+                "strokeWidth": 1
+              }
+            ],
+            "text": "••••••••••••••••",
+            "fontSize": 13,
+            "color": "#f8fafc",
+            "layout": "none",
+            "children": []
+          },
+          {
+            "id": "auth-submit",
+            "name": "Submit Button",
+            "type": "rect",
+            "x": 32,
+            "y": 384,
+            "width": 376,
+            "height": 48,
+            "borderRadius": 8,
+            "fills": [
+              {
+                "fillColor": "#7c3aed"
+              }
+            ],
+            "strokes": [],
+            "text": "Sign In to Workspace ➔",
+            "fontSize": 14,
+            "fontWeight": "bold",
+            "color": "#ffffff",
+            "layout": "none",
+            "children": []
+          },
+          {
+            "id": "auth-footer",
+            "name": "Security Notice",
+            "type": "text",
+            "x": 32,
+            "y": 450,
+            "width": 376,
+            "height": 20,
+            "borderRadius": 0,
+            "fills": [
+              {
+                "fillColor": "#1e293b",
+                "fillOpacity": 1
+              }
+            ],
+            "strokes": [],
+            "text": "🔒 Protected with AES-256 & Argon2 Hashing",
+            "fontSize": 11,
+            "color": "#10b981",
+            "layout": "none",
+            "children": []
+          }
+        ]
+      },
+      {
+        "id": "kpi-card-1789384230315",
+        "name": "AI Metric Card",
+        "type": "rect",
+        "x": 292,
+        "y": 104,
+        "width": 264,
+        "height": 120,
+        "borderRadius": 12,
+        "fills": [
+          {
+            "fillColor": "#131b2e"
+          }
+        ],
+        "strokes": [
+          {
+            "strokeColor": "#1e293b",
+            "strokeWidth": 1
+          }
+        ],
+        "text": "⚡ Realtime Metric\n+34.2% Optimization",
+        "fontSize": 14,
+        "color": "#f8fafc",
+        "layout": "none",
+        "children": []
+      }
+    ]
+  }
+}

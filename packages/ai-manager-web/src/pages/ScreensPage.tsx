@@ -56,9 +56,14 @@ import {
   PanelLeftOpen,
   PanelRightClose,
   PanelRightOpen,
-  Sidebar
+  Sidebar,
+  MessageSquare,
+  Bot,
+  User as UserIcon,
+  Send,
+  CornerDownLeft
 } from 'lucide-react';
-import { useScreens, ScreenLayoutSpec, PenpotComponent } from '../hooks/useScreens';
+import { useScreens, ScreenLayoutSpec, PenpotComponent, ChatMessage } from '../hooks/useScreens';
 import { useTheme } from '../context/ThemeContext';
 
 type ResizeHandle = 'nw' | 'n' | 'ne' | 'e' | 'se' | 's' | 'sw' | 'w';
@@ -73,12 +78,16 @@ export function ScreensPage({ selectedProject }: { selectedProject?: { id: strin
     templates,
     isLoading,
     isGenerating,
+    animatingStep,
+    animationProgress,
     error,
     selectScreen,
     createScreen,
     updateScreen,
     deleteScreen,
     generateAiLayout,
+    generateStitchScreen,
+    sendChatMessage,
     exportPenpotJson,
     addComponent,
     updateComponent,
@@ -89,8 +98,10 @@ export function ScreensPage({ selectedProject }: { selectedProject?: { id: strin
   // Studio Tools & View States
   const [activeTool, setActiveTool] = useState<'select' | 'frame' | 'rect' | 'circle' | 'text' | 'component' | 'hand'>('select');
   const [activeTab, setActiveTab] = useState<'design' | 'prototype' | 'code'>('design');
-  const [leftTab, setLeftTab] = useState<'layers' | 'assets' | 'pages'>('layers');
+  const [leftTab, setLeftTab] = useState<'layers' | 'assets' | 'pages' | 'chat'>('chat');
   const [codeTab, setCodeTab] = useState<'penpot' | 'react' | 'tokens'>('penpot');
+  const [chatInput, setChatInput] = useState<string>('');
+  const chatEndRef = useRef<HTMLDivElement>(null);
   const [showLeftSidebar, setShowLeftSidebar] = useState<boolean>(() => {
     return localStorage.getItem('penpot_left_sidebar_visible') !== 'false';
   });
@@ -128,11 +139,24 @@ export function ScreensPage({ selectedProject }: { selectedProject?: { id: strin
     }
   };
 
-  const [selectedCompId, setSelectedCompId] = useState<string | null>(null);
+  const [selectedCompIds, setSelectedCompIds] = useState<string[]>([]);
+  const [selectedScreenIds, setSelectedScreenIds] = useState<string[]>([]);
+  const [showQuickAiBar, setShowQuickAiBar] = useState<boolean>(false);
+  const [quickPrompt, setQuickPrompt] = useState<string>('');
+  const quickInputRef = useRef<HTMLInputElement>(null);
+
+  // Backward-compatible alias for single active selection
+  const selectedCompId = selectedCompIds[0] || null;
+  const setSelectedCompId = useCallback((id: string | null) => {
+    setSelectedCompIds(id ? [id] : []);
+  }, []);
+
   const [hoveredCompId, setHoveredCompId] = useState<string | null>(null);
   const [zoom, setZoom] = useState<number>(75);
   const [prompt, setPrompt] = useState('');
   const [showAiModal, setShowAiModal] = useState(false);
+  const [aiMode, setAiMode] = useState<'create' | 'modify'>('create');
+  const [aiTheme, setAiTheme] = useState<'dark' | 'light' | 'cyberpunk' | 'minimal'>('dark');
   const [showNewModal, setShowNewModal] = useState(false);
   const [showPresentModal, setShowPresentModal] = useState(false);
   const [newScreenName, setNewScreenName] = useState('');
@@ -228,6 +252,31 @@ export function ScreensPage({ selectedProject }: { selectedProject?: { id: strin
     }
   }, [currentScreen?.id, centerArtboard]);
 
+  // Auto-scroll chat conversation to latest message
+  useEffect(() => {
+    if (leftTab === 'chat' && chatEndRef.current) {
+      chatEndRef.current.scrollIntoView({ behavior: 'smooth' });
+    }
+  }, [currentScreen?.chatHistory, leftTab]);
+
+  const handleChatSubmit = async (e?: React.FormEvent, customPrompt?: string) => {
+    if (e) e.preventDefault();
+    const textToSend = (customPrompt || chatInput).trim();
+    if (!textToSend || isGenerating) return;
+
+    setChatInput('');
+    const hasSelection = selectedCompIds.length > 0;
+    const targetMode = hasSelection ? 'modify' : (aiMode === 'modify' ? 'modify' : 'create');
+
+    await generateStitchScreen({
+      prompt: textToSend,
+      mode: targetMode,
+      selectedCompIds,
+      selectedScreenIds,
+      theme: aiTheme
+    });
+  };
+
   // Find component recursively
   const findComponent = useCallback((comps: PenpotComponent[], id: string): PenpotComponent | null => {
     for (const c of comps) {
@@ -305,10 +354,18 @@ export function ScreensPage({ selectedProject }: { selectedProject?: { id: strin
     window.addEventListener('mouseup', onUp);
   };
 
-  // Keyboard shortcuts (Figma standard)
+  // Keyboard shortcuts (Figma standard + Stitch 'E' Quick Edit)
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
       if (['INPUT', 'TEXTAREA', 'SELECT'].includes((e.target as HTMLElement).tagName)) {
+        return;
+      }
+
+      // 'E' Key Shortcut: Open Instant Quick AI Edit Bar
+      if ((e.key === 'e' || e.key === 'E') && !e.ctrlKey && !e.metaKey && !e.altKey) {
+        e.preventDefault();
+        setShowQuickAiBar(true);
+        setTimeout(() => quickInputRef.current?.focus(), 50);
         return;
       }
 
@@ -322,17 +379,17 @@ export function ScreensPage({ selectedProject }: { selectedProject?: { id: strin
         setIsAltPressed(true);
       }
 
-      // Delete / Backspace
-      if ((e.key === 'Delete' || e.key === 'Backspace') && selectedCompId) {
+      // Delete / Backspace (Multi-element support)
+      if ((e.key === 'Delete' || e.key === 'Backspace') && selectedCompIds.length > 0) {
         e.preventDefault();
-        deleteComponent(selectedCompId);
-        setSelectedCompId(null);
+        selectedCompIds.forEach(id => deleteComponent(id));
+        setSelectedCompIds([]);
       }
 
       // Duplicate: Ctrl+D / Cmd+D
-      if ((e.ctrlKey || e.metaKey) && e.key === 'd' && selectedCompId) {
+      if ((e.ctrlKey || e.metaKey) && e.key === 'd' && selectedCompIds.length > 0) {
         e.preventDefault();
-        duplicateComponent(selectedCompId);
+        selectedCompIds.forEach(id => duplicateComponent(id));
       }
 
       // Copy: Ctrl+C
@@ -348,7 +405,8 @@ export function ScreensPage({ selectedProject }: { selectedProject?: { id: strin
 
       // Escape to deselect / return to select tool
       if (e.key === 'Escape') {
-        setSelectedCompId(null);
+        setSelectedCompIds([]);
+        setShowQuickAiBar(false);
         setShowAiModal(false);
         setShowNewModal(false);
         setShowPresentModal(false);
@@ -403,7 +461,7 @@ export function ScreensPage({ selectedProject }: { selectedProject?: { id: strin
       window.removeEventListener('keydown', handleKeyDown);
       window.removeEventListener('keyup', handleKeyUp);
     };
-  }, [selectedCompId, selectedComponent, selectedParent, copiedComponent, deleteComponent, duplicateComponent, updateComponent, getChildRelativeCoords]);
+  }, [selectedCompIds, selectedCompId, selectedComponent, selectedParent, copiedComponent, deleteComponent, duplicateComponent, updateComponent, getChildRelativeCoords]);
 
   // High-performance RAF Mouse Listener for Dragging, Resizing & Canvas Panning
   useEffect(() => {
@@ -564,7 +622,9 @@ export function ScreensPage({ selectedProject }: { selectedProject?: { id: strin
       setIsPanning(true);
       return;
     }
-    setSelectedCompId(null);
+    if (!e.shiftKey && !e.ctrlKey && !e.metaKey) {
+      setSelectedCompIds([]);
+    }
   };
 
   // Start dragging component
@@ -573,7 +633,14 @@ export function ScreensPage({ selectedProject }: { selectedProject?: { id: strin
     if (lockedNodes[comp.id] || isHandMode) return;
     e.preventDefault();
     e.stopPropagation();
-    setSelectedCompId(comp.id);
+
+    if (!selectedCompIds.includes(comp.id)) {
+      if (e.shiftKey || e.ctrlKey || e.metaKey) {
+        setSelectedCompIds(prev => [...prev, comp.id]);
+      } else {
+        setSelectedCompIds([comp.id]);
+      }
+    }
 
     const pos = getChildRelativeCoords(comp, parent);
 
@@ -607,15 +674,44 @@ export function ScreensPage({ selectedProject }: { selectedProject?: { id: strin
     };
   };
 
-  // Handle AI spec generation
+  // Handle Stitch AI quick inline edit bar (E Shortcut)
+  const handleQuickAiEdit = async (e?: React.FormEvent) => {
+    if (e) e.preventDefault();
+    if (!quickPrompt.trim()) return;
+    try {
+      setShowQuickAiBar(false);
+      await generateStitchScreen({
+        prompt: quickPrompt,
+        mode: 'modify',
+        screenId: currentScreen?.id,
+        selectedCompIds: selectedCompIds.length > 0 ? selectedCompIds : undefined,
+        selectedScreenIds: selectedScreenIds.length > 0 ? selectedScreenIds : undefined,
+        theme: aiTheme
+      });
+      setQuickPrompt('');
+    } catch (err: any) {
+      console.error('Failed to quick edit with Stitch AI:', err);
+    }
+  };
+
+  // Handle Stitch AI spec generation & live placement
   const handleAiGenerate = async (e?: React.FormEvent) => {
     if (e) e.preventDefault();
     if (!prompt.trim()) return;
     try {
-      await generateAiLayout(prompt);
-      setPrompt('');
       setShowAiModal(false);
-    } catch {}
+      await generateStitchScreen({
+        prompt,
+        mode: aiMode,
+        screenId: currentScreen?.id,
+        selectedCompIds: selectedCompIds.length > 0 ? selectedCompIds : undefined,
+        selectedScreenIds: selectedScreenIds.length > 0 ? selectedScreenIds : undefined,
+        theme: aiTheme
+      });
+      setPrompt('');
+    } catch (err: any) {
+      console.error('Failed to generate Stitch layout:', err);
+    }
   };
 
   // Handle create new screen
@@ -842,7 +938,7 @@ export function ${screen.name.replace(/[^a-zA-Z0-9]/g, '')}Layout() {
     if (hiddenNodes[comp.id]) return null;
 
     const isTopLevel = !parent;
-    const isSelected = selectedCompId === comp.id;
+    const isSelected = selectedCompIds.includes(comp.id);
     const isHovered = hoveredCompId === comp.id && !isSelected;
     const isLocked = lockedNodes[comp.id];
     const bg = comp.fills && comp.fills[0]?.fillColor ? comp.fills[0].fillColor : 'transparent';
@@ -866,12 +962,24 @@ export function ${screen.name.replace(/[^a-zA-Z0-9]/g, '')}Layout() {
         onClick={(e) => {
           if (isHandMode) return;
           e.stopPropagation();
-          setSelectedCompId(comp.id);
+          if (e.shiftKey || e.ctrlKey || e.metaKey) {
+            setSelectedCompIds(prev =>
+              prev.includes(comp.id) ? prev.filter(id => id !== comp.id) : [...prev, comp.id]
+            );
+          } else {
+            setSelectedCompIds([comp.id]);
+          }
         }}
         onDoubleClick={(e) => {
           if (isHandMode) return;
           e.stopPropagation();
-          setSelectedCompId(comp.id);
+          if (e.shiftKey || e.ctrlKey || e.metaKey) {
+            setSelectedCompIds(prev =>
+              prev.includes(comp.id) ? prev.filter(id => id !== comp.id) : [...prev, comp.id]
+            );
+          } else {
+            setSelectedCompIds([comp.id]);
+          }
         }}
         onMouseEnter={(e) => {
           if (isHandMode) return;
@@ -1090,7 +1198,7 @@ export function ${screen.name.replace(/[^a-zA-Z0-9]/g, '')}Layout() {
   };
 
   const renderLayerTreeNode = (comp: PenpotComponent, depth: number = 0) => {
-    const isSelected = selectedCompId === comp.id;
+    const isSelected = selectedCompIds.includes(comp.id);
     const isCollapsed = collapsedNodes[comp.id];
     const isHidden = hiddenNodes[comp.id];
     const isLocked = lockedNodes[comp.id];
@@ -1103,7 +1211,15 @@ export function ${screen.name.replace(/[^a-zA-Z0-9]/g, '')}Layout() {
     return (
       <div key={comp.id} className="select-none">
         <div
-          onClick={() => setSelectedCompId(comp.id)}
+          onClick={(e) => {
+            if (e.shiftKey || e.ctrlKey || e.metaKey) {
+              setSelectedCompIds(prev =>
+                prev.includes(comp.id) ? prev.filter(id => id !== comp.id) : [...prev, comp.id]
+              );
+            } else {
+              setSelectedCompIds([comp.id]);
+            }
+          }}
           className={`group flex items-center justify-between py-1.5 px-2 rounded-md text-xs cursor-pointer transition-colors ${
             isSelected
               ? 'bg-violet-600 text-white font-medium shadow-sm'
@@ -1310,19 +1426,37 @@ export function ${screen.name.replace(/[^a-zA-Z0-9]/g, '')}Layout() {
 
       {/* 2. MAIN STUDIO LAYOUT: Left Layers | Center Scrollable Canvas | Right Inspector */}
       <div className="flex-1 min-h-0 flex overflow-hidden relative">
-        {/* LEFT PANEL: Layers Tree, UI Kit, Pages */}
+        {/* LEFT PANEL: Stitch Chat, Layers Tree, UI Kit, Pages */}
         <div
           className={`border-r ${isLight ? 'border-slate-200 bg-white' : 'border-slate-800 bg-[#0d1322]'} flex flex-col overflow-hidden shrink-0 transition-all duration-200 ${
             showLeftSidebar
-              ? 'w-64 min-w-[256px] opacity-100'
+              ? leftTab === 'chat'
+                ? 'w-80 min-w-[320px] opacity-100'
+                : 'w-64 min-w-[256px] opacity-100'
               : 'w-0 min-w-0 border-r-0 opacity-0 pointer-events-none'
           }`}
         >
           <div className={`h-10 border-b ${isLight ? 'border-slate-200 bg-slate-50' : 'border-slate-800 bg-[#090d16]'} px-2 flex items-center justify-between text-xs font-semibold`}>
-            <div className="flex space-x-1">
+            <div className="flex space-x-1 overflow-x-auto py-0.5">
+              <button
+                onClick={() => setLeftTab('chat')}
+                className={`px-2.5 py-1 rounded-md transition-all flex items-center space-x-1.5 ${
+                  leftTab === 'chat'
+                    ? 'bg-gradient-to-r from-violet-600 to-indigo-600 text-white shadow-xs font-bold'
+                    : isLight ? 'text-violet-600 hover:bg-violet-50' : 'text-violet-400 hover:bg-slate-800/80'
+                }`}
+              >
+                <Sparkles className="w-3.5 h-3.5 fill-current" />
+                <span>Stitch AI</span>
+                {currentScreen?.chatHistory && currentScreen.chatHistory.length > 0 && (
+                  <span className="text-[10px] px-1 py-0.2 rounded-full bg-white/20 text-white font-mono">
+                    {currentScreen.chatHistory.length}
+                  </span>
+                )}
+              </button>
               <button
                 onClick={() => setLeftTab('layers')}
-                className={`px-2.5 py-1 rounded-md transition-colors ${
+                className={`px-2 py-1 rounded-md transition-colors ${
                   leftTab === 'layers'
                     ? isLight ? 'bg-white text-slate-900 shadow-xs border border-slate-200' : 'bg-slate-800 text-white'
                     : isLight ? 'text-slate-500 hover:text-slate-800' : 'text-slate-400 hover:text-slate-200'
@@ -1332,7 +1466,7 @@ export function ${screen.name.replace(/[^a-zA-Z0-9]/g, '')}Layout() {
               </button>
               <button
                 onClick={() => setLeftTab('assets')}
-                className={`px-2.5 py-1 rounded-md transition-colors ${
+                className={`px-2 py-1 rounded-md transition-colors ${
                   leftTab === 'assets'
                     ? isLight ? 'bg-white text-slate-900 shadow-xs border border-slate-200' : 'bg-slate-800 text-white'
                     : isLight ? 'text-slate-500 hover:text-slate-800' : 'text-slate-400 hover:text-slate-200'
@@ -1342,7 +1476,7 @@ export function ${screen.name.replace(/[^a-zA-Z0-9]/g, '')}Layout() {
               </button>
               <button
                 onClick={() => setLeftTab('pages')}
-                className={`px-2.5 py-1 rounded-md transition-colors ${
+                className={`px-2 py-1 rounded-md transition-colors ${
                   leftTab === 'pages'
                     ? isLight ? 'bg-white text-slate-900 shadow-xs border border-slate-200' : 'bg-slate-800 text-white'
                     : isLight ? 'text-slate-500 hover:text-slate-800' : 'text-slate-400 hover:text-slate-200'
@@ -1360,6 +1494,248 @@ export function ${screen.name.replace(/[^a-zA-Z0-9]/g, '')}Layout() {
               <Plus className="w-4 h-4" />
             </button>
           </div>
+
+          {/* Tab 0: Stitch Conversational AI Chat Panel */}
+          {leftTab === 'chat' && (
+            <div className="flex-1 min-h-0 flex flex-col overflow-hidden">
+              {/* Chat Subheader with Active Screen & Mode Status */}
+              <div className={`p-2.5 border-b ${isLight ? 'border-slate-200 bg-slate-50/50' : 'border-slate-800 bg-slate-950/40'} flex items-center justify-between text-xs`}>
+                <div className="flex items-center space-x-2 truncate">
+                  <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
+                  <span className={`font-semibold truncate ${isLight ? 'text-slate-800' : 'text-slate-200'}`}>
+                    {currentScreen ? currentScreen.name : 'New Session'}
+                  </span>
+                </div>
+                <div className="flex items-center space-x-1.5">
+                  <span className={`text-[10px] px-2 py-0.5 rounded-full font-mono font-medium ${
+                    selectedCompIds.length > 0
+                      ? 'bg-amber-500/20 text-amber-400 border border-amber-500/30'
+                      : aiMode === 'modify'
+                      ? 'bg-orange-500/20 text-orange-400 border border-orange-500/30'
+                      : 'bg-violet-500/20 text-violet-400 border border-violet-500/30'
+                  }`}>
+                    {selectedCompIds.length > 0 ? `Target (${selectedCompIds.length})` : aiMode === 'modify' ? 'Modify' : 'Create'}
+                  </span>
+                </div>
+              </div>
+
+              {/* Chat Message Thread */}
+              <div className="flex-1 overflow-y-auto p-3 space-y-3.5">
+                {(!currentScreen?.chatHistory || currentScreen.chatHistory.length === 0) ? (
+                  <div className="py-4 space-y-4">
+                    <div className={`p-4 rounded-xl text-center border ${isLight ? 'bg-slate-50 border-slate-200 text-slate-700' : 'bg-slate-900/60 border-slate-800 text-slate-300'}`}>
+                      <div className="w-10 h-10 mx-auto mb-2 rounded-full bg-gradient-to-tr from-violet-600 to-indigo-600 flex items-center justify-center text-white shadow-lg shadow-violet-600/30">
+                        <Sparkles className="w-5 h-5" />
+                      </div>
+                      <h4 className="font-bold text-sm mb-1">Stitch AI Designer</h4>
+                      <p className="text-xs text-slate-400 leading-relaxed">
+                        Prompt anything to generate 2D game maps, mobile viewports, dashboards, or web interfaces with live progressive AST placement.
+                      </p>
+                    </div>
+
+                    <div>
+                      <span className={`text-[10px] font-bold uppercase tracking-wider block mb-2 ${isLight ? 'text-slate-500' : 'text-slate-400'}`}>
+                        Quick Starter Prompts:
+                      </span>
+                      <div className="space-y-1.5">
+                        {[
+                          '🎮 Hey generate Minimilitia 2D map in mobile view',
+                          '🛍️ E-Commerce Storefront with Product Grid & Cart',
+                          '💬 Real-Time Team Messaging & Chat Interface',
+                          '📊 Modern SaaS Analytics Dashboard with 4 KPI Cards',
+                          '📱 Mobile Crypto Wallet with Send & Receive'
+                        ].map((suggestion, idx) => (
+                          <button
+                            key={idx}
+                            onClick={() => handleChatSubmit(undefined, suggestion.replace(/^[^\w]+/, ''))}
+                            disabled={isGenerating}
+                            className={`w-full text-left text-xs p-2 rounded-lg border transition-all ${
+                              isLight
+                                ? 'bg-white hover:bg-violet-50 border-slate-200 text-slate-700 hover:text-violet-700 hover:border-violet-300'
+                                : 'bg-slate-900/80 hover:bg-slate-800 border-slate-800 text-slate-300 hover:text-white hover:border-slate-700'
+                            }`}
+                          >
+                            {suggestion}
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+                  </div>
+                ) : (
+                  currentScreen.chatHistory.map((msg, idx) => {
+                    const isUser = msg.role === 'user';
+                    return (
+                      <div key={msg.id || idx} className={`flex flex-col space-y-1 ${isUser ? 'items-end' : 'items-start'}`}>
+                        <div className="flex items-center space-x-1.5 text-[10px] text-slate-400 px-1">
+                          {isUser ? (
+                            <>
+                              <span>You</span>
+                              <UserIcon className="w-3 h-3" />
+                            </>
+                          ) : (
+                            <>
+                              <Bot className="w-3 h-3 text-violet-400" />
+                              <span className="font-semibold text-violet-400">Stitch AI</span>
+                            </>
+                          )}
+                          <span>·</span>
+                          <span>{new Date(msg.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</span>
+                        </div>
+
+                        <div
+                          className={`max-w-[95%] rounded-2xl p-3 text-xs leading-relaxed shadow-sm ${
+                            isUser
+                              ? 'bg-gradient-to-r from-violet-600 to-indigo-600 text-white rounded-tr-xs'
+                              : isLight
+                              ? 'bg-white border border-slate-200 text-slate-800 rounded-tl-xs shadow-xs'
+                              : 'bg-slate-900 border border-slate-800 text-slate-200 rounded-tl-xs'
+                          }`}
+                        >
+                          <div className="whitespace-pre-wrap">{msg.text}</div>
+
+                          {!isUser && msg.metadata && (
+                            <div className="mt-2.5 pt-2 border-t border-slate-800/40 flex flex-wrap gap-1.5 text-[10px]">
+                              {msg.metadata.dimensions && (
+                                <span className="px-2 py-0.5 rounded-full bg-slate-800/80 text-slate-300 font-mono">
+                                  📐 {msg.metadata.dimensions.width}×{msg.metadata.dimensions.height}
+                                </span>
+                              )}
+                              {msg.stepsCount && (
+                                <span className="px-2 py-0.5 rounded-full bg-violet-900/40 text-violet-300 font-mono">
+                                  ⚡ {msg.stepsCount} Steps
+                                </span>
+                              )}
+                              {msg.metadata.mode && (
+                                <span className="px-2 py-0.5 rounded-full bg-emerald-900/40 text-emerald-300 font-mono uppercase">
+                                  {msg.metadata.mode}
+                                </span>
+                              )}
+                            </div>
+                          )}
+
+                          {!isUser && idx === currentScreen.chatHistory!.length - 1 && (
+                            <div className="mt-3 pt-2 border-t border-slate-800/40">
+                              <span className="text-[10px] text-slate-400 font-semibold uppercase tracking-wider block mb-1.5">
+                                Suggested Iterations:
+                              </span>
+                              <div className="flex flex-wrap gap-1">
+                                {[
+                                  'Add floating tactical platforms',
+                                  'Add obstacle crates and ammo cache',
+                                  'Switch to Cyberpunk Neon palette',
+                                  'Add top combat radar and telemetry',
+                                  'Switch to Mobile Portrait view'
+                                ].map((sug, sIdx) => (
+                                  <button
+                                    key={sIdx}
+                                    onClick={() => handleChatSubmit(undefined, sug)}
+                                    disabled={isGenerating}
+                                    className={`text-[10px] px-2 py-0.5 rounded-md border transition-all ${
+                                      isLight
+                                        ? 'bg-slate-50 hover:bg-violet-50 text-slate-700 border-slate-200 hover:border-violet-300 hover:text-violet-700'
+                                        : 'bg-slate-950/60 hover:bg-slate-800 text-slate-300 border-slate-800 hover:border-slate-700 hover:text-white'
+                                    }`}
+                                  >
+                                    + {sug}
+                                  </button>
+                                ))}
+                              </div>
+                            </div>
+                          )}
+                        </div>
+                      </div>
+                    );
+                  })
+                )}
+
+                {isGenerating && (
+                  <div className="flex flex-col space-y-1 items-start">
+                    <div className="flex items-center space-x-1.5 text-[10px] text-violet-400 px-1">
+                      <Bot className="w-3 h-3 text-violet-400 animate-spin" />
+                      <span className="font-semibold">Stitch AI Synthesizing...</span>
+                    </div>
+                    <div className={`max-w-[95%] rounded-2xl p-3 text-xs border ${
+                      isLight ? 'bg-white border-violet-200 text-slate-800' : 'bg-slate-900/90 border-violet-500/40 text-slate-200'
+                    }`}>
+                      <div className="flex items-center space-x-2">
+                        <div className="w-3.5 h-3.5 border-2 border-violet-500 border-t-transparent rounded-full animate-spin"></div>
+                        <span className="font-medium text-violet-400">
+                          {animatingStep ? animatingStep.action : 'Computing Penpot AST Nodes...'}
+                        </span>
+                      </div>
+                      <div className="w-full bg-slate-800 h-1.5 rounded-full overflow-hidden mt-2">
+                        <div
+                          className="bg-gradient-to-r from-violet-500 to-emerald-400 h-full transition-all duration-150"
+                          style={{ width: `${animationProgress}%` }}
+                        />
+                      </div>
+                    </div>
+                  </div>
+                )}
+
+                <div ref={chatEndRef} />
+              </div>
+
+              {/* Fixed Bottom Input Bar */}
+              <form
+                onSubmit={handleChatSubmit}
+                className={`p-2.5 border-t ${isLight ? 'border-slate-200 bg-slate-50' : 'border-slate-800 bg-[#090d16]'}`}
+              >
+                {selectedCompIds.length > 0 && (
+                  <div className="mb-2 flex items-center justify-between text-[11px] bg-violet-600/10 border border-violet-500/30 text-violet-400 px-2.5 py-1 rounded-lg">
+                    <div className="flex items-center space-x-1.5 truncate">
+                      <Zap className="w-3 h-3 fill-current" />
+                      <span className="truncate font-medium">Targeting {selectedCompIds.length} selected element(s)</span>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => setSelectedCompIds([])}
+                      className="text-slate-400 hover:text-white ml-2 text-[10px]"
+                    >
+                      Clear
+                    </button>
+                  </div>
+                )}
+
+                <div className="relative flex items-center">
+                  <textarea
+                    rows={2}
+                    value={chatInput}
+                    onChange={(e) => setChatInput(e.target.value)}
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter' && !e.shiftKey) {
+                        e.preventDefault();
+                        handleChatSubmit();
+                      }
+                    }}
+                    placeholder={
+                      selectedCompIds.length > 0
+                        ? `Tell AI to modify ${selectedCompIds.length} element(s)...`
+                        : "Ask Stitch to create, change colors, or add platforms..."
+                    }
+                    disabled={isGenerating}
+                    className={`w-full text-xs rounded-xl p-2.5 pr-10 border resize-none focus:outline-none transition-all ${
+                      isLight
+                        ? 'bg-white border-slate-300 text-slate-900 placeholder-slate-400 focus:border-violet-600'
+                        : 'bg-slate-950 border-slate-800 text-slate-200 placeholder-slate-500 focus:border-violet-500'
+                    }`}
+                  />
+                  <button
+                    type="submit"
+                    disabled={!chatInput.trim() || isGenerating}
+                    className="absolute right-2 p-1.5 rounded-lg bg-violet-600 hover:bg-violet-500 disabled:opacity-40 text-white transition-all shadow-xs cursor-pointer"
+                    title="Send prompt to Stitch AI (Enter)"
+                  >
+                    <Send className="w-3.5 h-3.5" />
+                  </button>
+                </div>
+                <div className="mt-1 flex items-center justify-between text-[10px] text-slate-500 px-1">
+                  <span>Press <kbd className="font-mono bg-slate-800 px-1 py-0.2 rounded text-[9px] text-slate-300">Enter ↵</kbd> to send</span>
+                  <span><kbd className="font-mono bg-slate-800 px-1 py-0.2 rounded text-[9px] text-slate-300">Shift + Enter</kbd> for newline</span>
+                </div>
+              </form>
+            </div>
+          )}
 
           {/* Tab 1: Layers */}
           {leftTab === 'layers' && (
@@ -1454,26 +1830,6 @@ export function ${screen.name.replace(/[^a-zA-Z0-9]/g, '')}Layout() {
                   </button>
                 </div>
               </div>
-
-              {/* Preset Templates */}
-              <div className={`pt-2 border-t ${isLight ? 'border-slate-200' : 'border-slate-800'}`}>
-                <div className={`text-[11px] font-bold uppercase tracking-wider ${isLight ? 'text-slate-500' : 'text-slate-400'} mb-2 flex items-center space-x-1.5`}>
-                  <Layout className="w-3.5 h-3.5 text-indigo-500" />
-                  <span>Preset Templates</span>
-                </div>
-                <div className="space-y-2">
-                  {templates.map(t => (
-                    <div
-                      key={t.key}
-                      onClick={() => createScreen({ name: t.name, templateKey: t.key })}
-                      className={`p-2.5 rounded-lg ${isLight ? 'bg-slate-50 hover:bg-slate-100 border-slate-200' : 'bg-slate-900/80 hover:bg-slate-800 border-slate-800/80'} border cursor-pointer transition-all group`}
-                    >
-                      <div className={`text-xs font-semibold ${isLight ? 'text-slate-800 group-hover:text-violet-600' : 'text-slate-200 group-hover:text-violet-300'}`}>{t.name}</div>
-                      <div className="text-[10px] text-slate-500 mt-0.5">{t.dimensions.width} × {t.dimensions.height}</div>
-                    </div>
-                  ))}
-                </div>
-              </div>
             </div>
           )}
 
@@ -1481,13 +1837,22 @@ export function ${screen.name.replace(/[^a-zA-Z0-9]/g, '')}Layout() {
           {leftTab === 'pages' && (
             <div className="flex-1 overflow-y-auto p-2 space-y-1">
               {screens.map(s => {
-                const isActive = currentScreen?.id === s.id;
+                const isSelected = selectedScreenIds.includes(s.id) || currentScreen?.id === s.id;
                 return (
                   <div
                     key={s.id}
-                    onClick={() => selectScreen(s.id)}
+                    onClick={(e) => {
+                      if (e.shiftKey || e.ctrlKey || e.metaKey) {
+                        setSelectedScreenIds(prev =>
+                          prev.includes(s.id) ? prev.filter(id => id !== s.id) : [...prev, s.id]
+                        );
+                      } else {
+                        setSelectedScreenIds([s.id]);
+                        selectScreen(s.id);
+                      }
+                    }}
                     className={`group flex items-center justify-between p-2.5 rounded-lg text-xs cursor-pointer transition-all ${
-                      isActive
+                      isSelected
                         ? 'bg-violet-600 text-white font-semibold shadow-sm'
                         : isLight
                           ? 'text-slate-700 hover:bg-slate-100 hover:text-slate-900'
@@ -1495,7 +1860,7 @@ export function ${screen.name.replace(/[^a-zA-Z0-9]/g, '')}Layout() {
                     }`}
                   >
                     <div className="flex items-center space-x-2 truncate">
-                      <Monitor className={`w-3.5 h-3.5 flex-shrink-0 ${isActive ? 'text-white' : isLight ? 'text-slate-500' : 'text-slate-500'}`} />
+                      <Monitor className={`w-3.5 h-3.5 flex-shrink-0 ${isSelected ? 'text-white' : isLight ? 'text-slate-500' : 'text-slate-500'}`} />
                       <span className="truncate">{s.name}</span>
                     </div>
                     <button
@@ -1530,6 +1895,126 @@ export function ${screen.name.replace(/[^a-zA-Z0-9]/g, '')}Layout() {
             backgroundSize: '24px 24px'
           }}
         >
+          {/* Floating Stitch Live Generator HUD Notification */}
+          {isGenerating && (
+            <div className="sticky top-4 left-1/2 -translate-x-1/2 mx-auto z-50 max-w-xl bg-slate-900/95 border border-violet-500/60 backdrop-blur-md px-4 py-2.5 rounded-2xl shadow-2xl flex items-center space-x-3 text-xs text-white pointer-events-none transition-all animate-bounce">
+              <div className="w-5 h-5 rounded-full bg-violet-600/30 border border-violet-400 flex items-center justify-center shrink-0">
+                <Sparkles className="w-3 h-3 text-violet-300 animate-spin" />
+              </div>
+              <div className="flex-1 min-w-0">
+                <div className="font-semibold text-violet-200 truncate">
+                  {animatingStep
+                    ? `Placing: ${animatingStep.name} (${animatingStep.action})`
+                    : 'Synthesizing Stitch Layout Schema...'}
+                </div>
+                {animatingStep && (
+                  <div className="text-[10px] font-mono text-slate-400">
+                    Pos: ({animatingStep.x}, {animatingStep.y}) • Size: {animatingStep.width} × {animatingStep.height}
+                  </div>
+                )}
+              </div>
+              <div className="font-mono text-[11px] font-bold text-violet-300 bg-violet-950/90 px-2 py-0.5 rounded-lg border border-violet-700/50">
+                {animationProgress}%
+              </div>
+            </div>
+          )}
+
+          {/* Quick AI Trigger Floating Action Pill */}
+          {selectedCompIds.length > 0 && !showQuickAiBar && (
+            <div className="sticky top-4 left-1/2 -translate-x-1/2 mx-auto z-40 flex justify-center pointer-events-auto">
+              <button
+                type="button"
+                onClick={() => {
+                  setShowQuickAiBar(true);
+                  setTimeout(() => quickInputRef.current?.focus(), 50);
+                }}
+                className="bg-gradient-to-r from-violet-600 via-indigo-600 to-purple-600 hover:from-violet-500 hover:to-purple-500 text-white font-semibold text-xs px-4 py-2 rounded-full shadow-2xl border border-white/20 flex items-center space-x-2 transition-all hover:scale-105 cursor-pointer backdrop-blur-md animate-pulse"
+                title="Press 'E' to prompt AI for selected elements"
+              >
+                <Sparkles className="w-3.5 h-3.5 text-amber-300" />
+                <span>Edit {selectedCompIds.length} element{selectedCompIds.length > 1 ? 's' : ''} with AI</span>
+                <kbd className="ml-1 px-1.5 py-0.5 bg-black/40 rounded text-[10px] font-mono border border-white/20">E</kbd>
+              </button>
+            </div>
+          )}
+
+          {/* Floating Stitch Quick AI Command Bar (Press E shortcut) */}
+          {showQuickAiBar && (
+            <div className="sticky top-4 left-1/2 -translate-x-1/2 mx-auto z-50 w-full max-w-xl px-4 pointer-events-auto">
+              <div className={`p-3 rounded-2xl shadow-2xl border backdrop-blur-xl transition-all ${
+                isLight ? 'bg-white/95 border-violet-300 text-slate-900 shadow-violet-500/10' : 'bg-slate-900/95 border-violet-500/50 text-white shadow-violet-950/80'
+              }`}>
+                <form onSubmit={handleQuickAiEdit} className="flex items-center space-x-2">
+                  <div className="w-8 h-8 rounded-xl bg-gradient-to-tr from-violet-600 to-indigo-500 flex items-center justify-center text-white shrink-0 shadow-sm">
+                    <Sparkles className="w-4 h-4" />
+                  </div>
+                  <input
+                    ref={quickInputRef}
+                    type="text"
+                    value={quickPrompt}
+                    onChange={(e) => setQuickPrompt(e.target.value)}
+                    placeholder={
+                      selectedCompIds.length > 0
+                        ? `Tell AI to modify ${selectedCompIds.length} selected element${selectedCompIds.length > 1 ? 's' : ''} (e.g. "make glassmorphic", "turn into pricing cards", "emerald theme")...`
+                        : selectedScreenIds.length > 1
+                        ? `Tell AI to modify ${selectedScreenIds.length} selected screens...`
+                        : 'Tell AI what to change or add to this screen...'
+                    }
+                    className={`flex-1 bg-transparent px-2 py-1.5 text-xs font-sans outline-none ${
+                      isLight ? 'text-slate-900 placeholder-slate-400' : 'text-white placeholder-slate-400'
+                    }`}
+                    autoFocus
+                  />
+                  <button
+                    type="submit"
+                    disabled={!quickPrompt.trim() || isGenerating}
+                    className="px-3.5 py-1.5 bg-gradient-to-r from-violet-600 to-indigo-600 hover:from-violet-500 hover:to-indigo-500 text-white text-xs font-semibold rounded-xl shadow cursor-pointer disabled:opacity-40 transition-all flex items-center space-x-1"
+                  >
+                    <span>Change</span>
+                    <ArrowRight className="w-3 h-3" />
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setShowQuickAiBar(false)}
+                    className={`p-1.5 rounded-lg ${isLight ? 'hover:bg-slate-100 text-slate-400' : 'hover:bg-slate-800 text-slate-400'} transition-colors cursor-pointer`}
+                    title="Close (Esc)"
+                  >
+                    ✕
+                  </button>
+                </form>
+
+                {/* Quick suggestions chips */}
+                <div className="flex items-center space-x-1.5 mt-2.5 pt-2 border-t border-slate-700/30 overflow-x-auto text-[11px]">
+                  <span className={`text-[10px] font-mono shrink-0 ${isLight ? 'text-slate-400' : 'text-slate-500'}`}>Quick:</span>
+                  {[
+                    'Make glassmorphic glow',
+                    'Convert to emerald theme',
+                    'Rounded pill corners',
+                    'Turn into 3-tier pricing cards',
+                    'Add search & filter controls',
+                    'Modern cyberpunk dark style'
+                  ].map((chip, idx) => (
+                    <button
+                      key={idx}
+                      type="button"
+                      onClick={() => {
+                        setQuickPrompt(chip);
+                        quickInputRef.current?.focus();
+                      }}
+                      className={`px-2 py-0.5 rounded-md border whitespace-nowrap transition-all cursor-pointer ${
+                        isLight
+                          ? 'bg-slate-50 hover:bg-slate-100 border-slate-200 text-slate-700'
+                          : 'bg-slate-800/80 hover:bg-slate-700/80 border-slate-700 text-slate-300'
+                      }`}
+                    >
+                      {chip}
+                    </button>
+                  ))}
+                </div>
+              </div>
+            </div>
+          )}
+
           {activeTab === 'design' ? (
             currentScreen ? (
               <div
@@ -1554,18 +2039,25 @@ export function ${screen.name.replace(/[^a-zA-Z0-9]/g, '')}Layout() {
                     minHeight: `${canvasBounds.artboardHeight}px`,
                     backgroundColor: currentScreen.board.background || (isLight ? '#ffffff' : '#090d16'),
                     borderRadius: `${currentScreen.theme.borderRadius || 12}px`,
-                    boxShadow: isLight
+                    boxShadow: isGenerating
+                      ? '0 0 60px rgba(139, 92, 246, 0.4), 0 0 0 2px rgba(167, 139, 250, 0.8)'
+                      : isLight
                       ? '0 20px 50px -10px rgba(0, 0, 0, 0.12), 0 0 0 1px rgba(0, 0, 0, 0.08)'
                       : '0 25px 60px -15px rgba(0, 0, 0, 0.9), 0 0 0 1px rgba(255, 255, 255, 0.08)',
                     position: 'relative'
                   }}
-                  className="select-none"
+                  className={`select-none transition-shadow ${isGenerating ? 'ring-2 ring-violet-400/80 animate-pulse' : ''}`}
                 >
                   {/* Figma Artboard Header */}
                   <div className={`absolute -top-7 left-0 flex items-center space-x-2 text-xs font-mono font-semibold ${isLight ? 'text-slate-500' : 'text-slate-400'}`}>
                     <span className="text-violet-500">#</span>
                     <span>{currentScreen.board.name}</span>
                     <span className={`${isLight ? 'text-slate-400' : 'text-slate-600'} font-normal`}>({currentScreen.board.width} × {currentScreen.board.height})</span>
+                    {isGenerating && (
+                      <span className="text-[10px] text-violet-400 bg-violet-950/80 border border-violet-700/60 px-1.5 py-0.2 rounded font-sans animate-pulse">
+                        ⚡ AI Synthesizing
+                      </span>
+                    )}
                   </div>
 
                   {/* Figma Smart Alignment Guide Lines */}
@@ -1580,6 +2072,26 @@ export function ${screen.name.replace(/[^a-zA-Z0-9]/g, '')}Layout() {
                       className="absolute left-0 right-0 pointer-events-none z-50 border-t border-[#ff0055] border-dashed"
                       style={{ top: `${activeGuides.y}px` }}
                     />
+                  )}
+
+                  {/* Live Stitch Ghost Placement Indicator */}
+                  {animatingStep && (
+                    <div
+                      className="absolute pointer-events-none z-50 border-2 border-violet-400 bg-violet-500/15 rounded-lg transition-all duration-150 animate-pulse"
+                      style={{
+                        left: `${animatingStep.x}px`,
+                        top: `${animatingStep.y}px`,
+                        width: `${animatingStep.width}px`,
+                        height: `${animatingStep.height}px`,
+                        boxShadow: '0 0 25px rgba(139, 92, 246, 0.6), inset 0 0 15px rgba(139, 92, 246, 0.3)'
+                      }}
+                    >
+                      <div className="absolute -top-6 left-0 bg-violet-600 text-white font-mono text-[10px] font-bold px-2 py-0.5 rounded shadow-lg flex items-center space-x-1 whitespace-nowrap">
+                        <Sparkles className="w-2.5 h-2.5 animate-spin" />
+                        <span>{animatingStep.name}</span>
+                        <span className="opacity-75">[{animatingStep.x},{animatingStep.y}]</span>
+                      </div>
+                    </div>
                   )}
 
                   {/* Render Absolute Positioned Components */}
@@ -1645,7 +2157,11 @@ export function ${screen.name.replace(/[^a-zA-Z0-9]/g, '')}Layout() {
               <span>Inspector</span>
               <div className="flex items-center space-x-2">
                 <span className="text-[10px] font-mono text-slate-500 uppercase">
-                  {selectedComponent ? selectedComponent.type : 'Artboard'}
+                  {selectedCompIds.length > 1
+                    ? `${selectedCompIds.length} Selected`
+                    : selectedComponent
+                    ? selectedComponent.type
+                    : 'Artboard'}
                 </span>
                 <button
                   type="button"
@@ -1657,6 +2173,31 @@ export function ${screen.name.replace(/[^a-zA-Z0-9]/g, '')}Layout() {
                 </button>
               </div>
             </div>
+
+            {selectedCompIds.length > 1 && (
+              <div className={`p-3 mx-3 mt-3 rounded-xl border ${
+                isLight ? 'bg-violet-50 border-violet-200 text-violet-900' : 'bg-violet-950/40 border-violet-500/30 text-violet-200'
+              } space-y-2 text-xs`}>
+                <div className="flex items-center space-x-2 font-bold">
+                  <Sparkles className="w-4 h-4 text-violet-400" />
+                  <span>{selectedCompIds.length} Elements Multi-Selected</span>
+                </div>
+                <p className="text-[11px] opacity-80 leading-relaxed">
+                  Press <kbd className="px-1.5 py-0.5 bg-black/40 text-white rounded font-mono text-[10px]">E</kbd> or click below to ask AI to transform all selected elements together.
+                </p>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setShowQuickAiBar(true);
+                    setTimeout(() => quickInputRef.current?.focus(), 50);
+                  }}
+                  className="w-full py-1.5 bg-violet-600 hover:bg-violet-500 text-white text-xs font-semibold rounded-lg shadow-sm transition-all flex items-center justify-center space-x-1.5 cursor-pointer"
+                >
+                  <Sparkles className="w-3.5 h-3.5" />
+                  <span>Modify Selection with AI (E)</span>
+                </button>
+              </div>
+            )}
 
             <div className="p-4 space-y-5 text-xs">
               {/* Alignment Tools Bar */}
@@ -2080,14 +2621,50 @@ export function ${screen.name.replace(/[^a-zA-Z0-9]/g, '')}Layout() {
 
           <div className={`h-5 w-[1px] ${isLight ? 'bg-slate-200' : 'bg-slate-700'} mx-1`} />
 
+          {/* Stitch AI Conversational Chat Trigger */}
+          <button
+            onClick={() => {
+              setShowLeftSidebar(true);
+              setLeftTab('chat');
+            }}
+            className={`flex items-center space-x-1.5 px-3 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer shadow-lg ${
+              leftTab === 'chat' && showLeftSidebar
+                ? 'bg-gradient-to-r from-violet-600 to-indigo-600 text-white shadow-violet-600/30'
+                : 'bg-violet-600/20 text-violet-400 hover:bg-violet-600/30 border border-violet-500/40'
+            }`}
+            title="Open Stitch AI Chat (Prompt & Modify)"
+          >
+            <MessageSquare className="w-3.5 h-3.5" />
+            <span>Stitch Chat</span>
+          </button>
+
           {/* AI Generator Trigger */}
           <button
-            onClick={() => setShowAiModal(true)}
+            onClick={() => {
+              setAiMode('create');
+              setShowAiModal(true);
+            }}
             className="flex items-center space-x-1.5 px-3 py-1.5 bg-gradient-to-r from-violet-600 to-indigo-600 hover:from-violet-500 hover:to-indigo-500 text-white text-xs font-semibold rounded-xl shadow-lg shadow-violet-600/20 cursor-pointer transition-all"
+            title="Generate new layout using AI"
           >
             <Sparkles className="w-3.5 h-3.5" />
             <span>AI Gen</span>
           </button>
+
+          {/* AI In-Place Modify Trigger */}
+          {currentScreen && (
+            <button
+              onClick={() => {
+                setAiMode('modify');
+                setShowAiModal(true);
+              }}
+              className="flex items-center space-x-1.5 px-3 py-1.5 bg-gradient-to-r from-amber-600 to-orange-600 hover:from-amber-500 hover:to-orange-500 text-white text-xs font-semibold rounded-xl shadow-lg shadow-amber-600/20 cursor-pointer transition-all"
+              title="Modify current screen with AI in-place"
+            >
+              <Zap className="w-3.5 h-3.5" />
+              <span>AI Edit</span>
+            </button>
+          )}
 
           {/* Present Prototype Trigger */}
           <button
@@ -2128,103 +2705,228 @@ export function ${screen.name.replace(/[^a-zA-Z0-9]/g, '')}Layout() {
 
       {/* 4. MODALS */}
 
-      {/* AI Prompt Modal */}
-      {showAiModal && (
+      {/* Unified Screen Creation & AI Generator Modal */}
+      {(showAiModal || showNewModal) && (
         <div className="fixed inset-0 bg-black/80 backdrop-blur-xs flex items-center justify-center z-50 p-4">
           <div className={`w-full max-w-xl ${isLight ? 'bg-white border-slate-200 text-slate-800' : 'bg-[#0d1322] border-slate-800 text-white'} border rounded-2xl p-6 shadow-2xl space-y-4`}>
             <div className={`flex items-center justify-between border-b ${isLight ? 'border-slate-200' : 'border-slate-800'} pb-3`}>
               <div className="flex items-center space-x-2">
                 <Sparkles className="w-5 h-5 text-violet-500" />
-                <h3 className={`text-base font-bold ${isLight ? 'text-slate-900' : 'text-white'}`}>AI Layout Spec Generator</h3>
+                <h3 className={`text-base font-bold ${isLight ? 'text-slate-900' : 'text-white'}`}>
+                  {aiMode === 'modify' ? '⚡ Modify Screen with Stitch AI' : '✨ New Screen & AI Generator'}
+                </h3>
               </div>
-              <button onClick={() => setShowAiModal(false)} className={`${isLight ? 'text-slate-400 hover:text-slate-700' : 'text-slate-400 hover:text-white'}`}>✕</button>
+              <button
+                onClick={() => {
+                  setShowAiModal(false);
+                  setShowNewModal(false);
+                }}
+                className={`${isLight ? 'text-slate-400 hover:text-slate-700' : 'text-slate-400 hover:text-white'}`}
+              >
+                ✕
+              </button>
             </div>
 
-            <div>
-              <label className={`text-xs ${isLight ? 'text-slate-600' : 'text-slate-400'} block mb-1.5`}>Describe your UI layout requirement:</label>
-              <textarea
-                rows={4}
-                value={prompt}
-                onChange={(e) => setPrompt(e.target.value)}
-                placeholder="e.g. Modern SaaS Analytics dashboard with 4 KPI cards, live AST telemetry chart, navigation sidebar, and schema migration data table..."
-                className={`w-full ${isLight ? 'bg-slate-50 border-slate-200 text-slate-800 placeholder-slate-400 focus:border-violet-600' : 'bg-slate-950 border-slate-800 text-white placeholder-slate-500 focus:border-violet-500'} border rounded-xl p-3 text-xs focus:outline-none font-sans`}
-              />
+            {/* Mode / Type Switcher Tabs */}
+            <div className="flex items-center space-x-2">
+              <button
+                type="button"
+                onClick={() => {
+                  setShowNewModal(false);
+                  setShowAiModal(true);
+                  setAiMode('create');
+                }}
+                className={`flex-1 py-2 px-3 rounded-lg text-xs font-semibold border transition-all flex items-center justify-center space-x-1.5 ${
+                  showAiModal && aiMode === 'create'
+                    ? 'bg-violet-600 border-violet-500 text-white shadow-sm'
+                    : isLight
+                    ? 'bg-slate-100 border-slate-200 text-slate-600 hover:bg-slate-200'
+                    : 'bg-slate-900 border-slate-800 text-slate-400 hover:text-white'
+                }`}
+              >
+                <Sparkles className="w-3.5 h-3.5" />
+                <span>⚡ AI Layout Generator</span>
+              </button>
+
+              <button
+                type="button"
+                onClick={() => {
+                  setShowNewModal(false);
+                  setShowAiModal(true);
+                  setAiMode('modify');
+                }}
+                disabled={!currentScreen}
+                className={`flex-1 py-2 px-3 rounded-lg text-xs font-semibold border transition-all flex items-center justify-center space-x-1.5 disabled:opacity-40 ${
+                  showAiModal && aiMode === 'modify'
+                    ? 'bg-amber-600 border-amber-500 text-white shadow-sm'
+                    : isLight
+                    ? 'bg-slate-100 border-slate-200 text-slate-600 hover:bg-slate-200'
+                    : 'bg-slate-900 border-slate-800 text-slate-400 hover:text-white'
+                }`}
+              >
+                <Zap className="w-3.5 h-3.5" />
+                <span>⚡ Modify Active Screen</span>
+              </button>
+
+              <button
+                type="button"
+                onClick={() => {
+                  setShowAiModal(false);
+                  setShowNewModal(true);
+                }}
+                className={`flex-1 py-2 px-3 rounded-lg text-xs font-semibold border transition-all flex items-center justify-center space-x-1.5 ${
+                  showNewModal
+                    ? 'bg-indigo-600 border-indigo-500 text-white shadow-sm'
+                    : isLight
+                    ? 'bg-slate-100 border-slate-200 text-slate-600 hover:bg-slate-200'
+                    : 'bg-slate-900 border-slate-800 text-slate-400 hover:text-white'
+                }`}
+              >
+                <Box className="w-3.5 h-3.5" />
+                <span>🎨 Blank / Template</span>
+              </button>
             </div>
 
-            <div>
-              <span className={`text-[10px] ${isLight ? 'text-slate-500' : 'text-slate-500'} font-semibold uppercase tracking-wider block mb-2`}>Preset Prompts:</span>
-              <div className="flex flex-wrap gap-1.5">
-                {[
-                  'SaaS Analytics Dashboard with 4 KPI cards and chart',
-                  'Enterprise Auth Login Portal with GitHub SSO',
-                  'DevOps Sprint Kanban Agile Board with 4 columns'
-                ].map((p, idx) => (
+            {/* TAB 1 & 2: AI PROMPT WORKFLOW */}
+            {showAiModal && (
+              <div className="space-y-4">
+                <div>
+                  <label className={`text-xs ${isLight ? 'text-slate-600' : 'text-slate-400'} block mb-1.5 font-medium`}>
+                    {aiMode === 'modify'
+                      ? 'Describe changes or elements to add/restyle in the current layout:'
+                      : 'Describe your UI layout requirement (Auth, E-Commerce, Chat, Video, Kanban, Pricing, Dashboard):'}
+                  </label>
+                  <textarea
+                    rows={4}
+                    value={prompt}
+                    onChange={(e) => setPrompt(e.target.value)}
+                    placeholder={
+                      aiMode === 'modify'
+                        ? 'e.g. Add 2 new KPI metric cards for monthly churn and active clusters, and insert a diagnostics log table below...'
+                        : 'e.g. Modern E-Commerce product catalog with hero banner, 4 hardware product cards with prices, ratings, and Add to Cart buttons...'
+                    }
+                    className={`w-full ${isLight ? 'bg-slate-50 border-slate-200 text-slate-800 placeholder-slate-400 focus:border-violet-600' : 'bg-slate-950 border-slate-800 text-white placeholder-slate-500 focus:border-violet-500'} border rounded-xl p-3 text-xs focus:outline-none font-sans`}
+                  />
+                </div>
+
+                {/* Theme Selector */}
+                <div className="flex items-center space-x-2">
+                  <span className={`text-[11px] font-semibold ${isLight ? 'text-slate-600' : 'text-slate-400'}`}>Theme:</span>
+                  {(['dark', 'light', 'cyberpunk', 'minimal'] as const).map(t => (
+                    <button
+                      key={t}
+                      type="button"
+                      onClick={() => setAiTheme(t)}
+                      className={`text-[11px] font-mono capitalize px-2.5 py-1 rounded-md border transition-all ${
+                        aiTheme === t
+                          ? 'bg-violet-600 border-violet-400 text-white font-bold'
+                          : isLight
+                          ? 'bg-slate-100 border-slate-200 text-slate-600'
+                          : 'bg-slate-900 border-slate-800 text-slate-400'
+                      }`}
+                    >
+                      {t}
+                    </button>
+                  ))}
+                </div>
+
+                <div>
+                  <span className={`text-[10px] ${isLight ? 'text-slate-500' : 'text-slate-500'} font-semibold uppercase tracking-wider block mb-2`}>
+                    Diverse Prompt Presets:
+                  </span>
+                  <div className="flex flex-wrap gap-1.5">
+                    {(aiMode === 'modify'
+                      ? [
+                          'Add 2 KPI metric cards for Cluster Latency and Memory Usage',
+                          'Add a real-time diagnostics data table with 4 columns',
+                          'Restyle header with search bar and filter dropdown buttons'
+                        ]
+                      : [
+                          'E-Commerce Storefront with Product Grid & Add to Cart',
+                          'Enterprise SSO Auth Login Portal with GitHub OAuth',
+                          'DevOps Sprint Kanban Agile Board with 4 Status Columns',
+                          'Real-Time Team Messaging & Chat Interface',
+                          'SaaS 3-Tier Pricing Comparison Matrix with CTAs'
+                        ]
+                    ).map((p, idx) => (
+                      <button
+                        key={idx}
+                        onClick={() => setPrompt(p)}
+                        className={`text-[11px] px-2.5 py-1 ${isLight ? 'bg-slate-100 hover:bg-slate-200 border-slate-200 text-slate-700' : 'bg-slate-900 hover:bg-slate-800 border-slate-800 text-slate-300'} border rounded-lg transition-colors text-left`}
+                      >
+                        {p}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+
+                <div className="flex items-center justify-end space-x-3 pt-2">
                   <button
-                    key={idx}
-                    onClick={() => setPrompt(p)}
-                    className={`text-[11px] px-2.5 py-1 ${isLight ? 'bg-slate-100 hover:bg-slate-200 border-slate-200 text-slate-700' : 'bg-slate-900 hover:bg-slate-800 border-slate-800 text-slate-300'} border rounded-lg transition-colors text-left`}
+                    onClick={() => {
+                      setShowAiModal(false);
+                      setShowNewModal(false);
+                    }}
+                    className={`px-4 py-2 text-xs ${isLight ? 'text-slate-600 hover:text-slate-900' : 'text-slate-400 hover:text-white'}`}
                   >
-                    {p}
+                    Cancel
                   </button>
-                ))}
+                  <button
+                    onClick={() => handleAiGenerate()}
+                    disabled={isGenerating || !prompt.trim()}
+                    className="px-5 py-2 bg-gradient-to-r from-violet-600 to-indigo-600 hover:from-violet-500 hover:to-indigo-500 disabled:opacity-50 text-white text-xs font-semibold rounded-lg shadow cursor-pointer transition-all flex items-center space-x-2"
+                  >
+                    <Sparkles className="w-3.5 h-3.5" />
+                    <span>{isGenerating ? 'Synthesizing Spec AST...' : aiMode === 'modify' ? 'Apply Stitch AI Edits' : 'Generate Screen AST'}</span>
+                  </button>
+                </div>
               </div>
-            </div>
+            )}
 
-            <div className="flex items-center justify-end space-x-3 pt-2">
-              <button onClick={() => setShowAiModal(false)} className={`px-4 py-2 text-xs ${isLight ? 'text-slate-600 hover:text-slate-900' : 'text-slate-400 hover:text-white'}`}>
-                Cancel
-              </button>
-              <button
-                onClick={() => handleAiGenerate()}
-                disabled={isGenerating || !prompt.trim()}
-                className="px-5 py-2 bg-gradient-to-r from-violet-600 to-indigo-600 hover:from-violet-500 hover:to-indigo-500 disabled:opacity-50 text-white text-xs font-semibold rounded-lg shadow cursor-pointer transition-all"
-              >
-                {isGenerating ? 'Generating Spec AST...' : 'Generate Layout Spec'}
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* New Screen Modal */}
-      {showNewModal && (
-        <div className="fixed inset-0 bg-black/80 backdrop-blur-xs flex items-center justify-center z-50 p-4">
-          <div className={`w-full max-w-md ${isLight ? 'bg-white border-slate-200 text-slate-800' : 'bg-[#0d1322] border-slate-800 text-white'} border rounded-2xl p-6 shadow-2xl space-y-4`}>
-            <h3 className={`text-base font-bold ${isLight ? 'text-slate-900' : 'text-white'}`}>Create New Artboard</h3>
-            <div>
-              <label className={`text-xs ${isLight ? 'text-slate-600' : 'text-slate-400'} block mb-1`}>Artboard Name</label>
-              <input
-                type="text"
-                value={newScreenName}
-                onChange={(e) => setNewScreenName(e.target.value)}
-                placeholder="e.g. Mobile User Profile"
-                className={`w-full ${isLight ? 'bg-slate-50 border-slate-200 text-slate-800 focus:border-violet-600' : 'bg-slate-950 border-slate-800 text-white focus:border-violet-500'} border rounded-lg px-3 py-2 text-xs focus:outline-none`}
-              />
-            </div>
-            <div>
-              <label className={`text-xs ${isLight ? 'text-slate-600' : 'text-slate-400'} block mb-1`}>Starting Template</label>
-              <select
-                value={selectedTemplateKey}
-                onChange={(e) => setSelectedTemplateKey(e.target.value)}
-                className={`w-full ${isLight ? 'bg-slate-50 border-slate-200 text-slate-800 focus:border-violet-600' : 'bg-slate-950 border-slate-800 text-white focus:border-violet-500'} border rounded-lg px-3 py-2 text-xs focus:outline-none`}
-              >
-                {templates.map(t => (
-                  <option key={t.key} value={t.key}>{t.name} ({t.dimensions.width} × {t.dimensions.height})</option>
-                ))}
-              </select>
-            </div>
-            <div className="flex items-center justify-end space-x-3 pt-2">
-              <button onClick={() => setShowNewModal(false)} className={`px-4 py-2 text-xs ${isLight ? 'text-slate-600 hover:text-slate-900' : 'text-slate-400 hover:text-white'}`}>
-                Cancel
-              </button>
-              <button
-                onClick={handleCreateNew}
-                disabled={!newScreenName.trim()}
-                className="px-4 py-2 bg-violet-600 hover:bg-violet-500 text-white text-xs font-semibold rounded-lg shadow cursor-pointer disabled:opacity-50"
-              >
-                Create Artboard
-              </button>
-            </div>
+            {/* TAB 3: BLANK / TEMPLATE WORKFLOW */}
+            {showNewModal && (
+              <div className="space-y-4">
+                <div>
+                  <label className={`text-xs ${isLight ? 'text-slate-600' : 'text-slate-400'} block mb-1 font-medium`}>Artboard Title</label>
+                  <input
+                    type="text"
+                    value={newScreenName}
+                    onChange={(e) => setNewScreenName(e.target.value)}
+                    placeholder="e.g. Mobile User Profile"
+                    className={`w-full ${isLight ? 'bg-slate-50 border-slate-200 text-slate-800 focus:border-violet-600' : 'bg-slate-950 border-slate-800 text-white focus:border-violet-500'} border rounded-lg px-3 py-2 text-xs focus:outline-none`}
+                  />
+                </div>
+                <div>
+                  <label className={`text-xs ${isLight ? 'text-slate-600' : 'text-slate-400'} block mb-1 font-medium`}>Canvas Dimension Preset</label>
+                  <select
+                    value={selectedTemplateKey}
+                    onChange={(e) => setSelectedTemplateKey(e.target.value)}
+                    className={`w-full ${isLight ? 'bg-slate-50 border-slate-200 text-slate-800 focus:border-violet-600' : 'bg-slate-950 border-slate-800 text-white focus:border-violet-500'} border rounded-lg px-3 py-2 text-xs focus:outline-none`}
+                  >
+                    {templates.map(t => (
+                      <option key={t.key} value={t.key}>{t.name} ({t.dimensions.width} × {t.dimensions.height})</option>
+                    ))}
+                  </select>
+                </div>
+                <div className="flex items-center justify-end space-x-3 pt-2">
+                  <button
+                    onClick={() => {
+                      setShowAiModal(false);
+                      setShowNewModal(false);
+                    }}
+                    className={`px-4 py-2 text-xs ${isLight ? 'text-slate-600 hover:text-slate-900' : 'text-slate-400 hover:text-white'}`}
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    onClick={handleCreateNew}
+                    disabled={!newScreenName.trim()}
+                    className="px-4 py-2 bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-semibold rounded-lg shadow cursor-pointer disabled:opacity-50"
+                  >
+                    Create Blank Artboard
+                  </button>
+                </div>
+              </div>
+            )}
           </div>
         </div>
       )}

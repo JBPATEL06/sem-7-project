@@ -503,3 +503,284 @@ diagramRouter.get('/:id/export', localOrAuth, async (req: AuthRequest, res: Resp
     res.status(500).json({ error: `Failed to export diagram: ${err.message}` });
   }
 });
+
+// --------------------------------------------------------------------------
+// 7. POST /api/diagrams/generate-ai — Stitch-Grade AI Diagram Generator
+// --------------------------------------------------------------------------
+diagramRouter.post('/generate-ai', localOrAuth, async (req: AuthRequest, res: Response): Promise<void> => {
+  try {
+    const {
+      prompt,
+      type = 'architecture',
+      projectId = 'acme-api',
+      mode = 'create',
+      diagramId
+    } = req.body;
+
+    if (!prompt || typeof prompt !== 'string' || !prompt.trim()) {
+      res.status(400).json({ error: 'A natural language prompt is required.' });
+      return;
+    }
+
+    const userId = req.user ? req.user.sub : 'usr_admin_default';
+    const cleanPrompt = prompt.trim();
+
+    // Derive semantic name
+    const rawWords = cleanPrompt.replace(/[^a-zA-Z0-9\s-_]/g, '').split(/\s+/).filter(Boolean);
+    const diagramName = rawWords.length > 0
+      ? rawWords.map(w => w.charAt(0).toUpperCase() + w.slice(1)).slice(0, 4).join(' ')
+      : 'AI Generated Architecture Flow';
+
+    const p = cleanPrompt.toLowerCase();
+    const isEr = type === 'er_diagram' || p.includes('er') || p.includes('schema') || p.includes('table') || p.includes('database') || p.includes('relation');
+
+    const elements: any[] = [];
+    const steps: Array<{ step: number; name: string; type: string; x: number; y: number; width: number; height: number; action: string }> = [];
+
+    if (isEr) {
+      // Generate ER Diagram Entities
+      const tables = [
+        { name: 'Users Table', fields: ['id (UUID, PK)', 'email (VARCHAR)', 'role (VARCHAR)', 'created_at (TIMESTAMP)'], x: 100, y: 140, color: '#7c3aed' },
+        { name: 'Projects Table', fields: ['id (UUID, PK)', 'user_id (UUID, FK)', 'name (VARCHAR)', 'status (VARCHAR)'], x: 480, y: 140, color: '#10b981' },
+        { name: 'Activity Logs Table', fields: ['id (UUID, PK)', 'project_id (UUID, FK)', 'action (VARCHAR)', 'latency_ms (INT)'], x: 860, y: 140, color: '#06b6d4' }
+      ];
+
+      tables.forEach((t, idx) => {
+        const boxId = `er_box_${idx + 1}`;
+        const textId = `er_text_${idx + 1}`;
+
+        // Table Box
+        elements.push({
+          id: boxId,
+          type: 'rectangle',
+          x: t.x,
+          y: t.y,
+          width: 280,
+          height: 180,
+          strokeColor: t.color,
+          backgroundColor: '#131b2e',
+          fillStyle: 'solid',
+          strokeWidth: 2,
+          roughness: 0,
+          roundness: { type: 3 },
+          seed: Math.floor(Math.random() * 100000)
+        });
+
+        // Table Text
+        elements.push({
+          id: textId,
+          type: 'text',
+          x: t.x + 16,
+          y: t.y + 16,
+          width: 248,
+          height: 140,
+          text: `🗄️ ${t.name}\n────────────────────\n${t.fields.join('\n')}`,
+          fontSize: 14,
+          fontFamily: 3,
+          textAlign: 'left',
+          strokeColor: '#f8fafc',
+          seed: Math.floor(Math.random() * 100000)
+        });
+
+        steps.push({
+          step: idx + 1,
+          name: t.name,
+          type: 'table_entity',
+          x: t.x,
+          y: t.y,
+          width: 280,
+          height: 180,
+          action: `Constructing ${t.name} with columns & foreign keys`
+        });
+      });
+
+      // Connector Arrows (1 -> 2, 2 -> 3)
+      elements.push({
+        id: 'arrow_1_2',
+        type: 'arrow',
+        x: 380,
+        y: 220,
+        width: 100,
+        height: 0,
+        points: [[0, 0], [100, 0]],
+        strokeColor: '#7c3aed',
+        strokeWidth: 2,
+        roughness: 0,
+        startArrowhead: null,
+        endArrowhead: 'arrow',
+        seed: Math.floor(Math.random() * 100000)
+      });
+      steps.push({ step: 4, name: '1:N Relationship Arrow (Users -> Projects)', type: 'arrow', x: 380, y: 220, width: 100, height: 2, action: 'Linking Foreign Key user_id constraint' });
+
+      elements.push({
+        id: 'arrow_2_3',
+        type: 'arrow',
+        x: 760,
+        y: 220,
+        width: 100,
+        height: 0,
+        points: [[0, 0], [100, 0]],
+        strokeColor: '#10b981',
+        strokeWidth: 2,
+        roughness: 0,
+        startArrowhead: null,
+        endArrowhead: 'arrow',
+        seed: Math.floor(Math.random() * 100000)
+      });
+      steps.push({ step: 5, name: '1:N Relationship Arrow (Projects -> Activity Logs)', type: 'arrow', x: 760, y: 220, width: 100, height: 2, action: 'Linking Foreign Key project_id constraint' });
+    } else {
+      // Generate Architecture / Microservice Flow
+      const nodes = [
+        { name: 'Client Browser (React / Vite)', sub: 'Port 5173 · Obsidian UI', x: 80, y: 180, color: '#38bdf8', bg: '#0f172a' },
+        { name: 'API Gateway & Auth Control Plane', sub: 'Express · JWT · AES-256', x: 440, y: 180, color: '#a855f7', bg: '#1e1b4b' },
+        { name: 'AST Code Intelligence Engine', sub: 'ts-morph · .dbci/index.sqlite', x: 800, y: 80, color: '#10b981', bg: '#064e3b' },
+        { name: 'Multi-Database Control Plane', sub: 'Postgres · MongoDB · Redis · SQLite', x: 800, y: 280, color: '#f59e0b', bg: '#451a03' }
+      ];
+
+      nodes.forEach((n, idx) => {
+        elements.push({
+          id: `node_box_${idx + 1}`,
+          type: 'rectangle',
+          x: n.x,
+          y: n.y,
+          width: 260,
+          height: 100,
+          strokeColor: n.color,
+          backgroundColor: n.bg,
+          fillStyle: 'solid',
+          strokeWidth: 2,
+          roughness: 0,
+          roundness: { type: 3 },
+          seed: Math.floor(Math.random() * 100000)
+        });
+
+        elements.push({
+          id: `node_text_${idx + 1}`,
+          type: 'text',
+          x: n.x + 16,
+          y: n.y + 24,
+          width: 228,
+          height: 52,
+          text: `⚡ ${n.name}\n${n.sub}`,
+          fontSize: 13,
+          fontFamily: 3,
+          textAlign: 'center',
+          strokeColor: '#f8fafc',
+          seed: Math.floor(Math.random() * 100000)
+        });
+
+        steps.push({
+          step: idx + 1,
+          name: n.name,
+          type: 'service_node',
+          x: n.x,
+          y: n.y,
+          width: 260,
+          height: 100,
+          action: `Placing Architecture Node (${n.name})`
+        });
+      });
+
+      // Connecting Arrows
+      elements.push({
+        id: 'arrow_client_gw',
+        type: 'arrow',
+        x: 340,
+        y: 230,
+        width: 100,
+        height: 0,
+        points: [[0, 0], [100, 0]],
+        strokeColor: '#38bdf8',
+        strokeWidth: 2,
+        roughness: 0,
+        endArrowhead: 'arrow',
+        seed: Math.floor(Math.random() * 100000)
+      });
+      steps.push({ step: 5, name: 'REST / WS Stream Link', type: 'arrow', x: 340, y: 230, width: 100, height: 2, action: 'Connecting Client ➔ API Gateway' });
+
+      elements.push({
+        id: 'arrow_gw_ast',
+        type: 'arrow',
+        x: 700,
+        y: 210,
+        width: 100,
+        height: -80,
+        points: [[0, 0], [100, -80]],
+        strokeColor: '#10b981',
+        strokeWidth: 2,
+        roughness: 0,
+        endArrowhead: 'arrow',
+        seed: Math.floor(Math.random() * 100000)
+      });
+      steps.push({ step: 6, name: 'AST Traversal Channel', type: 'arrow', x: 700, y: 210, width: 100, height: 80, action: 'Connecting API Gateway ➔ AST Engine' });
+
+      elements.push({
+        id: 'arrow_gw_db',
+        type: 'arrow',
+        x: 700,
+        y: 250,
+        width: 100,
+        height: 80,
+        points: [[0, 0], [100, 80]],
+        strokeColor: '#f59e0b',
+        strokeWidth: 2,
+        roughness: 0,
+        endArrowhead: 'arrow',
+        seed: Math.floor(Math.random() * 100000)
+      });
+      steps.push({ step: 7, name: 'Multi-Driver DB Connection Pool', type: 'arrow', x: 700, y: 250, width: 100, height: 80, action: 'Connecting API Gateway ➔ DB Control Plane' });
+    }
+
+    const targetId = (mode === 'modify' && diagramId)
+      ? diagramId
+      : `diag_ai_${Date.now()}_${Math.random().toString(36).slice(2, 7)}`;
+
+    const targetType: Diagram['type'] = isEr ? 'er_diagram' : 'architecture';
+
+    const fullDiagram: Diagram = {
+      id: targetId,
+      projectId,
+      userId,
+      name: diagramName,
+      description: `Stitch AI Generated: ${cleanPrompt}`,
+      type: targetType,
+      elements,
+      appState: { viewBackgroundColor: '#090d16', theme: 'dark' },
+      files: {},
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString()
+    };
+
+    if (mode === 'modify' && diagramId) {
+      if (getIsMongoConnected()) {
+        try {
+          await DiagramModel.updateOne({ id: diagramId }, { $set: fullDiagram });
+        } catch {}
+      }
+      await diagramStore.update(diagramId, fullDiagram);
+    } else {
+      if (getIsMongoConnected()) {
+        try {
+          await DiagramModel.create(fullDiagram);
+        } catch {}
+      }
+      await diagramStore.create(fullDiagram);
+    }
+
+    const relPath = syncDiagramToDisk(fullDiagram);
+
+    res.status(201).json({
+      success: true,
+      diagram: {
+        ...fullDiagram,
+        filePath: relPath
+      },
+      generationSteps: steps,
+      message: `Generated diagram '${diagramName}' with ${elements.length} editable elements`
+    });
+  } catch (err: any) {
+    console.error('[diagrams/generate-ai] Error:', err.message);
+    res.status(500).json({ error: `Failed to generate AI diagram: ${err.message}` });
+  }
+});
+

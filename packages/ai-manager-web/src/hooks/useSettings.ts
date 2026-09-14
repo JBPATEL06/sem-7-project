@@ -100,6 +100,21 @@ export function useSettings() {
     }
   };
 
+  const verifyKey = async (keyType: 'groq' | 'github' | 'openai', keyValue?: string) => {
+    try {
+      const res = await fetch('/api/settings/keys/verify', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ keyType, keyValue })
+      });
+
+      const data = await res.json();
+      return data;
+    } catch (err: any) {
+      return { valid: false, error: err.message || 'Failed to verify key' };
+    }
+  };
+
   const resetAllData = async () => {
     setIsResetting(true);
     try {
@@ -135,6 +150,7 @@ export function useSettings() {
     revealedValues,
     toggleReveal,
     saveKey,
+    verifyKey,
     resetAllData,
     refetch: fetchKeys
   };

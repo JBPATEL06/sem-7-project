@@ -18,7 +18,9 @@ import {
   Database,
   GitBranch,
   FileCheck,
-  Maximize2
+  Maximize2,
+  Sparkles,
+  Zap
 } from 'lucide-react';
 import { useDiagrams, Diagram } from '../hooks/useDiagrams';
 import { useTheme } from '../context/ThemeContext';
@@ -37,6 +39,7 @@ export const DiagramsPage: React.FC<DiagramsPageProps> = ({ projectId = 'acme-ap
     isSaving,
     error,
     createDiagram,
+    generateAiDiagram,
     saveDiagram,
     deleteDiagram,
     importDiagramJson,
@@ -47,6 +50,10 @@ export const DiagramsPage: React.FC<DiagramsPageProps> = ({ projectId = 'acme-ap
   const [newDiagramName, setNewDiagramName] = useState('');
   const [newDiagramType, setNewDiagramType] = useState<Diagram['type']>('architecture');
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
+  const [isAiModalOpen, setIsAiModalOpen] = useState(false);
+  const [aiPrompt, setAiPrompt] = useState('');
+  const [aiDiagramType, setAiDiagramType] = useState<Diagram['type']>('architecture');
+  const [isAiGenerating, setIsAiGenerating] = useState(false);
   const [saveSuccess, setSaveSuccess] = useState(false);
   const [copiedFilePath, setCopiedFilePath] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -164,6 +171,22 @@ export const DiagramsPage: React.FC<DiagramsPageProps> = ({ projectId = 'acme-ap
     await createDiagram(newDiagramName.trim(), newDiagramType, initialElements);
     setNewDiagramName('');
     setIsCreateModalOpen(false);
+  };
+
+  // Handle AI Generate Diagram
+  const handleAiGenerateDiagram = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!aiPrompt.trim()) return;
+    try {
+      setIsAiGenerating(true);
+      await generateAiDiagram(aiPrompt.trim(), aiDiagramType);
+      setAiPrompt('');
+      setIsAiModalOpen(false);
+    } catch (err: any) {
+      console.error('AI Diagram Generation failed:', err);
+    } finally {
+      setIsAiGenerating(false);
+    }
   };
 
   // Export JSON (.excalidraw)
@@ -345,6 +368,16 @@ export const DiagramsPage: React.FC<DiagramsPageProps> = ({ projectId = 'acme-ap
               ))}
             </SelectContent>
           </Select>
+
+          {/* AI Generate Diagram Button */}
+          <Button
+            size="sm"
+            onClick={() => setIsAiModalOpen(true)}
+            className="gap-1.5 text-xs h-8 bg-gradient-to-r from-violet-600 to-indigo-600 hover:from-violet-500 hover:to-indigo-500 text-white cursor-pointer shadow-xs font-semibold"
+          >
+            <Sparkles className="size-3.5" />
+            AI Generate
+          </Button>
 
           {/* New Diagram Button */}
           <Button
@@ -569,6 +602,105 @@ export const DiagramsPage: React.FC<DiagramsPageProps> = ({ projectId = 'acme-ap
                   className="bg-primary text-primary-foreground text-xs cursor-pointer"
                 >
                   Create Diagram
+                </Button>
+              </div>
+            </form>
+          </Card>
+        </div>
+      )}
+
+      {/* AI Diagram Generator Modal */}
+      {isAiModalOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur-xs p-4">
+          <Card className="w-full max-w-lg p-6 bg-card border-border shadow-2xl space-y-4">
+            <div className="flex items-center justify-between border-b border-border pb-3">
+              <div className="flex items-center gap-2">
+                <Sparkles className="size-5 text-violet-500" />
+                <h2 className="text-base font-bold text-foreground">AI Diagram Synthesis Engine</h2>
+              </div>
+              <button
+                type="button"
+                onClick={() => setIsAiModalOpen(false)}
+                className="text-muted-foreground hover:text-foreground text-xs"
+              >
+                ✕
+              </button>
+            </div>
+
+            <form onSubmit={handleAiGenerateDiagram} className="flex flex-col gap-4">
+              <div>
+                <label className="text-xs font-semibold text-foreground block mb-1">
+                  Diagram Architecture Type
+                </label>
+                <Select
+                  value={aiDiagramType}
+                  onValueChange={(val: any) => setAiDiagramType(val)}
+                >
+                  <SelectTrigger className="w-full text-xs">
+                    <SelectValue placeholder="Select type" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="architecture">Microservices Architecture Flow</SelectItem>
+                    <SelectItem value="er_diagram">Relational Database ER Schema</SelectItem>
+                    <SelectItem value="activity_flow">Event-Driven Telemetry Pipeline</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+
+              <div>
+                <label className="text-xs font-semibold text-foreground block mb-1">
+                  Describe the system architecture or schema:
+                </label>
+                <textarea
+                  rows={4}
+                  required
+                  value={aiPrompt}
+                  onChange={(e) => setAiPrompt(e.target.value)}
+                  placeholder="e.g. Distributed high-throughput microservices architecture with API Gateway, JWT Auth Service, Kafka Event Bus, and MongoDB Cluster with bidirectional sync arrows..."
+                  className="w-full px-3 py-2 text-xs rounded-lg border border-border bg-background text-foreground focus:outline-hidden focus:ring-1 focus:ring-primary font-sans"
+                />
+              </div>
+
+              <div>
+                <span className="text-[10px] text-muted-foreground font-semibold uppercase tracking-wider block mb-2">
+                  Preset Architectures:
+                </span>
+                <div className="flex flex-wrap gap-1.5">
+                  {[
+                    'Full-Stack Cloud Architecture with Gateway, Auth & Cache',
+                    'E-Commerce Relational ER Diagram with Users & Orders',
+                    'Real-Time WebSocket Analytics Pipeline with Redis Stream'
+                  ].map((preset, idx) => (
+                    <button
+                      key={idx}
+                      type="button"
+                      onClick={() => setAiPrompt(preset)}
+                      className="text-[11px] px-2.5 py-1 bg-muted/60 hover:bg-muted border border-border rounded-lg text-foreground transition-colors text-left"
+                    >
+                      {preset}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              <div className="flex justify-end gap-2 mt-2 pt-2 border-t border-border">
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setIsAiModalOpen(false)}
+                  className="text-xs cursor-pointer"
+                >
+                  Cancel
+                </Button>
+                <Button
+                  type="submit"
+                  size="sm"
+                  disabled={isAiGenerating || !aiPrompt.trim()}
+                  className="bg-gradient-to-r from-violet-600 to-indigo-600 hover:from-violet-500 hover:to-indigo-500 text-white text-xs gap-1.5 cursor-pointer disabled:opacity-50"
+                >
+                  <Sparkles className="size-3.5" />
+                  {isAiGenerating ? 'Synthesizing Architecture...' : 'Generate Diagram'}
                 </Button>
               </div>
             </form>

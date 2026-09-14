@@ -1,48 +1,16 @@
-# What is Flow Audit?
+# Zero Presets Purge & Dynamic Generation Engine
 
-**Flow Audit** (`/flow-audit`) is the **AST (Abstract Syntax Tree) Code Intelligence & Call Graph Visualizer** of the AI Manager platform.
-
-It performs static analysis on your TypeScript and JavaScript source code to construct a comprehensive map of how API routes, functions, and database queries connect to each other.
-
----
-
-## 1. What Problem Does Flow Audit Solve?
-
-In modern web applications:
-- It is difficult to know which API endpoint touches which database tables or MongoDB collections.
-- Database queries are often buried several function calls deep (transitive dependencies).
-- When altering a database schema or refactoring a function, developers risk breaking hidden callers.
-
-**Flow Audit solves this by statically inspecting the entire codebase without needing to run the code**, generating a searchable call graph and tracking every database operation from endpoint to disk.
-
----
-
-## 2. Key Capabilities & Features
-
-### 🔍 1. Multi-Dialect Database Query Extraction
-Flow Audit inspects code for query operations across:
-- **MongoDB / Mongoose**: `.find()`, `.create()`, `.updateOne()`, `.aggregate()`, `.deleteMany()`
-- **PostgreSQL / Supabase / SQL**: `SELECT`, `INSERT`, `UPDATE`, `pg.query()`, `.from('table')`
-- **Redis / Valkey**: `client.get()`, `client.set()`, `client.del()`, `client.pipeline()`
-- **SQLite / LibSQL**: `db.exec()`, `db.prepare()`, `sql.js` WASM queries
-- **Firebase / Firestore**: `.collection()`, `.doc()`, `.get()`
-
-### 🔄 2. Transitive Call-Graph Traversal
-If `GET /api/users` calls `userService.getUser()`, which in turn calls `dbDriver.findUser()`, Flow Audit traces the entire chain and marks `GET /api/users` as **Touching the `users` table transitively**.
-
-### 📊 3. The 3-Pane Interactive Studio (`/flow-audit`)
-1. **Symbol Explorer (Left)**:
-   - Filter functions by category: `All`, `Routes`, `DB Callers`, `Async`.
-   - Instant search across function names, classes, and source files.
-2. **Call Graph Canvas (Center)**:
-   - Visual flow mapping: `Incoming Callers` ➔ `Selected Function` ➔ `Outgoing Callees & Database Operations`.
-3. **AST Inspector (Right)**:
-   - File path, start & end line numbers, class name, and direct database queries.
-   - OpenTelemetry span preview.
-
-### 📡 4. Live Incremental AST Scanning (SSE)
-- Built with `ts-morph` and the `@ai-manager/db-context-indexer` engine.
-- Runs on-demand incremental scans and streams real-time progress via **Server-Sent Events (SSE)** through 5 compilation phases (`AST_TOKENIZATION` ➔ `ROUTE_DISCOVERY` ➔ `QUERY_EXTRACTION` ➔ `CALL_GRAPH_TRAVERSAL` ➔ `INDEX_PERSISTENCE`).
-
-### 🛡️ 5. OpenTelemetry (OTel) Export
-- Generates standard OpenTelemetry-compliant JSON trace spans (`resourceSpans`, `scopeSpans`) ready for import into observability platforms (Datadog, Jaeger, Grafana Tempo).
+### What Was Done:
+1. **Removed Preset Functions & Static Templates**:
+   - Completely deleted all canned presets (`// Built-in presets for rapid prototyping`, `SCREEN_TEMPLATES`, `saas-dashboard`, `auth-portal`, `kanban-board`).
+   - Sliced out the duplicated block in `packages/ai-manager-web/server/screenRoutes.ts`.
+2. **Zero Pre-seeded Screens**:
+   - `GET /api/screens` no longer auto-seeds any default dashboard if the screen list is empty (`screens: []`).
+   - Reset `packages/ai-manager-web/.ai-manager/screens.json` to `[]`.
+   - Purged all prebuilt mock `.penpot.json` files from `ui/`.
+3. **Cleaned UI**:
+   - Removed the "Preset Templates" section from `ScreensPage.tsx` sidebar.
+4. **100% Dynamic Generation**:
+   - Screen generation is 100% dynamic from configured LLM keys (Groq, OpenAI) or the AST layout synthesis engine, creating custom component trees per user prompt.
+5. **Verification**:
+   - Vitest suite passed: **19/19 tests passing across all 4 test suites**.

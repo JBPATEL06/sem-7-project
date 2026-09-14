@@ -171,6 +171,157 @@ settingsRouter.post('/keys', localOrAuth, async (req: AuthRequest, res: Response
   }
 });
 
+// POST /api/settings/keys/verify — Test and verify if an API key is valid against live provider
+settingsRouter.post('/keys/verify', localOrAuth, async (req: AuthRequest, res: Response): Promise<void> => {
+  try {
+    const { keyType, keyValue } = req.body;
+    if (!keyType || !['groq', 'github', 'openai'].includes(keyType)) {
+      res.status(400).json({ valid: false, error: 'Valid keyType (groq, github, openai) is required.' });
+      return;
+    }
+
+    const creds = loadDecryptedCredentials();
+    let rawKey = typeof keyValue === 'string' ? keyValue.trim() : '';
+    if (!rawKey) {
+      if (keyType === 'groq') rawKey = creds.groq || process.env.GROQ_API_KEY || '';
+      else if (keyType === 'github') rawKey = creds.github || process.env.GITHUB_TOKEN || '';
+      else if (keyType === 'openai') rawKey = creds.openai || process.env.OPENAI_API_KEY || '';
+    }
+
+    if (!rawKey) {
+      res.status(200).json({
+        valid: false,
+        keyType,
+        error: `No API key provided or configured for '${keyType}'.`
+      });
+      return;
+    }
+
+    if (keyType === 'groq') {
+      try {
+        const testRes = await fetch('https://api.groq.com/openai/v1/models', {
+          headers: {
+            Authorization: `Bearer ${rawKey}`,
+            'Content-Type': 'application/json'
+          }
+        });
+        if (testRes.ok) {
+          const data: any = await testRes.json();
+          const models = Array.isArray(data?.data) ? data.data.map((m: any) => m.id) : [];
+          res.status(200).json({
+            valid: true,
+            provider: 'Groq',
+            keyType,
+            message: 'Groq API Key is valid and active!',
+            modelsCount: models.length,
+            recommendedModel: 'llama-3.3-70b-versatile'
+          });
+          return;
+        } else {
+          const errData: any = await testRes.json().catch(() => ({}));
+          const errMsg = errData?.error?.message || `Authentication failed (HTTP ${testRes.status})`;
+          res.status(200).json({
+            valid: false,
+            provider: 'Groq',
+            keyType,
+            error: errMsg
+          });
+          return;
+        }
+      } catch (e: any) {
+        res.status(200).json({
+          valid: false,
+          provider: 'Groq',
+          keyType,
+          error: `Network error connecting to Groq API: ${e.message}`
+        });
+        return;
+      }
+    } else if (keyType === 'openai') {
+      try {
+        const testRes = await fetch('https://api.openai.com/v1/models', {
+          headers: {
+            Authorization: `Bearer ${rawKey}`,
+            'Content-Type': 'application/json'
+          }
+        });
+        if (testRes.ok) {
+          const data: any = await testRes.json();
+          const models = Array.isArray(data?.data) ? data.data.map((m: any) => m.id) : [];
+          res.status(200).json({
+            valid: true,
+            provider: 'OpenAI',
+            keyType,
+            message: 'OpenAI API Key is valid and active!',
+            modelsCount: models.length,
+            recommendedModel: 'gpt-4o-mini'
+          });
+          return;
+        } else {
+          const errData: any = await testRes.json().catch(() => ({}));
+          const errMsg = errData?.error?.message || `Authentication failed (HTTP ${testRes.status})`;
+          res.status(200).json({
+            valid: false,
+            provider: 'OpenAI',
+            keyType,
+            error: errMsg
+          });
+          return;
+        }
+      } catch (e: any) {
+        res.status(200).json({
+          valid: false,
+          provider: 'OpenAI',
+          keyType,
+          error: `Network error connecting to OpenAI API: ${e.message}`
+        });
+        return;
+      }
+    } else if (keyType === 'github') {
+      try {
+        const testRes = await fetch('https://api.github.com/user', {
+          headers: {
+            Authorization: `Bearer ${rawKey}`,
+            'User-Agent': 'AI-Manager-Platform',
+            Accept: 'application/vnd.github.v3+json'
+          }
+        });
+        if (testRes.ok) {
+          const data: any = await testRes.json();
+          res.status(200).json({
+            valid: true,
+            provider: 'GitHub',
+            keyType,
+            message: `GitHub Token is valid! Authenticated as @${data.login}.`,
+            username: data.login,
+            scopes: testRes.headers.get('x-oauth-scopes') || 'repo/workflow'
+          });
+          return;
+        } else {
+          res.status(200).json({
+            valid: false,
+            provider: 'GitHub',
+            keyType,
+            error: `Invalid GitHub Token (HTTP ${testRes.status}: Bad credentials)`
+          });
+          return;
+        }
+      } catch (e: any) {
+        res.status(200).json({
+          valid: false,
+          provider: 'GitHub',
+          keyType,
+          error: `Network error connecting to GitHub API: ${e.message}`
+        });
+        return;
+      }
+    }
+  } catch (err: any) {
+    console.error('[settings/keys/verify] Error:', err);
+    res.status(500).json({ valid: false, error: `Verification failed: ${err.message}` });
+  }
+});
+
 // POST /api/settings/reset — Reset all indexed SQLite databases and project metrics
 settingsRouter.post('/reset', localOrAuth, async (req: AuthRequest, res: Response): Promise<void> => {
   try {

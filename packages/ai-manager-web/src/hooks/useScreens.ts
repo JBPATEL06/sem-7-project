@@ -36,6 +36,20 @@ export interface PenpotBoard {
   components: PenpotComponent[];
 }
 
+export interface ChatMessage {
+  id: string;
+  role: 'user' | 'assistant';
+  text: string;
+  timestamp: string;
+  stepsCount?: number;
+  changesSummary?: string;
+  metadata?: {
+    mode?: string;
+    theme?: string;
+    dimensions?: { width: number; height: number };
+  };
+}
+
 export interface ScreenLayoutSpec {
   id: string;
   projectId: string;
@@ -51,8 +65,30 @@ export interface ScreenLayoutSpec {
     accentColor: string;
     borderRadius: number;
   };
+  chatHistory?: ChatMessage[];
   createdAt: string;
   updatedAt: string;
+}
+
+export interface StitchGenerationStep {
+  step: number;
+  name: string;
+  type: string;
+  x: number;
+  y: number;
+  width: number;
+  height: number;
+  action: string;
+}
+
+export interface StitchGenerationResponse {
+  success: boolean;
+  mode: 'create' | 'modify';
+  screen: ScreenLayoutSpec;
+  generationSteps: StitchGenerationStep[];
+  changesSummary?: string;
+  assistantMessage?: string;
+  chatHistory?: ChatMessage[];
 }
 
 export interface TemplateInfo {
@@ -69,6 +105,8 @@ export function useScreens(projectId?: string) {
   const [templates, setTemplates] = useState<TemplateInfo[]>([]);
   const [isLoading, setIsLoading] = useState<boolean>(true);
   const [isGenerating, setIsGenerating] = useState<boolean>(false);
+  const [animatingStep, setAnimatingStep] = useState<StitchGenerationStep | null>(null);
+  const [animationProgress, setAnimationProgress] = useState<number>(0);
   const [error, setError] = useState<string | null>(null);
 
   const fetchScreens = useCallback(async () => {
@@ -98,43 +136,68 @@ export function useScreens(projectId?: string) {
   }, []);
 
   const selectScreen = useCallback(async (id: string) => {
-    setIsLoading(true);
-    setError(null);
     try {
+      const found = screens.find(s => s.id === id);
+      if (found) {
+        setCurrentScreen(found);
+        return;
+      }
       const res = await ApiClient.get<{ success: boolean; screen: ScreenLayoutSpec }>(`/api/screens/${id}`);
-      setCurrentScreen(res.screen);
+      if (res.screen) {
+        setCurrentScreen(res.screen);
+        setScreens(prev => {
+          if (!prev.some(s => s.id === id)) return [...prev, res.screen];
+          return prev;
+        });
+      }
     } catch (err: any) {
-      setError(err.message || `Failed to fetch screen ${id}`);
-    } finally {
-      setIsLoading(false);
+      setError(err.message || 'Failed to select screen');
     }
-  }, []);
+  }, [screens]);
 
-  const createScreen = useCallback(async (payload: { name: string; description?: string; templateKey?: string; board?: PenpotBoard; theme?: any }) => {
-    setError(null);
+  const createScreen = useCallback(async (
+    nameOrOptions: string | { name: string; templateKey?: string; description?: string },
+    templateKey?: string,
+    description?: string
+  ) => {
+    setIsLoading(true);
     try {
-      const res = await ApiClient.post<{ success: boolean; screen: ScreenLayoutSpec }>('/api/screens', {
-        ...payload,
-        projectId: projectId || 'global'
-      });
-      setScreens(prev => [res.screen, ...prev]);
-      setCurrentScreen(res.screen);
-      return res.screen;
+      let name = '';
+      let tKey = templateKey;
+      let desc = description;
+      if (typeof nameOrOptions === 'object') {
+        name = nameOrOptions.name;
+        tKey = nameOrOptions.templateKey;
+        desc = nameOrOptions.description;
+      } else {
+        name = nameOrOptions;
+      }
+      const payload: any = { name, description: desc, projectId };
+      if (tKey) payload.templateKey = tKey;
+      const res = await ApiClient.post<{ success: boolean; screen: ScreenLayoutSpec }>('/api/screens', payload);
+      if (res.screen) {
+        setScreens(prev => [res.screen, ...prev]);
+        setCurrentScreen(res.screen);
+        return res.screen;
+      }
     } catch (err: any) {
       setError(err.message || 'Failed to create screen');
       throw err;
+    } finally {
+      setIsLoading(false);
     }
   }, [projectId]);
 
-  const updateScreen = useCallback(async (id: string, payload: Partial<ScreenLayoutSpec>) => {
-    setError(null);
+  const updateScreen = useCallback(async (id: string, updates: Partial<ScreenLayoutSpec>) => {
     try {
-      const res = await ApiClient.put<{ success: boolean; screen: ScreenLayoutSpec }>(`/api/screens/${id}`, payload);
-      setScreens(prev => prev.map(s => (s.id === id ? res.screen : s)));
-      if (currentScreen?.id === id) {
-        setCurrentScreen(res.screen);
+      const res = await ApiClient.put<{ success: boolean; screen: ScreenLayoutSpec }>(`/api/screens/${id}`, updates);
+      if (res.screen) {
+        setScreens(prev => prev.map(s => (s.id === id ? res.screen : s)));
+        if (currentScreen?.id === id) {
+          setCurrentScreen(res.screen);
+        }
+        return res.screen;
       }
-      return res.screen;
     } catch (err: any) {
       setError(err.message || 'Failed to update screen');
       throw err;
@@ -158,22 +221,93 @@ export function useScreens(projectId?: string) {
 
   const generateAiLayout = useCallback(async (prompt: string) => {
     setIsGenerating(true);
-    setError(null);
     try {
-      const res = await ApiClient.post<{ success: boolean; screen: ScreenLayoutSpec }>('/api/screens/generate', {
-        prompt,
-        projectId: projectId || 'global'
-      });
-      setScreens(prev => [res.screen, ...prev]);
-      setCurrentScreen(res.screen);
-      return res.screen;
+      const res = await ApiClient.post<{ success: boolean; screen: ScreenLayoutSpec }>('/api/screens/generate', { prompt, projectId });
+      if (res.screen) {
+        setScreens(prev => [res.screen, ...prev]);
+        setCurrentScreen(res.screen);
+        return res.screen;
+      }
     } catch (err: any) {
-      setError(err.message || 'AI layout generation failed');
+      setError(err.message || 'Failed to generate layout');
       throw err;
     } finally {
       setIsGenerating(false);
     }
   }, [projectId]);
+
+  const generateStitchScreen = useCallback(async (options: {
+    prompt: string;
+    mode?: 'create' | 'modify';
+    screenId?: string;
+    selectedCompIds?: string[];
+    selectedScreenIds?: string[];
+    theme?: string;
+    category?: string;
+    onStep?: (step: StitchGenerationStep, currentProgress: number) => void;
+  }): Promise<ScreenLayoutSpec | null> => {
+    setIsGenerating(true);
+    setError(null);
+    try {
+      const res = await ApiClient.post<StitchGenerationResponse>('/api/screens/generate-stitch', {
+        prompt: options.prompt,
+        mode: options.mode || 'create',
+        screenId: options.screenId || currentScreen?.id,
+        existingBoard: currentScreen?.board,
+        selectedCompIds: options.selectedCompIds || [],
+        selectedScreenIds: options.selectedScreenIds || [],
+        projectId,
+        theme: options.theme || 'dark',
+        category: options.category || 'dashboard'
+      });
+
+      if (res.success && res.screen) {
+        const fullScreen = res.screen;
+        const steps = res.generationSteps || [];
+
+        // Run progressive animation sequence
+        if (steps.length > 0) {
+          const finalComponents = fullScreen.board.components;
+          for (let i = 0; i < steps.length; i++) {
+            const step = steps[i];
+            setAnimatingStep(step);
+            const p = Math.round(((i + 1) / steps.length) * 100);
+            setAnimationProgress(p);
+            if (options.onStep) options.onStep(step, p);
+            
+            // Incrementally reveal components
+            const partialComps = finalComponents.slice(0, i + 1);
+            setCurrentScreen({
+              ...fullScreen,
+              board: {
+                ...fullScreen.board,
+                components: partialComps
+              }
+            });
+            await new Promise(resolve => setTimeout(resolve, 140));
+          }
+        }
+
+        // Finalize state
+        setScreens(prev => {
+          const exists = prev.some(s => s.id === fullScreen.id);
+          if (exists) return prev.map(s => s.id === fullScreen.id ? fullScreen : s);
+          return [fullScreen, ...prev];
+        });
+        setCurrentScreen(fullScreen);
+        setAnimatingStep(null);
+        setAnimationProgress(100);
+        return fullScreen;
+      }
+      return null;
+    } catch (err: any) {
+      setError(err.message || 'Failed to generate Stitch screen');
+      return null;
+    } finally {
+      setIsGenerating(false);
+      setAnimatingStep(null);
+    }
+  }, [currentScreen, projectId]);
 
   const exportPenpotJson = useCallback(async (screenId: string, screenName: string) => {
     try {
@@ -331,6 +465,21 @@ export function useScreens(projectId?: string) {
     });
   }, [persistScreenState]);
 
+  const sendChatMessage = useCallback(async (screenId: string, message: string) => {
+    try {
+      const res = await ApiClient.post<{ success: boolean; reply: string; chatHistory: ChatMessage[] }>(`/api/screens/${screenId}/chat`, { message });
+      if (res.success && res.chatHistory) {
+        setCurrentScreen(prev => prev && prev.id === screenId ? { ...prev, chatHistory: res.chatHistory } : prev);
+        setScreens(prev => prev.map(s => s.id === screenId ? { ...s, chatHistory: res.chatHistory } : s));
+        return res.reply;
+      }
+      return null;
+    } catch (err: any) {
+      console.error('Failed to send chat message:', err);
+      return null;
+    }
+  }, []);
+
   useEffect(() => {
     fetchScreens();
     fetchTemplates();
@@ -343,6 +492,8 @@ export function useScreens(projectId?: string) {
     templates,
     isLoading,
     isGenerating,
+    animatingStep,
+    animationProgress,
     error,
     fetchScreens,
     selectScreen,
@@ -350,6 +501,8 @@ export function useScreens(projectId?: string) {
     updateScreen,
     deleteScreen,
     generateAiLayout,
+    generateStitchScreen,
+    sendChatMessage,
     exportPenpotJson,
     addComponent,
     updateComponent,

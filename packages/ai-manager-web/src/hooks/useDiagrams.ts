@@ -148,6 +148,36 @@ export function useDiagrams(projectId: string = 'acme-api') {
     [createDiagram]
   );
 
+  // Generate AI diagram
+  const generateAiDiagram = useCallback(
+    async (prompt: string, type: Diagram['type'] = 'architecture', name?: string) => {
+      try {
+        setIsSaving(true);
+        setError(null);
+        const res = await ApiClient.post<{ success: boolean; message: string; diagram: Diagram }>('/api/diagrams/generate-ai', {
+          projectId,
+          prompt,
+          type,
+          name
+        });
+
+        if (res.diagram) {
+          setDiagrams((prev) => [res.diagram, ...prev]);
+          setActiveDiagram(res.diagram);
+          return res.diagram;
+        }
+        throw new Error(res.message || 'Failed to generate AI diagram');
+      } catch (err: any) {
+        console.error('[useDiagrams] AI Generation error:', err.message);
+        setError(err.message || 'AI diagram generation failed');
+        throw err;
+      } finally {
+        setIsSaving(false);
+      }
+    },
+    [projectId]
+  );
+
   return {
     diagrams,
     activeDiagram,
@@ -156,6 +186,7 @@ export function useDiagrams(projectId: string = 'acme-api') {
     isSaving,
     error,
     createDiagram,
+    generateAiDiagram,
     saveDiagram,
     deleteDiagram,
     importDiagramJson,

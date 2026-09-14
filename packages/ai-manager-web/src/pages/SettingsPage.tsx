@@ -19,14 +19,42 @@ export const SettingsPage: React.FC = () => {
     revealedValues,
     toggleReveal,
     saveKey,
+    verifyKey,
     resetAllData
   } = useSettings();
+
+  // Key verification states
+  const [verifyingMap, setVerifyingMap] = useState<{ [key: string]: boolean }>({});
+  const [verifyResultMap, setVerifyResultMap] = useState<{
+    [key: string]: { valid: boolean; message?: string; error?: string };
+  }>({});
 
   // Modal editing state
   const [editingKeyType, setEditingKeyType] = useState<'groq' | 'github' | 'openai' | null>(null);
   const [keyInputValue, setKeyInputValue] = useState('');
   const [modalFeedback, setModalFeedback] = useState<{ type: 'success' | 'error'; message: string } | null>(null);
+  const [modalVerifying, setModalVerifying] = useState(false);
   const [resetFeedback, setResetFeedback] = useState<string | null>(null);
+
+  const handleVerifyStoredKey = async (keyType: 'groq' | 'github' | 'openai') => {
+    setVerifyingMap((prev) => ({ ...prev, [keyType]: true }));
+    const res = await verifyKey(keyType);
+    setVerifyResultMap((prev) => ({ ...prev, [keyType]: res }));
+    setVerifyingMap((prev) => ({ ...prev, [keyType]: false }));
+  };
+
+  const handleVerifyModalInput = async () => {
+    if (!editingKeyType || !keyInputValue.trim()) return;
+    setModalVerifying(true);
+    setModalFeedback(null);
+    const res = await verifyKey(editingKeyType, keyInputValue.trim());
+    if (res.valid) {
+      setModalFeedback({ type: 'success', message: res.message || 'API Key is valid and active!' });
+    } else {
+      setModalFeedback({ type: 'error', message: res.error || 'Invalid API Key' });
+    }
+    setModalVerifying(false);
+  };
 
   const handleOpenEditModal = (keyType: 'groq' | 'github' | 'openai') => {
     setEditingKeyType(keyType);
@@ -226,6 +254,8 @@ export const SettingsPage: React.FC = () => {
               const revealedVal = revealedValues[item.id];
               const isRevealed = Boolean(revealedVal);
               const isRevealing = revealingKey === item.id;
+              const isVerifying = verifyingMap[item.id];
+              const verifyResult = verifyResultMap[item.id];
               const displayValue = isConfigured
                 ? isRevealed
                   ? revealedVal
@@ -235,7 +265,7 @@ export const SettingsPage: React.FC = () => {
               return (
                 <div key={item.id} className="flex py-4 justify-between items-center gap-4 first:pt-0 last:pb-0">
                   <div className="flex flex-col gap-1.5 min-w-0 flex-1">
-                    <div className="flex items-center gap-2">
+                    <div className="flex items-center gap-2 flex-wrap">
                       <span className="font-medium text-sm text-foreground">{item.label}</span>
                       {isConfigured ? (
                         <span className="font-medium rounded-full bg-emerald-500/15 text-emerald-400 text-[11px] py-0.5 px-2">
@@ -246,10 +276,38 @@ export const SettingsPage: React.FC = () => {
                           Not Set
                         </span>
                       )}
+
+                      {/* Live Verification Status Badge */}
+                      {verifyResult && (
+                        verifyResult.valid ? (
+                          <span className="font-medium rounded-full bg-emerald-500/20 text-emerald-300 border border-emerald-500/30 text-[11px] py-0.5 px-2 flex items-center gap-1">
+                            <Check className="size-3" />
+                            <span>Valid & Connected</span>
+                          </span>
+                        ) : (
+                          <span className="font-medium rounded-full bg-destructive/20 text-destructive border border-destructive/30 text-[11px] py-0.5 px-2 flex items-center gap-1">
+                            <AlertCircle className="size-3" />
+                            <span>Invalid Key</span>
+                          </span>
+                        )
+                      )}
                     </div>
+
                     <span className="font-mono text-muted-foreground text-xs select-all">
                       {isLoading ? 'Loading...' : displayValue}
                     </span>
+
+                    {verifyResult && !verifyResult.valid && (
+                      <span className="text-[11px] text-destructive font-medium">
+                        ✗ {verifyResult.error}
+                      </span>
+                    )}
+                    {verifyResult && verifyResult.valid && (
+                      <span className="text-[11px] text-emerald-400 font-medium">
+                        ✓ {verifyResult.message}
+                      </span>
+                    )}
+
                     <span className="text-muted-foreground text-[11px] hidden sm:block">
                       {item.description}
                     </span>
@@ -257,23 +315,42 @@ export const SettingsPage: React.FC = () => {
 
                   <div className="flex items-center shrink-0 gap-2">
                     {isConfigured && (
-                      <Button
-                        type="button"
-                        variant="outline"
-                        size="sm"
-                        disabled={isRevealing}
-                        onClick={() => toggleReveal(item.id)}
-                        className="h-8 px-2.5 text-xs font-medium text-muted-foreground hover:text-foreground gap-1.5 cursor-pointer"
-                      >
-                        {isRevealing ? (
-                          <Loader2 className="size-3.5 animate-spin" />
-                        ) : isRevealed ? (
-                          <EyeOff className="size-3.5" />
-                        ) : (
-                          <Eye className="size-3.5" />
-                        )}
-                        {isRevealed ? 'Hide' : 'Reveal'}
-                      </Button>
+                      <>
+                        <Button
+                          type="button"
+                          variant="outline"
+                          size="sm"
+                          disabled={isVerifying}
+                          onClick={() => handleVerifyStoredKey(item.id)}
+                          className="h-8 px-2.5 text-xs font-medium text-muted-foreground hover:text-foreground gap-1.5 cursor-pointer"
+                          title="Test key validity with live service"
+                        >
+                          {isVerifying ? (
+                            <Loader2 className="size-3.5 animate-spin" />
+                          ) : (
+                            <ShieldCheck className="size-3.5 text-emerald-500" />
+                          )}
+                          <span>{isVerifying ? 'Checking...' : 'Verify'}</span>
+                        </Button>
+
+                        <Button
+                          type="button"
+                          variant="outline"
+                          size="sm"
+                          disabled={isRevealing}
+                          onClick={() => toggleReveal(item.id)}
+                          className="h-8 px-2.5 text-xs font-medium text-muted-foreground hover:text-foreground gap-1.5 cursor-pointer"
+                        >
+                          {isRevealing ? (
+                            <Loader2 className="size-3.5 animate-spin" />
+                          ) : isRevealed ? (
+                            <EyeOff className="size-3.5" />
+                          ) : (
+                            <Eye className="size-3.5" />
+                          )}
+                          {isRevealed ? 'Hide' : 'Reveal'}
+                        </Button>
+                      </>
                     )}
                     <Button
                       type="button"
@@ -385,26 +462,40 @@ export const SettingsPage: React.FC = () => {
                 </div>
               )}
 
-              <div className="flex justify-end items-center gap-2 pt-2">
+              <div className="flex justify-between items-center gap-2 pt-2">
                 <Button
                   type="button"
                   variant="outline"
                   size="sm"
-                  onClick={handleCloseModal}
-                  disabled={isSaving}
-                  className="cursor-pointer"
+                  disabled={modalVerifying || !keyInputValue.trim()}
+                  onClick={handleVerifyModalInput}
+                  className="cursor-pointer gap-1.5 text-xs"
                 >
-                  Cancel
+                  {modalVerifying ? <Loader2 className="size-3.5 animate-spin" /> : <ShieldCheck className="size-3.5 text-emerald-500" />}
+                  <span>{modalVerifying ? 'Testing...' : 'Test Key'}</span>
                 </Button>
-                <Button
-                  type="submit"
-                  size="sm"
-                  disabled={isSaving}
-                  className="bg-primary hover:bg-primary/90 text-primary-foreground gap-2 cursor-pointer"
-                >
-                  {isSaving ? <Loader2 className="size-3.5 animate-spin" /> : <ShieldCheck className="size-3.5" />}
-                  Encrypt & Save
-                </Button>
+
+                <div className="flex items-center gap-2">
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    onClick={handleCloseModal}
+                    disabled={isSaving}
+                    className="cursor-pointer"
+                  >
+                    Cancel
+                  </Button>
+                  <Button
+                    type="submit"
+                    size="sm"
+                    disabled={isSaving}
+                    className="bg-primary hover:bg-primary/90 text-primary-foreground gap-2 cursor-pointer"
+                  >
+                    {isSaving ? <Loader2 className="size-3.5 animate-spin" /> : <ShieldCheck className="size-3.5" />}
+                    Encrypt & Save
+                  </Button>
+                </div>
               </div>
             </form>
           </div>
