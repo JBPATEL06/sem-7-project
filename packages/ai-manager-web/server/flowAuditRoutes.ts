@@ -3,17 +3,37 @@ import path from 'path';
 import fs from 'fs';
 import { localOrAuth, AuthRequest } from './auth.js';
 import { loadIndexFromSqlite, IndexResult } from '@ai-manager/core';
-import { sanitizeErrorMessage, toRelativeDbPath } from './dbRoutes.js';
+import { sanitizeErrorMessage } from './dbRoutes.js';
 
 export const flowAuditRouter = Router();
 
+function toRelativeDbPath(p: string | null): string {
+  if (!p) return '';
+  const rootDir = getWorkspaceRootDir();
+  return path.relative(rootDir, p).replace(/\\/g, '/');
+}
+
+function getWorkspaceRootDir(): string {
+  if (fs.existsSync(path.resolve(process.cwd(), '.git')) || fs.existsSync(path.resolve(process.cwd(), 'packages'))) {
+    return process.cwd();
+  }
+  const oneUp = path.resolve(process.cwd(), '..');
+  if (fs.existsSync(path.resolve(oneUp, '.git')) || fs.existsSync(path.resolve(oneUp, 'packages'))) {
+    return oneUp;
+  }
+  const twoUp = path.resolve(process.cwd(), '..', '..');
+  if (fs.existsSync(path.resolve(twoUp, '.git')) || fs.existsSync(path.resolve(twoUp, 'packages'))) {
+    return twoUp;
+  }
+  return process.cwd();
+}
+
 function findDbciPath(projectId: string): string | null {
+  const rootDir = getWorkspaceRootDir();
   const candidates = [
-    path.resolve(`.tmp_projects/${projectId}/index.sqlite`),
-    path.resolve('.dbci/index.sqlite'),
-    path.resolve('../../.dbci/index.sqlite'),
-    path.resolve('../db-context-indexer/.dbci/index.sqlite'),
-    path.resolve('packages/db-context-indexer/.dbci/index.sqlite')
+    path.resolve(rootDir, `.tmp_projects/${projectId}/index.sqlite`),
+    path.resolve(rootDir, '.dbci/index.sqlite'),
+    path.resolve(rootDir, 'packages/db-context-indexer/.dbci/index.sqlite')
   ];
   return candidates.find((p) => fs.existsSync(p)) || null;
 }
@@ -31,7 +51,7 @@ async function getOrBuildIndex(projectId: string): Promise<{ index: IndexResult 
 
   // Attempt to build index dynamically if indexer package is present
   try {
-    const rootDir = path.resolve(process.cwd(), '../..');
+    const rootDir = getWorkspaceRootDir();
     const indexerPath = path.resolve(rootDir, 'packages/db-context-indexer/dist/index.mjs');
     if (fs.existsSync(indexerPath)) {
       const { buildIndex } = await import(indexerPath);
@@ -166,7 +186,7 @@ flowAuditRouter.get('/stream', (req: AuthRequest, res: Response): void => {
 flowAuditRouter.post('/scan', localOrAuth, async (req: AuthRequest, res: Response): Promise<void> => {
   try {
     const { projectId = 'sem-7-project' } = req.body;
-    const rootDir = path.resolve(process.cwd(), '../..');
+    const rootDir = getWorkspaceRootDir();
     const indexerPath = path.resolve(rootDir, 'packages/db-context-indexer/dist/index.mjs');
 
     if (!fs.existsSync(indexerPath)) {
@@ -202,6 +222,7 @@ flowAuditRouter.post('/scan', localOrAuth, async (req: AuthRequest, res: Respons
       }
     });
   } catch (err: any) {
+    console.error('[flowAudit/scan] error:', err);
     res.status(500).json({ error: sanitizeErrorMessage(err.message || 'Scan failed') });
   }
 });

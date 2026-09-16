@@ -1,0 +1,147 @@
+{
+  "id": "screen_stitch_1789470619083_u4qdm",
+  "projectId": "acme-api",
+  "userId": "usr_1788946347500",
+  "name": "Dark Mode Dashboard",
+  "description": "A simple dark-themed dashboard layout with header, sidebar, main content area, a card component, and footer.",
+  "board": {
+    "id": "board_screen_stitch_1789470619083_u4qdm",
+    "name": "Dark Mode Dashboard Canvas",
+    "x": 0,
+    "y": 0,
+    "width": 1440,
+    "height": 900,
+    "background": "#090d16",
+    "components": [
+      {
+        "id": "c1",
+        "name": "Header",
+        "type": "frame",
+        "x": 0,
+        "y": 0,
+        "width": 1440,
+        "height": 80,
+        "fills": [
+          "#1E1E1E"
+        ],
+        "strokes": [],
+        "borderRadius": 0,
+        "text": "",
+        "fontSize": 0,
+        "color": ""
+      },
+      {
+        "id": "c2",
+        "name": "Sidebar",
+        "type": "frame",
+        "x": 0,
+        "y": 80,
+        "width": 240,
+        "height": 720,
+        "fills": [
+          "#252526"
+        ],
+        "strokes": [],
+        "borderRadius": 0,
+        "text": "",
+        "fontSize": 0,
+        "color": ""
+      },
+      {
+        "id": "c3",
+        "name": "MainContent",
+        "type": "frame",
+        "x": 240,
+        "y": 80,
+        "width": 1200,
+        "height": 720,
+        "fills": [
+          "#1E1E1E"
+        ],
+        "strokes": [],
+        "borderRadius": 0,
+        "text": "",
+        "fontSize": 0,
+        "color": ""
+      },
+      {
+        "id": "c4",
+        "name": "Card",
+        "type": "frame",
+        "x": 260,
+        "y": 100,
+        "width": 300,
+        "height": 200,
+        "fills": [
+          "#2D2D30"
+        ],
+        "strokes": [
+          "#3F3F46"
+        ],
+        "borderRadius": 8,
+        "text": "",
+        "fontSize": 0,
+        "color": ""
+      },
+      {
+        "id": "c5",
+        "name": "CardTitle",
+        "type": "text",
+        "x": 280,
+        "y": 110,
+        "width": 260,
+        "height": 30,
+        "fills": [],
+        "strokes": [],
+        "borderRadius": 0,
+        "text": "Dashboard Overview",
+        "fontSize": 18,
+        "color": "#FFFFFF"
+      },
+      {
+        "id": "c6",
+        "name": "CardButton",
+        "type": "button",
+        "x": 280,
+        "y": 250,
+        "width": 120,
+        "height": 40,
+        "fills": [
+          "#0E639C"
+        ],
+        "strokes": [],
+        "borderRadius": 4,
+        "text": "View Details",
+        "fontSize": 14,
+        "color": "#FFFFFF"
+      },
+      {
+        "id": "c7",
+        "name": "Footer",
+        "type": "frame",
+        "x": 0,
+        "y": 800,
+        "width": 1440,
+        "height": 40,
+        "fills": [
+          "#1E1E1E"
+        ],
+        "strokes": [],
+        "borderRadius": 0,
+        "text": "",
+        "fontSize": 0,
+        "color": ""
+      }
+    ]
+  },
+  "theme": {
+    "primaryColor": "#7c3aed",
+    "backgroundColor": "#090d16",
+    "surfaceColor": "#131b2e",
+    "textColor": "#f8fafc",
+    "accentColor": "#10b981",
+    "borderRadius": 12
+  },
+  "createdAt": "2026-09-15T11:10:19.084Z",
+  "updatedAt": "2026-09-15T11:10:19.084Z"
+}

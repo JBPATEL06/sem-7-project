@@ -110,22 +110,27 @@ async function runTests() {
   }
   const aiScreenId = aiData.screen.id;
 
-  // Test 4: Export to Penpot Plugin Manifest
-  console.log('\n4. Testing GET /api/screens/:id/export?format=penpot...');
-  const exportRes = await fetch(`${API_BASE}/api/screens/${screenAId}/export?format=penpot`, {
+  // Test 4: Export to Native .fig & Spec JSON
+  console.log('\n4. Testing GET /api/screens/:id/export (native .fig and format=json)...');
+  const exportRes = await fetch(`${API_BASE}/api/screens/${screenAId}/export?format=json`, {
     headers: { Authorization: `Bearer ${tokenA}` }
   });
   const exportData = (await exportRes.json()) as any;
 
+  const exportFigRes = await fetch(`${API_BASE}/api/screens/${screenAId}/export?format=fig`, {
+    headers: { Authorization: `Bearer ${tokenA}` }
+  });
+  const figBlob = await exportFigRes.arrayBuffer();
+
   if (
     exportRes.status === 200 &&
-    exportData.schemaVersion === '2.0' &&
-    exportData.generator === 'AI-Manager Penpot Layout Spec Bridge' &&
-    exportData.board.shapes.length > 0
+    exportData.board &&
+    exportFigRes.status === 200 &&
+    figBlob.byteLength > 0
   ) {
-    console.log(`   ✅ Success: Generated valid Penpot Plugin Manifest Schema 2.0 with ${exportData.board.shapes.length} board shapes`);
+    console.log(`   ✅ Success: Generated valid layout spec JSON and native OpenPencil .fig container (${figBlob.byteLength} bytes)`);
   } else {
-    console.error('   ❌ Failed Penpot manifest export:', exportRes.status, exportData);
+    console.error('   ❌ Failed spec / fig export:', exportRes.status, exportFigRes.status);
     process.exit(1);
   }
 
@@ -171,7 +176,7 @@ async function runTests() {
   console.log(`   - User B PUT /api/screens/${screenAId}: Status ${putForbidden.status} (${putForbidden.status === 403 ? '✅ 403 Forbidden' : '❌ UNEXPECTED'})`);
 
   // 6c: User B exporting User A's screen
-  const exportForbidden = await fetch(`${API_BASE}/api/screens/${screenAId}/export?format=penpot`, {
+  const exportForbidden = await fetch(`${API_BASE}/api/screens/${screenAId}/export?format=fig`, {
     headers: { Authorization: `Bearer ${tokenB}` }
   });
   console.log(`   - User B Export /api/screens/${screenAId}: Status ${exportForbidden.status} (${exportForbidden.status === 403 ? '✅ 403 Forbidden' : '❌ UNEXPECTED'})`);
@@ -216,7 +221,7 @@ async function runTests() {
   }
 
   console.log('\n======================================================');
-  console.log('🎉 ALL 8 TESTS PASSED — DAY 4 PENPOT BRIDGE COMPLETE & VERIFIED');
+  console.log('🎉 ALL 8 TESTS PASSED — OPENPENCIL FIGMA BRIDGE COMPLETE & VERIFIED');
   console.log('======================================================\n');
   process.exit(0);
 }

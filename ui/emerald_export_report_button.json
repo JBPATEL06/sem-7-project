@@ -1,0 +1,581 @@
+{
+  "id": "screen_disk_emerald_export_report_button",
+  "projectId": "acme-api",
+  "userId": "usr_1788946347500",
+  "name": "Emerald Export Report Button",
+  "description": "Adds a dark‑theme interactive 2D map area with zoom controls, a filter dropdown, and a legend to the existing layout.",
+  "board": {
+    "id": "board_screen_disk_emerald_export_report_button",
+    "name": "Emerald Export Report Button Canvas",
+    "x": 0,
+    "y": 0,
+    "width": 1200,
+    "height": 900,
+    "background": "#090d16",
+    "components": [
+      {
+        "id": "comp_topbar",
+        "name": "Top Navigation Bar",
+        "type": "frame",
+        "x": 0,
+        "y": 0,
+        "width": 1200,
+        "height": 60,
+        "borderRadius": 0,
+        "fills": [
+          {
+            "color": "#1e293b"
+          }
+        ],
+        "strokes": [],
+        "layout": "none",
+        "children": []
+      },
+      {
+        "id": "comp_brand",
+        "name": "Brand Logo & Title",
+        "type": "text",
+        "x": 20,
+        "y": 15,
+        "width": 180,
+        "height": 30,
+        "borderRadius": 0,
+        "fills": [
+          {
+            "fillColor": "#1e293b",
+            "fillOpacity": 1
+          }
+        ],
+        "strokes": [],
+        "layout": "none",
+        "children": []
+      },
+      {
+        "id": "comp_search",
+        "name": "Global Search Input",
+        "type": "rect",
+        "x": 341,
+        "y": 241,
+        "width": 300,
+        "height": 40,
+        "borderRadius": 0,
+        "fills": [
+          {
+            "fillColor": "#1e293b",
+            "fillOpacity": 1
+          }
+        ],
+        "strokes": [],
+        "layout": "none",
+        "children": []
+      },
+      {
+        "id": "comp_user_avatar",
+        "name": "User Profile Avatar",
+        "type": "frame",
+        "x": 1140,
+        "y": 10,
+        "width": 40,
+        "height": 40,
+        "borderRadius": 0,
+        "fills": [
+          {
+            "fillColor": "#1e293b",
+            "fillOpacity": 1
+          }
+        ],
+        "strokes": [],
+        "layout": "none",
+        "children": []
+      },
+      {
+        "id": "comp_sidebar",
+        "name": "Left Sidebar Container",
+        "type": "frame",
+        "x": 0,
+        "y": 60,
+        "width": 220,
+        "height": 840,
+        "borderRadius": 0,
+        "fills": [
+          {
+            "fillColor": "#1e293b",
+            "fillOpacity": 1
+          }
+        ],
+        "strokes": [],
+        "layout": "none",
+        "children": []
+      },
+      {
+        "id": "comp_nav_overview",
+        "name": "Nav Item: Overview",
+        "type": "text",
+        "x": 20,
+        "y": 90,
+        "width": 180,
+        "height": 30,
+        "borderRadius": 0,
+        "fills": [
+          {
+            "fillColor": "#1e293b",
+            "fillOpacity": 1
+          }
+        ],
+        "strokes": [],
+        "layout": "none",
+        "children": []
+      },
+      {
+        "id": "comp_nav_reports",
+        "name": "Nav Item: Reports",
+        "type": "text",
+        "x": 20,
+        "y": 130,
+        "width": 180,
+        "height": 30,
+        "borderRadius": 0,
+        "fills": [
+          {
+            "fillColor": "#1e293b",
+            "fillOpacity": 1
+          }
+        ],
+        "strokes": [],
+        "layout": "none",
+        "children": []
+      },
+      {
+        "id": "comp_nav_users",
+        "name": "Nav Item: Users",
+        "type": "text",
+        "x": -251,
+        "y": 190,
+        "width": 180,
+        "height": 30,
+        "borderRadius": 0,
+        "fills": [
+          {
+            "fillColor": "#1e293b",
+            "fillOpacity": 1
+          }
+        ],
+        "strokes": [],
+        "layout": "none",
+        "children": []
+      },
+      {
+        "id": "comp_nav_settings",
+        "name": "Nav Item: Settings",
+        "type": "text",
+        "x": -47,
+        "y": 426,
+        "width": 180,
+        "height": 30,
+        "borderRadius": 0,
+        "fills": [
+          {
+            "fillColor": "#1e293b",
+            "fillOpacity": 1
+          }
+        ],
+        "strokes": [],
+        "layout": "none",
+        "children": []
+      },
+      {
+        "id": "comp_card_kpi1",
+        "name": "Total Revenue KPI Card",
+        "type": "rect",
+        "x": 250,
+        "y": 90,
+        "width": 220,
+        "height": 120,
+        "borderRadius": 8,
+        "fills": [
+          {
+            "fillColor": "#10b981"
+          }
+        ],
+        "strokes": [],
+        "layout": "none",
+        "children": [],
+        "text": "Total Revenue: $1.2M",
+        "fontSize": 18,
+        "color": "#e2e8f0"
+      },
+      {
+        "id": "comp_card_kpi2",
+        "name": "Active Users KPI Card",
+        "type": "rect",
+        "x": 487,
+        "y": 90,
+        "width": 220,
+        "height": 120,
+        "borderRadius": 8,
+        "fills": [
+          {
+            "fillColor": "#1e293b",
+            "fillOpacity": 1
+          }
+        ],
+        "strokes": [
+          {
+            "strokeColor": "#334155",
+            "strokeWidth": 1
+          }
+        ],
+        "layout": "none",
+        "children": [],
+        "text": "Active Users\n12,345\nSince last week",
+        "fontSize": 16,
+        "color": "#ffffff"
+      },
+      {
+        "id": "comp_card_kpi3",
+        "name": "Conversion Rate KPI Card",
+        "type": "rect",
+        "x": 730,
+        "y": 80,
+        "width": 220,
+        "height": 120,
+        "borderRadius": 0,
+        "fills": [
+          {
+            "fillColor": "#1e293b",
+            "fillOpacity": 1
+          }
+        ],
+        "strokes": [],
+        "layout": "none",
+        "children": []
+      },
+      {
+        "id": "comp_card_kpi4",
+        "name": "Avg Session KPI Card",
+        "type": "rect",
+        "x": 970,
+        "y": 80,
+        "width": 220,
+        "height": 120,
+        "borderRadius": 0,
+        "fills": [
+          {
+            "fillColor": "#1e293b",
+            "fillOpacity": 1
+          }
+        ],
+        "strokes": [],
+        "layout": "none",
+        "children": []
+      },
+      {
+        "id": "comp_chart_main",
+        "name": "Main Traffic Line Chart",
+        "type": "rect",
+        "x": 557,
+        "y": 231,
+        "width": 620,
+        "height": 320,
+        "borderRadius": 0,
+        "fills": [
+          {
+            "fillColor": "#1e293b",
+            "fillOpacity": 1
+          }
+        ],
+        "strokes": [],
+        "layout": "none",
+        "children": []
+      },
+      {
+        "id": "comp_pie_sources",
+        "name": "Traffic Sources Pie Chart",
+        "type": "rect",
+        "x": 890,
+        "y": 220,
+        "width": 300,
+        "height": 320,
+        "borderRadius": 0,
+        "fills": [
+          {
+            "fillColor": "#1e293b",
+            "fillOpacity": 1
+          }
+        ],
+        "strokes": [],
+        "layout": "none",
+        "children": [
+          {
+            "id": "comp_pie_sources_text",
+            "name": "Pie Chart Title",
+            "type": "text",
+            "x": 20,
+            "y": 20,
+            "width": 260,
+            "height": 40,
+            "borderRadius": 0,
+            "fills": [],
+            "strokes": [],
+            "text": "Traffic Sources",
+            "fontSize": 18,
+            "color": "#ffffff"
+          }
+        ]
+      },
+      {
+        "id": "comp_table_header",
+        "name": "Recent Transactions Header",
+        "type": "text",
+        "x": 250,
+        "y": 560,
+        "width": 400,
+        "height": 30,
+        "borderRadius": 0,
+        "fills": [
+          {
+            "fillColor": "#1e293b",
+            "fillOpacity": 1
+          }
+        ],
+        "strokes": [],
+        "layout": "none",
+        "children": []
+      },
+      {
+        "id": "comp_table_grid",
+        "name": "Transactions Data Table",
+        "type": "rect",
+        "x": -294,
+        "y": -336,
+        "width": 940,
+        "height": 260,
+        "borderRadius": 0,
+        "fills": [
+          {
+            "fillColor": "#1e293b",
+            "fillOpacity": 1
+          }
+        ],
+        "strokes": [],
+        "layout": "none",
+        "children": []
+      },
+      {
+        "id": "comp_footer",
+        "name": "Dashboard Footer",
+        "type": "frame",
+        "x": 220,
+        "y": 870,
+        "width": 980,
+        "height": 30,
+        "borderRadius": 0,
+        "fills": [
+          {
+            "fillColor": "#1e293b",
+            "fillOpacity": 1
+          }
+        ],
+        "strokes": [],
+        "layout": "none",
+        "children": []
+      },
+      {
+        "id": "comp_export_btn",
+        "name": "Export Report Button",
+        "type": "rect",
+        "x": 1040,
+        "y": 15,
+        "width": 110,
+        "height": 32,
+        "borderRadius": 4,
+        "fills": [
+          {
+            "color": "#10B981"
+          }
+        ],
+        "strokes": [],
+        "text": "Export Report",
+        "fontSize": 14,
+        "color": "#FFFFFF",
+        "layout": "none",
+        "children": []
+      },
+      {
+        "id": "comp_map_container",
+        "name": "Map Container",
+        "type": "frame",
+        "x": 240,
+        "y": 80,
+        "width": 940,
+        "height": 720,
+        "fills": [
+          {
+            "fillColor": "#1e293b",
+            "fillOpacity": 1
+          }
+        ],
+        "strokes": [],
+        "borderRadius": 8,
+        "text": "",
+        "fontSize": null,
+        "color": null
+      },
+      {
+        "id": "comp_map_canvas",
+        "name": "Map Canvas",
+        "type": "rect",
+        "x": 250,
+        "y": 90,
+        "width": 920,
+        "height": 700,
+        "fills": [
+          {
+            "fillColor": "#0f172a",
+            "fillOpacity": 1
+          }
+        ],
+        "strokes": [],
+        "borderRadius": 0,
+        "text": "",
+        "fontSize": null,
+        "color": null
+      },
+      {
+        "id": "comp_map_filter",
+        "name": "Map Filter Dropdown",
+        "type": "rect",
+        "x": 250,
+        "y": 70,
+        "width": 200,
+        "height": 30,
+        "fills": [
+          {
+            "fillColor": "#334155",
+            "fillOpacity": 1
+          }
+        ],
+        "strokes": [],
+        "borderRadius": 4,
+        "text": "Filter...",
+        "fontSize": 14,
+        "color": "#f1f5f9"
+      },
+      {
+        "id": "comp_zoom_in",
+        "name": "Zoom In Button",
+        "type": "rect",
+        "x": 1150,
+        "y": 90,
+        "width": 30,
+        "height": 30,
+        "fills": [
+          {
+            "fillColor": "#334155",
+            "fillOpacity": 1
+          }
+        ],
+        "strokes": [],
+        "borderRadius": 4,
+        "text": "+",
+        "fontSize": 18,
+        "color": "#f1f5f9"
+      },
+      {
+        "id": "comp_zoom_out",
+        "name": "Zoom Out Button",
+        "type": "rect",
+        "x": 1150,
+        "y": 130,
+        "width": 30,
+        "height": 30,
+        "fills": [
+          {
+            "fillColor": "#334155",
+            "fillOpacity": 1
+          }
+        ],
+        "strokes": [],
+        "borderRadius": 4,
+        "text": "-",
+        "fontSize": 18,
+        "color": "#f1f5f9"
+      },
+      {
+        "id": "comp_legend_container",
+        "name": "Map Legend Container",
+        "type": "frame",
+        "x": 250,
+        "y": 800,
+        "width": 200,
+        "height": 120,
+        "fills": [
+          {
+            "fillColor": "#1e293b",
+            "fillOpacity": 0.9
+          }
+        ],
+        "strokes": [],
+        "borderRadius": 6,
+        "text": "",
+        "fontSize": null,
+        "color": null
+      },
+      {
+        "id": "comp_legend_title",
+        "name": "Legend Title",
+        "type": "text",
+        "x": 260,
+        "y": 810,
+        "width": 180,
+        "height": 20,
+        "fills": [],
+        "strokes": [],
+        "borderRadius": 0,
+        "text": "Legend",
+        "fontSize": 16,
+        "color": "#f1f5f9"
+      },
+      {
+        "id": "comp_legend_item1",
+        "name": "Legend Item: Area A",
+        "type": "text",
+        "x": 260,
+        "y": 840,
+        "width": 180,
+        "height": 20,
+        "fills": [],
+        "strokes": [],
+        "borderRadius": 0,
+        "text": "• Area A – Red",
+        "fontSize": 14,
+        "color": "#f1f5f9"
+      },
+      {
+        "id": "comp_legend_item2",
+        "name": "Legend Item: Area B",
+        "type": "text",
+        "x": 260,
+        "y": 870,
+        "width": 180,
+        "height": 20,
+        "fills": [],
+        "strokes": [],
+        "borderRadius": 0,
+        "text": "• Area B – Blue",
+        "fontSize": 14,
+        "color": "#f1f5f9"
+      }
+    ]
+  },
+  "theme": {
+    "primaryColor": "#7c3aed",
+    "backgroundColor": "#090d16",
+    "surfaceColor": "#131b2e",
+    "textColor": "#f8fafc",
+    "accentColor": "#10b981",
+    "borderRadius": 12
+  },
+  "createdAt": "2026-09-15T07:11:11.590Z",
+  "updatedAt": "2026-09-15T10:54:45.725Z"
+}

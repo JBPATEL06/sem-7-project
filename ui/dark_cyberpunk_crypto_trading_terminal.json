@@ -1,0 +1,484 @@
+{
+  "id": "screen_stitch_1789541814700_42dik",
+  "projectId": "acme-api",
+  "userId": "local-dev-user",
+  "name": "Dark Cyberpunk Crypto Trading Terminal",
+  "description": "A dark cyberpunk‑styled trading interface featuring a live order book, candlestick chart, and buy/sell panel.",
+  "theme": {
+    "primaryColor": "#7c3aed",
+    "backgroundColor": "#f8fafc",
+    "surfaceColor": "#ffffff",
+    "textColor": "#0f172a",
+    "accentColor": "#10b981",
+    "borderRadius": 12
+  },
+  "board": {
+    "id": "board_screen_stitch_1789541814700_42dik",
+    "name": "Dark Cyberpunk Crypto Trading Terminal Canvas",
+    "x": 0,
+    "y": 0,
+    "width": 1440,
+    "height": 900,
+    "background": "#f8fafc",
+    "components": [
+      {
+        "id": "c0",
+        "name": "MainContainer",
+        "type": "frame",
+        "x": 0,
+        "y": 0,
+        "width": 1440,
+        "height": 900,
+        "fills": [
+          {
+            "type": "solid",
+            "color": "#0a0a0a"
+          }
+        ],
+        "strokes": [],
+        "borderRadius": 0,
+        "text": "",
+        "fontSize": null,
+        "color": null
+      },
+      {
+        "id": "c1",
+        "name": "Header",
+        "type": "frame",
+        "x": 0,
+        "y": 0,
+        "width": 1440,
+        "height": 80,
+        "fills": [
+          {
+            "type": "solid",
+            "color": "#111111"
+          }
+        ],
+        "strokes": [],
+        "borderRadius": 0,
+        "text": "",
+        "fontSize": null,
+        "color": null
+      },
+      {
+        "id": "c2",
+        "name": "HeaderTitle",
+        "type": "text",
+        "x": 24,
+        "y": 24,
+        "width": 500,
+        "height": 32,
+        "fills": [],
+        "strokes": [],
+        "borderRadius": 0,
+        "text": "CYBERPUNK CRYPTO TERMINAL",
+        "fontSize": 28,
+        "color": "#00ffea"
+      },
+      {
+        "id": "c3",
+        "name": "OrderBookPanel",
+        "type": "frame",
+        "x": 0,
+        "y": 80,
+        "width": 300,
+        "height": 820,
+        "fills": [
+          {
+            "type": "solid",
+            "color": "#151515"
+          }
+        ],
+        "strokes": [
+          {
+            "type": "solid",
+            "color": "#00ffea",
+            "weight": 2
+          }
+        ],
+        "borderRadius": 8,
+        "text": "",
+        "fontSize": null,
+        "color": null
+      },
+      {
+        "id": "c4",
+        "name": "OrderBookTitle",
+        "type": "text",
+        "x": 12,
+        "y": 12,
+        "width": 276,
+        "height": 24,
+        "fills": [],
+        "strokes": [],
+        "borderRadius": 0,
+        "text": "ORDER BOOK",
+        "fontSize": 20,
+        "color": "#00ffea"
+      },
+      {
+        "id": "c5",
+        "name": "BidsLabel",
+        "type": "text",
+        "x": 12,
+        "y": 56,
+        "width": 276,
+        "height": 20,
+        "fills": [],
+        "strokes": [],
+        "borderRadius": 0,
+        "text": "BIDS",
+        "fontSize": 16,
+        "color": "#00ffea"
+      },
+      {
+        "id": "c6",
+        "name": "BidsList",
+        "type": "frame",
+        "x": 12,
+        "y": 84,
+        "width": 276,
+        "height": 300,
+        "fills": [
+          {
+            "type": "solid",
+            "color": "#1a1a1a"
+          }
+        ],
+        "strokes": [],
+        "borderRadius": 4,
+        "text": "",
+        "fontSize": null,
+        "color": null
+      },
+      {
+        "id": "c7",
+        "name": "AsksLabel",
+        "type": "text",
+        "x": 12,
+        "y": 400,
+        "width": 276,
+        "height": 20,
+        "fills": [],
+        "strokes": [],
+        "borderRadius": 0,
+        "text": "ASKS",
+        "fontSize": 16,
+        "color": "#ff4d4d"
+      },
+      {
+        "id": "c8",
+        "name": "AsksList",
+        "type": "frame",
+        "x": 12,
+        "y": 428,
+        "width": 276,
+        "height": 300,
+        "fills": [
+          {
+            "type": "solid",
+            "color": "#1a1a1a"
+          }
+        ],
+        "strokes": [],
+        "borderRadius": 4,
+        "text": "",
+        "fontSize": null,
+        "color": null
+      },
+      {
+        "id": "c9",
+        "name": "CandlestickChartPanel",
+        "type": "frame",
+        "x": 300,
+        "y": 80,
+        "width": 840,
+        "height": 560,
+        "fills": [
+          {
+            "type": "solid",
+            "color": "#151515"
+          }
+        ],
+        "strokes": [
+          {
+            "type": "solid",
+            "color": "#00ffea",
+            "weight": 2
+          }
+        ],
+        "borderRadius": 8,
+        "text": "",
+        "fontSize": null,
+        "color": null
+      },
+      {
+        "id": "c10",
+        "name": "ChartTitle",
+        "type": "text",
+        "x": 312,
+        "y": 92,
+        "width": 816,
+        "height": 24,
+        "fills": [],
+        "strokes": [],
+        "borderRadius": 0,
+        "text": "BTC/USDT – 1M Candlesticks",
+        "fontSize": 20,
+        "color": "#00ffea"
+      },
+      {
+        "id": "c11",
+        "name": "ChartCanvas",
+        "type": "frame",
+        "x": 312,
+        "y": 124,
+        "width": 816,
+        "height": 504,
+        "fills": [
+          {
+            "type": "solid",
+            "color": "#0f0f0f"
+          }
+        ],
+        "strokes": [
+          {
+            "type": "solid",
+            "color": "#00ffea",
+            "weight": 1
+          }
+        ],
+        "borderRadius": 4,
+        "text": "",
+        "fontSize": null,
+        "color": null
+      },
+      {
+        "id": "c12",
+        "name": "BuySellPanel",
+        "type": "frame",
+        "x": 1140,
+        "y": 80,
+        "width": 300,
+        "height": 820,
+        "fills": [
+          {
+            "type": "solid",
+            "color": "#151515"
+          }
+        ],
+        "strokes": [
+          {
+            "type": "solid",
+            "color": "#00ffea",
+            "weight": 2
+          }
+        ],
+        "borderRadius": 8,
+        "text": "",
+        "fontSize": null,
+        "color": null
+      },
+      {
+        "id": "c13",
+        "name": "BuySellTitle",
+        "type": "text",
+        "x": 1152,
+        "y": 92,
+        "width": 276,
+        "height": 24,
+        "fills": [],
+        "strokes": [],
+        "borderRadius": 0,
+        "text": "PLACE ORDER",
+        "fontSize": 20,
+        "color": "#00ffea"
+      },
+      {
+        "id": "c14",
+        "name": "PriceLabel",
+        "type": "text",
+        "x": 1152,
+        "y": 140,
+        "width": 276,
+        "height": 20,
+        "fills": [],
+        "strokes": [],
+        "borderRadius": 0,
+        "text": "Price (USDT)",
+        "fontSize": 16,
+        "color": "#e0e0e0"
+      },
+      {
+        "id": "c15",
+        "name": "PriceInput",
+        "type": "input",
+        "x": 1152,
+        "y": 168,
+        "width": 276,
+        "height": 36,
+        "fills": [
+          {
+            "type": "solid",
+            "color": "#0f0f0f"
+          }
+        ],
+        "strokes": [
+          {
+            "type": "solid",
+            "color": "#00ffea",
+            "weight": 1
+          }
+        ],
+        "borderRadius": 4,
+        "text": "",
+        "fontSize": 16,
+        "color": "#00ffea"
+      },
+      {
+        "id": "c16",
+        "name": "AmountLabel",
+        "type": "text",
+        "x": 1152,
+        "y": 224,
+        "width": 276,
+        "height": 20,
+        "fills": [],
+        "strokes": [],
+        "borderRadius": 0,
+        "text": "Amount (BTC)",
+        "fontSize": 16,
+        "color": "#e0e0e0"
+      },
+      {
+        "id": "c17",
+        "name": "AmountInput",
+        "type": "input",
+        "x": 1152,
+        "y": 252,
+        "width": 276,
+        "height": 36,
+        "fills": [
+          {
+            "type": "solid",
+            "color": "#0f0f0f"
+          }
+        ],
+        "strokes": [
+          {
+            "type": "solid",
+            "color": "#00ffea",
+            "weight": 1
+          }
+        ],
+        "borderRadius": 4,
+        "text": "",
+        "fontSize": 16,
+        "color": "#00ffea"
+      },
+      {
+        "id": "c18",
+        "name": "BuyButton",
+        "type": "button",
+        "x": 1152,
+        "y": 312,
+        "width": 132,
+        "height": 48,
+        "fills": [
+          {
+            "type": "solid",
+            "color": "#00ffea"
+          }
+        ],
+        "strokes": [],
+        "borderRadius": 6,
+        "text": "BUY",
+        "fontSize": 18,
+        "color": "#0a0a0a"
+      },
+      {
+        "id": "c19",
+        "name": "SellButton",
+        "type": "button",
+        "x": 1296,
+        "y": 312,
+        "width": 132,
+        "height": 48,
+        "fills": [
+          {
+            "type": "solid",
+            "color": "#ff4d4d"
+          }
+        ],
+        "strokes": [],
+        "borderRadius": 6,
+        "text": "SELL",
+        "fontSize": 18,
+        "color": "#0a0a0a"
+      },
+      {
+        "id": "c20",
+        "name": "Footer",
+        "type": "frame",
+        "x": 0,
+        "y": 900,
+        "width": 1440,
+        "height": 40,
+        "fills": [
+          {
+            "type": "solid",
+            "color": "#111111"
+          }
+        ],
+        "strokes": [],
+        "borderRadius": 0,
+        "text": "",
+        "fontSize": null,
+        "color": null
+      },
+      {
+        "id": "c21",
+        "name": "FooterText",
+        "type": "text",
+        "x": 24,
+        "y": 904,
+        "width": 600,
+        "height": 24,
+        "fills": [],
+        "strokes": [],
+        "borderRadius": 0,
+        "text": "© 2026 Cyberpunk Trading Inc. All rights reserved.",
+        "fontSize": 14,
+        "color": "#555555"
+      }
+    ]
+  },
+  "chatHistory": [
+    {
+      "id": "msg_u_1789541814700",
+      "role": "user",
+      "text": "Dark Cyberpunk Crypto Trading Terminal with live order book, candlestick chart, and buy/sell panel",
+      "timestamp": "2026-09-16T06:56:54.700Z"
+    },
+    {
+      "id": "msg_a_1789541814700",
+      "role": "assistant",
+      "text": "I synthesized **Dark Cyberpunk Crypto Trading Terminal** with 22 components matching your prompt \"Dark Cyberpunk Crypto Trading Terminal with live order book, candlestick chart, and buy/sell panel\" using Groq LLM (openai/gpt-oss-120b).",
+      "timestamp": "2026-09-16T06:56:54.700Z",
+      "stepsCount": 22,
+      "changesSummary": "Synthesized 22 custom AI components for Dark Cyberpunk Crypto Trading Terminal (via Groq openai/gpt-oss-120b)",
+      "metadata": {
+        "mode": "create",
+        "intent": "GENERATE",
+        "theme": "light",
+        "dimensions": {
+          "width": 1440,
+          "height": 900
+        }
+      }
+    }
+  ],
+  "createdAt": "2026-09-16T06:56:54.700Z",
+  "updatedAt": "2026-09-16T06:56:54.700Z"
+}

@@ -6,6 +6,7 @@ import { RegisterPage } from './pages/RegisterPage';
 import { OnboardingPage } from './pages/OnboardingPage';
 import { DashboardPage } from './pages/DashboardPage';
 import { ProjectsPage } from './pages/ProjectsPage';
+import { ProjectDetailPage } from './pages/ProjectDetailPage';
 import { DbManagerPage } from './pages/DbManagerPage';
 import { QaPage } from './pages/QaPage';
 import { FlowAuditPage } from './pages/FlowAuditPage';
@@ -45,6 +46,7 @@ const AppContent: React.FC = () => {
 
   const [currentRoute, setCurrentRoute] = useState<NavRoute>(getInitialRoute);
   const [selectedProject, setSelectedProject] = useState('acme-api');
+  const [viewingProjectDetailId, setViewingProjectDetailId] = useState<string | null>(null);
 
   const handleNavigate = (route: NavRoute) => {
     // Role guard for admin route
@@ -52,6 +54,10 @@ const AppContent: React.FC = () => {
       setCurrentRoute('dashboard');
       window.history.pushState(null, '', '/dashboard');
       return;
+    }
+    // If navigating to projects directly, clear detail view unless specifically requested
+    if (route !== 'projects') {
+      setViewingProjectDetailId(null);
     }
     setCurrentRoute(route);
     window.history.pushState(null, '', `/${route}`);
@@ -105,9 +111,25 @@ const AppContent: React.FC = () => {
       case 'dashboard':
         return <DashboardPage onNavigate={handleNavigate} />;
       case 'projects':
+        if (viewingProjectDetailId) {
+          return (
+            <ProjectDetailPage
+              projectId={viewingProjectDetailId}
+              onBack={() => setViewingProjectDetailId(null)}
+              onNavigate={handleNavigate}
+              onProjectDeleted={(id) => {
+                if (selectedProject === id) {
+                  setSelectedProject('acme-api');
+                }
+                setViewingProjectDetailId(null);
+              }}
+            />
+          );
+        }
         return (
           <ProjectsPage
             onSelectProject={(id) => setSelectedProject(id)}
+            onOpenProject={(id) => setViewingProjectDetailId(id)}
             selectedProjectId={selectedProject}
           />
         );

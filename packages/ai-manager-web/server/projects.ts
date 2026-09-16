@@ -222,6 +222,31 @@ projectsRouter.post('/', localOrAuth, async (req: AuthRequest, res: Response): P
   }
 });
 
+// GET /api/projects/:id — Get specific project details
+projectsRouter.get('/:id', localOrAuth, async (req: AuthRequest, res: Response): Promise<void> => {
+  try {
+    const projectId = req.params.id as string;
+    const project = await getProjectById(projectId);
+
+    if (!project) {
+      res.status(404).json({ error: `Project '${projectId}' not found.` });
+      return;
+    }
+
+    const isAdmin = req.user?.role === 'admin';
+    const isOwner = !project.userId || project.userId === req.user?.sub;
+
+    if (!isAdmin && !isOwner) {
+      res.status(403).json({ error: 'Forbidden: You do not have permission to view this project.' });
+      return;
+    }
+
+    res.status(200).json({ project });
+  } catch (err: any) {
+    res.status(500).json({ error: `Failed to fetch project: ${err.message}` });
+  }
+});
+
 // DELETE /api/projects/:id — Remove project (RBAC & Ownership enforced: non-owner/non-admin rejected with 403)
 projectsRouter.delete('/:id', localOrAuth, async (req: AuthRequest, res: Response): Promise<void> => {
   try {

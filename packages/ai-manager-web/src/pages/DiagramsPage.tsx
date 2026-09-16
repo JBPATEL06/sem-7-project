@@ -65,11 +65,17 @@ export const DiagramsPage: React.FC<DiagramsPageProps> = ({ projectId = 'acme-ap
         elements: activeDiagram.elements || [],
         appState: {
           ...(activeDiagram.appState || {}),
+          viewBackgroundColor: theme === 'dark' ? '#090d16' : '#ffffff',
           theme: theme === 'dark' ? 'dark' : 'light'
         }
       });
+      if (activeDiagram.elements && activeDiagram.elements.length > 0) {
+        setTimeout(() => {
+          excalidrawAPI.scrollToContent(activeDiagram.elements, { fitToViewport: true, viewportZoomFactor: 0.85 });
+        }, 60);
+      }
     }
-  }, [activeDiagram?.id, excalidrawAPI]);
+  }, [activeDiagram?.id, activeDiagram?.updatedAt, excalidrawAPI, theme]);
 
   // Handle Save
   const handleSave = async () => {
@@ -179,9 +185,24 @@ export const DiagramsPage: React.FC<DiagramsPageProps> = ({ projectId = 'acme-ap
     if (!aiPrompt.trim()) return;
     try {
       setIsAiGenerating(true);
-      await generateAiDiagram(aiPrompt.trim(), aiDiagramType);
+      const newDiagram = await generateAiDiagram(aiPrompt.trim(), aiDiagramType);
       setAiPrompt('');
       setIsAiModalOpen(false);
+
+      if (newDiagram && excalidrawAPI) {
+        excalidrawAPI.updateScene({
+          elements: newDiagram.elements || [],
+          appState: {
+            viewBackgroundColor: '#090d16',
+            theme: theme === 'dark' ? 'dark' : 'light'
+          }
+        });
+        setTimeout(() => {
+          if (excalidrawAPI && newDiagram.elements && newDiagram.elements.length > 0) {
+            excalidrawAPI.scrollToContent(newDiagram.elements, { fitToViewport: true, viewportZoomFactor: 0.85 });
+          }
+        }, 80);
+      }
     } catch (err: any) {
       console.error('AI Diagram Generation failed:', err);
     } finally {
@@ -528,7 +549,24 @@ export const DiagramsPage: React.FC<DiagramsPageProps> = ({ projectId = 'acme-ap
         ) : (
           <div className="w-full h-full">
             <Excalidraw
-              excalidrawAPI={(api: any) => setExcalidrawAPI(api)}
+              key={activeDiagram?.id || 'empty-diagram'}
+              initialData={{
+                elements: activeDiagram?.elements || [],
+                appState: {
+                  ...(activeDiagram?.appState || {}),
+                  theme: theme === 'dark' ? 'dark' : 'light',
+                  viewBackgroundColor: theme === 'dark' ? '#090d16' : '#ffffff'
+                },
+                files: activeDiagram?.files || {}
+              }}
+              excalidrawAPI={(api: any) => {
+                setExcalidrawAPI(api);
+                if (activeDiagram?.elements && activeDiagram.elements.length > 0) {
+                  setTimeout(() => {
+                    api?.scrollToContent?.(activeDiagram.elements, { fitToViewport: true, viewportZoomFactor: 0.85 });
+                  }, 80);
+                }
+              }}
               theme={theme === 'dark' ? 'dark' : 'light'}
               UIOptions={{
                 canvasActions: {

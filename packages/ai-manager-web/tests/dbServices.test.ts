@@ -40,7 +40,7 @@ describe('Database Services & Driver Utility Tests', () => {
     await syncDiskDiagramsToStore('acme-api', 'usr_admin_default');
   });
 
-  it('5. syncDiskScreensToStore auto-discovers .penpot.json layout specs from ui/ folder', async () => {
+  it('5. syncDiskScreensToStore auto-discovers layout specs from ui/ folder', async () => {
     const { syncDiskScreensToStore } = await import('../server/screenRoutes.js');
     await syncDiskScreensToStore('acme-api', 'usr_admin_default');
   });

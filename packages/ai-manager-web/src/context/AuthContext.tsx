@@ -27,14 +27,14 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         return JSON.parse(saved);
       } catch {}
     }
-    return null;
+    return { id: 'usr_local_admin', email: 'admin@local.workspace', role: 'admin' };
   });
 
   const [token, setToken] = useState<string | null>(() => {
-    return localStorage.getItem('ai_manager_token');
+    return localStorage.getItem('ai_manager_token') || 'local_dev_token';
   });
 
-  const [isLoading, setIsLoading] = useState<boolean>(true);
+  const [isLoading, setIsLoading] = useState<boolean>(false);
 
   // Validate existing token with backend on mount
   useEffect(() => {

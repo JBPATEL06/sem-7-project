@@ -1,7 +1,7 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { ApiClient } from '../api/client';
 
-export interface PenpotComponent {
+export interface LayoutComponent {
   id: string;
   name: string;
   type: 'frame' | 'rect' | 'circle' | 'text' | 'button' | 'input' | 'card' | 'table' | 'badge' | 'avatar' | 'chart' | 'navbar' | 'sidebar';
@@ -21,11 +21,11 @@ export interface PenpotComponent {
   flexDir?: 'row' | 'column';
   gap?: number;
   padding?: number;
-  children?: PenpotComponent[];
+  children?: LayoutComponent[];
   props?: Record<string, any>;
 }
 
-export interface PenpotBoard {
+export interface LayoutBoard {
   id: string;
   name: string;
   x: number;
@@ -33,7 +33,7 @@ export interface PenpotBoard {
   width: number;
   height: number;
   background: string;
-  components: PenpotComponent[];
+  components: LayoutComponent[];
 }
 
 export interface ChatMessage {
@@ -56,7 +56,7 @@ export interface ScreenLayoutSpec {
   userId: string;
   name: string;
   description: string;
-  board: PenpotBoard;
+  board: LayoutBoard;
   theme: {
     primaryColor: string;
     backgroundColor: string;
@@ -83,11 +83,14 @@ export interface StitchGenerationStep {
 
 export interface StitchGenerationResponse {
   success: boolean;
-  mode: 'create' | 'modify';
+  intent?: 'GENERATE' | 'DISCUSS' | string;
+  mode: 'create' | 'modify' | 'discuss';
   screen: ScreenLayoutSpec;
   generationSteps: StitchGenerationStep[];
   changesSummary?: string;
   assistantMessage?: string;
+  assistantExplanation?: string;
+  reply?: string;
   chatHistory?: ChatMessage[];
 }
 
@@ -248,12 +251,13 @@ export function useScreens(projectId?: string) {
   }): Promise<ScreenLayoutSpec | null> => {
     setIsGenerating(true);
     setError(null);
+    const isModify = options.mode === 'modify';
     try {
       const res = await ApiClient.post<StitchGenerationResponse>('/api/screens/generate-stitch', {
         prompt: options.prompt,
         mode: options.mode || 'create',
-        screenId: options.screenId || currentScreen?.id,
-        existingBoard: currentScreen?.board,
+        screenId: isModify ? (options.screenId || currentScreen?.id) : undefined,
+        existingBoard: isModify ? currentScreen?.board : undefined,
         selectedCompIds: options.selectedCompIds || [],
         selectedScreenIds: options.selectedScreenIds || [],
         projectId,
@@ -261,43 +265,69 @@ export function useScreens(projectId?: string) {
         category: options.category || 'dashboard'
       });
 
-      if (res.success && res.screen) {
-        const fullScreen = res.screen;
-        const steps = res.generationSteps || [];
+      if (res.success) {
+        if (res.intent === 'DISCUSS') {
+          // If discuss mode, update chat history only, NEVER replace or blank out board components
+          const updatedChat = res.screen?.chatHistory || (res.chatHistory) || [
+            ...(currentScreen?.chatHistory || []),
+            { id: `msg_u_${Date.now()}`, role: 'user' as const, text: options.prompt, timestamp: new Date().toISOString() },
+            { id: `msg_a_${Date.now()}`, role: 'assistant' as const, text: res.assistantExplanation || res.reply || '', timestamp: new Date().toISOString() }
+          ];
 
-        // Run progressive animation sequence
-        if (steps.length > 0) {
-          const finalComponents = fullScreen.board.components;
-          for (let i = 0; i < steps.length; i++) {
-            const step = steps[i];
-            setAnimatingStep(step);
-            const p = Math.round(((i + 1) / steps.length) * 100);
-            setAnimationProgress(p);
-            if (options.onStep) options.onStep(step, p);
-            
-            // Incrementally reveal components
-            const partialComps = finalComponents.slice(0, i + 1);
-            setCurrentScreen({
-              ...fullScreen,
-              board: {
-                ...fullScreen.board,
-                components: partialComps
-              }
-            });
-            await new Promise(resolve => setTimeout(resolve, 140));
+          if (currentScreen) {
+            const updated: ScreenLayoutSpec = {
+              ...currentScreen,
+              chatHistory: updatedChat
+            };
+            setCurrentScreen(updated);
+            setScreens(prev => prev.map(s => s.id === updated.id ? updated : s));
+            return updated;
+          } else if (res.screen) {
+            setCurrentScreen(res.screen);
+            setScreens(prev => [res.screen, ...prev]);
+            return res.screen;
           }
+          return null;
         }
 
-        // Finalize state
-        setScreens(prev => {
-          const exists = prev.some(s => s.id === fullScreen.id);
-          if (exists) return prev.map(s => s.id === fullScreen.id ? fullScreen : s);
-          return [fullScreen, ...prev];
-        });
-        setCurrentScreen(fullScreen);
-        setAnimatingStep(null);
-        setAnimationProgress(100);
-        return fullScreen;
+        if (res.screen) {
+          const fullScreen = res.screen;
+          const steps = res.generationSteps || [];
+
+          // Run progressive animation sequence
+          if (steps.length > 0) {
+            const finalComponents = fullScreen.board.components;
+            for (let i = 0; i < steps.length; i++) {
+              const step = steps[i];
+              setAnimatingStep(step);
+              const p = Math.round(((i + 1) / steps.length) * 100);
+              setAnimationProgress(p);
+              if (options.onStep) options.onStep(step, p);
+              
+              // Incrementally reveal components
+              const partialComps = finalComponents.slice(0, i + 1);
+              setCurrentScreen({
+                ...fullScreen,
+                board: {
+                  ...fullScreen.board,
+                  components: partialComps
+                }
+              });
+              await new Promise(resolve => setTimeout(resolve, 140));
+            }
+          }
+
+          // Finalize state
+          setScreens(prev => {
+            const exists = prev.some(s => s.id === fullScreen.id);
+            if (exists) return prev.map(s => s.id === fullScreen.id ? fullScreen : s);
+            return [fullScreen, ...prev];
+          });
+          setCurrentScreen(fullScreen);
+          setAnimatingStep(null);
+          setAnimationProgress(100);
+          return fullScreen;
+        }
       }
       return null;
     } catch (err: any) {
@@ -309,23 +339,48 @@ export function useScreens(projectId?: string) {
     }
   }, [currentScreen, projectId]);
 
-  const exportPenpotJson = useCallback(async (screenId: string, screenName: string) => {
+  const exportFigFile = useCallback(async (screenId: string, screenName: string) => {
     try {
-      const res = await ApiClient.get<any>(`/api/screens/${screenId}/export?format=penpot`);
-      const blob = new Blob([JSON.stringify(res, null, 2)], { type: 'application/json' });
+      const response = await fetch(`/api/screens/${screenId}/export?format=fig`, {
+        headers: {
+          'Authorization': `Bearer ${localStorage.getItem('ai_manager_token') || ''}`
+        }
+      });
+      if (!response.ok) throw new Error(`HTTP ${response.status}`);
+      const blob = await response.blob();
       const url = URL.createObjectURL(blob);
       const a = document.createElement('a');
       a.href = url;
-      a.download = `${screenName.toLowerCase().replace(/[^a-z0-9]/g, '-')}.penpot.json`;
+      a.download = `${screenName.toLowerCase().replace(/[^a-z0-9]/g, '-')}.fig`;
       document.body.appendChild(a);
       a.click();
       document.body.removeChild(a);
       URL.revokeObjectURL(url);
     } catch (err: any) {
-      setError(err.message || 'Failed to export Penpot JSON');
+      setError(err.message || 'Failed to export .fig file');
       throw err;
     }
   }, []);
+
+  const exportSpecJson = useCallback(async (screenId: string, screenName: string) => {
+    try {
+      const res = await ApiClient.get<any>(`/api/screens/${screenId}/export?format=json`);
+      const blob = new Blob([JSON.stringify(res, null, 2)], { type: 'application/json' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `${screenName.toLowerCase().replace(/[^a-z0-9]/g, '-')}.json`;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+    } catch (err: any) {
+      setError(err.message || 'Failed to export layout JSON');
+      throw err;
+    }
+  }, []);
+
+  const exportPenpotJson = exportSpecJson;
 
   // Debounce ref for non-blocking 60fps local edits
   const persistTimeoutRef = useRef<NodeJS.Timeout | null>(null);
@@ -349,10 +404,10 @@ export function useScreens(projectId?: string) {
   }, []);
 
   // Component Tree Helpers (Synchronous instant UI updates + debounced persist)
-  const addComponent = useCallback((newComp: PenpotComponent, parentId?: string) => {
+  const addComponent = useCallback((newComp: LayoutComponent, parentId?: string) => {
     setCurrentScreen(prevScreen => {
       if (!prevScreen) return null;
-      const addRecursive = (list: PenpotComponent[]): PenpotComponent[] => {
+      const addRecursive = (list: LayoutComponent[]): LayoutComponent[] => {
         if (!parentId) return [...list, newComp];
         return list.map(c => {
           if (c.id === parentId) {
@@ -377,10 +432,10 @@ export function useScreens(projectId?: string) {
     });
   }, [persistScreenState]);
 
-  const updateComponent = useCallback((compId: string, updates: Partial<PenpotComponent>, persistImmediately: boolean = false) => {
+  const updateComponent = useCallback((compId: string, updates: Partial<LayoutComponent>, persistImmediately: boolean = false) => {
     setCurrentScreen(prevScreen => {
       if (!prevScreen) return null;
-      const updateRecursive = (list: PenpotComponent[]): PenpotComponent[] => {
+      const updateRecursive = (list: LayoutComponent[]): LayoutComponent[] => {
         return list.map(c => {
           if (c.id === compId) {
             return { ...c, ...updates };
@@ -407,7 +462,7 @@ export function useScreens(projectId?: string) {
   const deleteComponent = useCallback((compId: string) => {
     setCurrentScreen(prevScreen => {
       if (!prevScreen) return null;
-      const deleteRecursive = (list: PenpotComponent[]): PenpotComponent[] => {
+      const deleteRecursive = (list: LayoutComponent[]): LayoutComponent[] => {
         return list
           .filter(c => c.id !== compId)
           .map(c => (c.children ? { ...c, children: deleteRecursive(c.children) } : c));
@@ -428,7 +483,7 @@ export function useScreens(projectId?: string) {
   const duplicateComponent = useCallback((compId: string) => {
     setCurrentScreen(prevScreen => {
       if (!prevScreen) return null;
-      const cloneWithNewIds = (comp: PenpotComponent): PenpotComponent => {
+      const cloneWithNewIds = (comp: LayoutComponent): LayoutComponent => {
         const newId = `comp_${Date.now()}_${Math.random().toString(36).slice(2, 6)}`;
         return {
           ...comp,
@@ -440,8 +495,8 @@ export function useScreens(projectId?: string) {
         };
       };
 
-      const dupRecursive = (list: PenpotComponent[]): PenpotComponent[] => {
-        const res: PenpotComponent[] = [];
+      const dupRecursive = (list: LayoutComponent[]): LayoutComponent[] => {
+        const res: LayoutComponent[] = [];
         for (const c of list) {
           res.push(c);
           if (c.id === compId) {
@@ -503,7 +558,8 @@ export function useScreens(projectId?: string) {
     generateAiLayout,
     generateStitchScreen,
     sendChatMessage,
-    exportPenpotJson,
+    exportFigFile,
+    exportSpecJson,
     addComponent,
     updateComponent,
     deleteComponent,

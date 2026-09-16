@@ -20,10 +20,11 @@ import {
 
 interface ProjectsPageProps {
   onSelectProject?: (projectId: string) => void;
+  onOpenProject?: (projectId: string) => void;
   selectedProjectId?: string;
 }
 
-export const ProjectsPage: React.FC<ProjectsPageProps> = ({ onSelectProject, selectedProjectId }) => {
+export const ProjectsPage: React.FC<ProjectsPageProps> = ({ onSelectProject, onOpenProject, selectedProjectId }) => {
   const { projects, isLoading, error, createProject } = useProjects();
   const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid');
   const [searchQuery, setSearchQuery] = useState('');
@@ -246,16 +247,32 @@ export const ProjectsPage: React.FC<ProjectsPageProps> = ({ onSelectProject, sel
                   </CardContent>
 
 
-                  <CardFooter className="border-t border-border pt-3 p-0 flex justify-between items-center">
-                    <span className="text-xs font-mono text-muted-foreground">
+                  <CardFooter className="border-t border-border pt-3 p-0 flex justify-between items-center gap-2">
+                    <span className="text-xs font-mono text-muted-foreground truncate">
                       {project.lastSynced || 'Recently synced'}
                     </span>
-                    {isSelected && (
-                      <span className="text-[10px] font-mono text-primary flex items-center gap-1 font-semibold">
-                        <CheckCircle2 className="size-3" />
-                        Active
-                      </span>
-                    )}
+                    <div className="flex items-center gap-2 shrink-0">
+                      {isSelected && (
+                        <span className="text-[10px] font-mono text-primary flex items-center gap-1 font-semibold">
+                          <CheckCircle2 className="size-3" />
+                          Active
+                        </span>
+                      )}
+                      {onOpenProject && (
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            if (onSelectProject) onSelectProject(project.projectId);
+                            onOpenProject(project.projectId);
+                          }}
+                          className="h-7 px-2 text-xs text-primary hover:text-primary hover:bg-primary/10 gap-1 font-medium"
+                        >
+                          Workspace →
+                        </Button>
+                      )}
+                    </div>
                   </CardFooter>
                 </Card>
               );
@@ -283,7 +300,7 @@ export const ProjectsPage: React.FC<ProjectsPageProps> = ({ onSelectProject, sel
                     </span>
                   </div>
                 </div>
-                <div className="flex items-center gap-6 font-mono text-xs text-muted-foreground shrink-0">
+                <div className="flex items-center gap-4 font-mono text-xs text-muted-foreground shrink-0">
                   <span>Files: {project.files || (project.filesCount ? String(project.filesCount) : '—')}</span>
                   <span>Size: {project.dbSize || '—'}</span>
                   <Badge
@@ -299,8 +316,21 @@ export const ProjectsPage: React.FC<ProjectsPageProps> = ({ onSelectProject, sel
                   >
                     {project.status || 'Not indexed'}
                   </Badge>
+                  {onOpenProject && (
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        if (onSelectProject) onSelectProject(project.projectId);
+                        onOpenProject(project.projectId);
+                      }}
+                      className="h-7 px-2.5 text-xs text-primary hover:bg-primary/10 border-primary/30 gap-1 font-medium"
+                    >
+                      Workspace →
+                    </Button>
+                  )}
                 </div>
-
               </div>
             ))}
           </div>

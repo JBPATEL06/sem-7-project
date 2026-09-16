@@ -1,0 +1,113 @@
+{
+  "id": "screen_stitch_1789473680479_a8nq6",
+  "projectId": "acme-api",
+  "userId": "local-dev-user",
+  "name": "Blue Accent UI",
+  "description": "A dark theme screen with blue accent elements including a header bar and a primary button.",
+  "theme": {
+    "primaryColor": "#7c3aed",
+    "backgroundColor": "#090d16",
+    "surfaceColor": "#131b2e",
+    "textColor": "#f8fafc",
+    "accentColor": "#10b981",
+    "borderRadius": 12
+  },
+  "board": {
+    "id": "board_screen_stitch_1789473680479_a8nq6",
+    "name": "Blue Accent UI Canvas",
+    "x": 0,
+    "y": 0,
+    "width": 1440,
+    "height": 900,
+    "background": "#090d16",
+    "components": [
+      {
+        "id": "bg1",
+        "name": "Background",
+        "type": "rectangle",
+        "x": 0,
+        "y": 0,
+        "width": 1440,
+        "height": 1024,
+        "fills": [
+          {
+            "type": "solid",
+            "color": "#1E1E1E"
+          }
+        ],
+        "strokes": [],
+        "borderRadius": 0,
+        "text": "",
+        "fontSize": 0,
+        "color": ""
+      },
+      {
+        "id": "header1",
+        "name": "Header Bar",
+        "type": "rectangle",
+        "x": 0,
+        "y": 0,
+        "width": 1440,
+        "height": 80,
+        "fills": [
+          {
+            "type": "solid",
+            "color": "#0D47A1"
+          }
+        ],
+        "strokes": [],
+        "borderRadius": 0,
+        "text": "",
+        "fontSize": 0,
+        "color": ""
+      },
+      {
+        "id": "btn1",
+        "name": "Primary Button",
+        "type": "button",
+        "x": 620,
+        "y": 500,
+        "width": 200,
+        "height": 50,
+        "fills": [
+          {
+            "type": "solid",
+            "color": "#1565C0"
+          }
+        ],
+        "strokes": [],
+        "borderRadius": 8,
+        "text": "Submit",
+        "fontSize": 16,
+        "color": "#FFFFFF"
+      }
+    ]
+  },
+  "chatHistory": [
+    {
+      "id": "msg_u_1789473680479",
+      "role": "user",
+      "text": "addd blue color",
+      "timestamp": "2026-09-15T12:01:20.479Z"
+    },
+    {
+      "id": "msg_a_1789473680479",
+      "role": "assistant",
+      "text": "I synthesized **Blue Accent UI** with 3 components matching your prompt \"addd blue color\" using Groq LLM (openai/gpt-oss-120b).",
+      "timestamp": "2026-09-15T12:01:20.479Z",
+      "stepsCount": 3,
+      "changesSummary": "Synthesized 3 custom AI components for Blue Accent UI (via Groq openai/gpt-oss-120b)",
+      "metadata": {
+        "mode": "create",
+        "intent": "GENERATE",
+        "theme": "dark",
+        "dimensions": {
+          "width": 1440,
+          "height": 900
+        }
+      }
+    }
+  ],
+  "createdAt": "2026-09-15T12:01:20.479Z",
+  "updatedAt": "2026-09-15T12:01:20.479Z"
+}

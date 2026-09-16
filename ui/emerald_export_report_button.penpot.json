@@ -1,0 +1,393 @@
+{
+  "schemaVersion": "2.0",
+  "generator": "AI-Manager Penpot Layout Spec Bridge",
+  "exportedAt": "2026-09-15T07:10:58.684Z",
+  "name": "Emerald Export Report Button",
+  "description": "Updates the Export Report button to emerald green with white text and adds a download icon for proper export functionality.",
+  "theme": {
+    "primaryColor": "#7c3aed",
+    "backgroundColor": "#090d16",
+    "surfaceColor": "#131b2e",
+    "textColor": "#f8fafc",
+    "accentColor": "#10b981",
+    "borderRadius": 12
+  },
+  "board": {
+    "id": "board_screen_stitch_test_dashboard_1789456256566",
+    "name": "Emerald Export Report Button Canvas",
+    "x": 0,
+    "y": 0,
+    "width": 1200,
+    "height": 900,
+    "fills": [
+      {
+        "fillColor": "#090d16",
+        "fillOpacity": 1
+      }
+    ],
+    "shapes": [
+      {
+        "id": "comp_topbar",
+        "name": "Top Navigation Bar",
+        "type": "frame",
+        "x": 0,
+        "y": 0,
+        "width": 1200,
+        "height": 60,
+        "borderRadius": 0,
+        "fills": [
+          {
+            "color": "#1e293b"
+          }
+        ],
+        "strokes": [],
+        "layout": "none",
+        "children": []
+      },
+      {
+        "id": "comp_brand",
+        "name": "Brand Logo & Title",
+        "type": "text",
+        "x": 20,
+        "y": 15,
+        "width": 180,
+        "height": 30,
+        "borderRadius": 0,
+        "fills": [
+          {
+            "fillColor": "#1e293b",
+            "fillOpacity": 1
+          }
+        ],
+        "strokes": [],
+        "layout": "none",
+        "children": []
+      },
+      {
+        "id": "comp_search",
+        "name": "Global Search Input",
+        "type": "rect",
+        "x": 250,
+        "y": 10,
+        "width": 300,
+        "height": 40,
+        "borderRadius": 0,
+        "fills": [
+          {
+            "fillColor": "#1e293b",
+            "fillOpacity": 1
+          }
+        ],
+        "strokes": [],
+        "layout": "none",
+        "children": []
+      },
+      {
+        "id": "comp_user_avatar",
+        "name": "User Profile Avatar",
+        "type": "frame",
+        "x": 1140,
+        "y": 10,
+        "width": 40,
+        "height": 40,
+        "borderRadius": 0,
+        "fills": [
+          {
+            "fillColor": "#1e293b",
+            "fillOpacity": 1
+          }
+        ],
+        "strokes": [],
+        "layout": "none",
+        "children": []
+      },
+      {
+        "id": "comp_sidebar",
+        "name": "Left Sidebar Container",
+        "type": "frame",
+        "x": 0,
+        "y": 60,
+        "width": 220,
+        "height": 840,
+        "borderRadius": 0,
+        "fills": [
+          {
+            "fillColor": "#1e293b",
+            "fillOpacity": 1
+          }
+        ],
+        "strokes": [],
+        "layout": "none",
+        "children": []
+      },
+      {
+        "id": "comp_nav_overview",
+        "name": "Nav Item: Overview",
+        "type": "text",
+        "x": 20,
+        "y": 90,
+        "width": 180,
+        "height": 30,
+        "borderRadius": 0,
+        "fills": [
+          {
+            "fillColor": "#1e293b",
+            "fillOpacity": 1
+          }
+        ],
+        "strokes": [],
+        "layout": "none",
+        "children": []
+      },
+      {
+        "id": "comp_nav_reports",
+        "name": "Nav Item: Reports",
+        "type": "text",
+        "x": 20,
+        "y": 130,
+        "width": 180,
+        "height": 30,
+        "borderRadius": 0,
+        "fills": [
+          {
+            "fillColor": "#1e293b",
+            "fillOpacity": 1
+          }
+        ],
+        "strokes": [],
+        "layout": "none",
+        "children": []
+      },
+      {
+        "id": "comp_nav_users",
+        "name": "Nav Item: Users",
+        "type": "text",
+        "x": 20,
+        "y": 170,
+        "width": 180,
+        "height": 30,
+        "borderRadius": 0,
+        "fills": [
+          {
+            "fillColor": "#1e293b",
+            "fillOpacity": 1
+          }
+        ],
+        "strokes": [],
+        "layout": "none",
+        "children": []
+      },
+      {
+        "id": "comp_nav_settings",
+        "name": "Nav Item: Settings",
+        "type": "text",
+        "x": 20,
+        "y": 210,
+        "width": 180,
+        "height": 30,
+        "borderRadius": 0,
+        "fills": [
+          {
+            "fillColor": "#1e293b",
+            "fillOpacity": 1
+          }
+        ],
+        "strokes": [],
+        "layout": "none",
+        "children": []
+      },
+      {
+        "id": "comp_card_kpi1",
+        "name": "Total Revenue KPI Card",
+        "type": "rect",
+        "x": 250,
+        "y": 80,
+        "width": 220,
+        "height": 120,
+        "borderRadius": 0,
+        "fills": [
+          {
+            "fillColor": "#1e293b",
+            "fillOpacity": 1
+          }
+        ],
+        "strokes": [],
+        "layout": "none",
+        "children": []
+      },
+      {
+        "id": "comp_card_kpi2",
+        "name": "Active Users KPI Card",
+        "type": "rect",
+        "x": 490,
+        "y": 80,
+        "width": 220,
+        "height": 120,
+        "borderRadius": 0,
+        "fills": [
+          {
+            "fillColor": "#1e293b",
+            "fillOpacity": 1
+          }
+        ],
+        "strokes": [],
+        "layout": "none",
+        "children": []
+      },
+      {
+        "id": "comp_card_kpi3",
+        "name": "Conversion Rate KPI Card",
+        "type": "rect",
+        "x": 730,
+        "y": 80,
+        "width": 220,
+        "height": 120,
+        "borderRadius": 0,
+        "fills": [
+          {
+            "fillColor": "#1e293b",
+            "fillOpacity": 1
+          }
+        ],
+        "strokes": [],
+        "layout": "none",
+        "children": []
+      },
+      {
+        "id": "comp_card_kpi4",
+        "name": "Avg Session KPI Card",
+        "type": "rect",
+        "x": 970,
+        "y": 80,
+        "width": 220,
+        "height": 120,
+        "borderRadius": 0,
+        "fills": [
+          {
+            "fillColor": "#1e293b",
+            "fillOpacity": 1
+          }
+        ],
+        "strokes": [],
+        "layout": "none",
+        "children": []
+      },
+      {
+        "id": "comp_chart_main",
+        "name": "Main Traffic Line Chart",
+        "type": "rect",
+        "x": 250,
+        "y": 220,
+        "width": 620,
+        "height": 320,
+        "borderRadius": 0,
+        "fills": [
+          {
+            "fillColor": "#1e293b",
+            "fillOpacity": 1
+          }
+        ],
+        "strokes": [],
+        "layout": "none",
+        "children": []
+      },
+      {
+        "id": "comp_pie_sources",
+        "name": "Traffic Sources Pie Chart",
+        "type": "rect",
+        "x": 890,
+        "y": 220,
+        "width": 300,
+        "height": 320,
+        "borderRadius": 0,
+        "fills": [
+          {
+            "fillColor": "#1e293b",
+            "fillOpacity": 1
+          }
+        ],
+        "strokes": [],
+        "layout": "none",
+        "children": []
+      },
+      {
+        "id": "comp_table_header",
+        "name": "Recent Transactions Header",
+        "type": "text",
+        "x": 250,
+        "y": 560,
+        "width": 400,
+        "height": 30,
+        "borderRadius": 0,
+        "fills": [
+          {
+            "fillColor": "#1e293b",
+            "fillOpacity": 1
+          }
+        ],
+        "strokes": [],
+        "layout": "none",
+        "children": []
+      },
+      {
+        "id": "comp_table_grid",
+        "name": "Transactions Data Table",
+        "type": "rect",
+        "x": 250,
+        "y": 600,
+        "width": 940,
+        "height": 260,
+        "borderRadius": 0,
+        "fills": [
+          {
+            "fillColor": "#1e293b",
+            "fillOpacity": 1
+          }
+        ],
+        "strokes": [],
+        "layout": "none",
+        "children": []
+      },
+      {
+        "id": "comp_footer",
+        "name": "Dashboard Footer",
+        "type": "frame",
+        "x": 220,
+        "y": 870,
+        "width": 980,
+        "height": 30,
+        "borderRadius": 0,
+        "fills": [
+          {
+            "fillColor": "#1e293b",
+            "fillOpacity": 1
+          }
+        ],
+        "strokes": [],
+        "layout": "none",
+        "children": []
+      },
+      {
+        "id": "comp_export_btn",
+        "name": "Export Report Button",
+        "type": "rect",
+        "x": 1040,
+        "y": 15,
+        "width": 110,
+        "height": 32,
+        "borderRadius": 4,
+        "fills": [
+          {
+            "color": "#10B981"
+          }
+        ],
+        "strokes": [],
+        "text": "Export Report",
+        "fontSize": 14,
+        "color": "#FFFFFF",
+        "layout": "none",
+        "children": []
+      }
+    ]
+  }
+}

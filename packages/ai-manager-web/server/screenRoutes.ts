@@ -5,11 +5,108 @@ import { ScreenModel } from './models/index.js';
 import { localOrAuth, AuthRequest, getIsMongoConnected } from './auth.js';
 import { JsonStore } from './utils/JsonStore.js';
 import { loadDecryptedCredentials } from './settingsRoutes.js';
+import { AppLogger } from './utils/logger.js';
+import { exportScreenToFigBuffer } from './figExporter.js';
 
-export interface PenpotComponent {
+export interface SemanticProps {
+  variant?: 'primary' | 'secondary' | 'outline' | 'ghost' | 'danger' | 'elevated' | 'glassmorphic' | 'success' | 'warning' | 'info' | 'neutral' | string;
+  size?: 'sm' | 'md' | 'lg';
+  inputType?: 'text' | 'email' | 'password' | 'search' | 'number';
+  chartType?: 'line' | 'bar' | 'donut' | 'waveform';
+  scaleToken?: 'xs' | 'sm' | 'md' | 'lg' | 'xl' | '2xl' | '3xl';
+  weightToken?: 'regular' | 'medium' | 'semiBold' | 'bold';
+  colorToken?: 'primary' | 'secondary' | 'muted' | 'accent' | 'danger';
+  radiusToken?: 'none' | 'sm' | 'md' | 'lg' | 'xl' | '2xl' | 'full';
+  spacingToken?: number;
+  states?: {
+    default?: Record<string, any>;
+    hover?: Record<string, any>;
+    focus?: Record<string, any>;
+    active?: Record<string, any>;
+    disabled?: Record<string, any>;
+  };
+  meta?: Record<string, any>;
+}
+
+export interface DesignSystemTokens {
+  id: string;
+  projectId: string;
+  name: string;
+  themeName: 'violet' | 'emerald' | 'azure' | 'minimal-light' | string;
+  colors: {
+    primary: string;
+    primaryHover: string;
+    secondary: string;
+    accent: string;
+    background: string;
+    surface: string;
+    surfaceHover: string;
+    border: string;
+    textPrimary: string;
+    textSecondary: string;
+    textMuted: string;
+    danger: string;
+    warning: string;
+    success: string;
+  };
+  typography: {
+    fontFamily: string;
+    scale: {
+      xs: number;
+      sm: number;
+      md: number;
+      lg: number;
+      xl: number;
+      '2xl': number;
+      '3xl': number;
+    };
+    weights: {
+      regular: string;
+      medium: string;
+      semiBold: string;
+      bold: string;
+    };
+    lineHeights: {
+      tight: number;
+      normal: number;
+      relaxed: number;
+    };
+  };
+  spacing: {
+    scale: Record<string, number>;
+    baseGrid: number;
+  };
+  radii: {
+    none: number;
+    sm: number;
+    md: number;
+    lg: number;
+    xl: number;
+    '2xl': number;
+    full: number;
+  };
+  shadows: {
+    sm: string;
+    md: string;
+    lg: string;
+    glow: string;
+  };
+}
+
+export interface AstPropertyDiff {
+  componentId: string;
+  componentName: string;
+  field: string;
+  oldValue: any;
+  newValue: any;
+  description: string;
+}
+
+export interface LayoutComponent {
   id: string;
   name: string;
   type: 'frame' | 'rect' | 'circle' | 'text' | 'button' | 'input' | 'card' | 'table' | 'badge' | 'avatar' | 'chart' | 'navbar' | 'sidebar';
+  semantic?: SemanticProps;
   x: number;
   y: number;
   width: number;
@@ -25,11 +122,11 @@ export interface PenpotComponent {
   flexDir?: 'row' | 'column';
   gap?: number;
   padding?: number;
-  children?: PenpotComponent[];
+  children?: LayoutComponent[];
   props?: Record<string, any>;
 }
 
-export interface PenpotBoard {
+export interface LayoutBoard {
   id: string;
   name: string;
   x: number;
@@ -37,7 +134,7 @@ export interface PenpotBoard {
   width: number;
   height: number;
   background: string;
-  components: PenpotComponent[];
+  components: LayoutComponent[];
 }
 
 export interface ChatMessage {
@@ -49,6 +146,7 @@ export interface ChatMessage {
   changesSummary?: string;
   metadata?: {
     mode?: string;
+    intent?: string;
     theme?: string;
     dimensions?: { width: number; height: number };
   };
@@ -60,7 +158,7 @@ export interface ScreenLayoutSpec {
   userId: string;
   name: string;
   description: string;
-  board: PenpotBoard;
+  board: LayoutBoard;
   theme: {
     primaryColor: string;
     backgroundColor: string;
@@ -69,12 +167,114 @@ export interface ScreenLayoutSpec {
     accentColor: string;
     borderRadius: number;
   };
+  designTokens?: DesignSystemTokens;
   chatHistory?: ChatMessage[];
   createdAt: string;
   updatedAt: string;
 }
 
 const localScreenStore = new JsonStore<ScreenLayoutSpec>('screens.json');
+export const designTokensStore = new JsonStore<DesignSystemTokens>('design_tokens.json');
+
+export function getDefaultDesignTokens(themeName: string = 'violet', projectId: string = 'global'): DesignSystemTokens {
+  const isLight = themeName === 'light' || themeName === 'minimal-light';
+  const isEmerald = themeName === 'emerald';
+  const isAzure = themeName === 'azure' || themeName === 'blue';
+
+  let primary = '#7c3aed';
+  let primaryHover = '#6d28d9';
+  let secondary = '#3b82f6';
+  let accent = '#10b981';
+
+  if (isEmerald) {
+    primary = '#10b981';
+    primaryHover = '#059669';
+    secondary = '#06b6d4';
+    accent = '#8b5cf6';
+  } else if (isAzure) {
+    primary = '#2563eb';
+    primaryHover = '#1d4ed8';
+    secondary = '#0284c7';
+    accent = '#f59e0b';
+  }
+
+  return {
+    id: `tokens_${projectId}_${themeName}`,
+    projectId,
+    name: `${themeName.charAt(0).toUpperCase() + themeName.slice(1)} Design System`,
+    themeName,
+    colors: {
+      primary,
+      primaryHover,
+      secondary,
+      accent,
+      background: isLight ? '#f8fafc' : '#090d16',
+      surface: isLight ? '#ffffff' : '#131b2e',
+      surfaceHover: isLight ? '#f1f5f9' : '#1e293b',
+      border: isLight ? '#e2e8f0' : '#1e293b',
+      textPrimary: isLight ? '#0f172a' : '#f8fafc',
+      textSecondary: isLight ? '#475569' : '#94a3b8',
+      textMuted: isLight ? '#94a3b8' : '#64748b',
+      danger: '#ef4444',
+      warning: '#f59e0b',
+      success: '#10b981'
+    },
+    typography: {
+      fontFamily: "'Inter', -apple-system, sans-serif",
+      scale: {
+        xs: 11,
+        sm: 13,
+        md: 15,
+        lg: 18,
+        xl: 22,
+        '2xl': 28,
+        '3xl': 36
+      },
+      weights: {
+        regular: '400',
+        medium: '500',
+        semiBold: '600',
+        bold: '700'
+      },
+      lineHeights: {
+        tight: 1.2,
+        normal: 1.5,
+        relaxed: 1.75
+      }
+    },
+    spacing: {
+      scale: {
+        0: 0,
+        1: 4,
+        2: 8,
+        3: 12,
+        4: 16,
+        5: 20,
+        6: 24,
+        8: 32,
+        10: 40,
+        12: 48,
+        16: 64
+      },
+      baseGrid: 4
+    },
+    radii: {
+      none: 0,
+      sm: 4,
+      md: 8,
+      lg: 12,
+      xl: 16,
+      '2xl': 24,
+      full: 9999
+    },
+    shadows: {
+      sm: '0 1px 2px 0 rgba(0, 0, 0, 0.05)',
+      md: '0 4px 6px -1px rgba(0, 0, 0, 0.1)',
+      lg: '0 10px 15px -3px rgba(0, 0, 0, 0.2)',
+      glow: `0 0 20px ${primary}44`
+    }
+  };
+}
 
 export const DEFAULT_SCREEN_THEME = {
   primaryColor: '#7c3aed',
@@ -121,13 +321,43 @@ export function syncScreenToDisk(spec: ScreenLayoutSpec): string {
       fs.mkdirSync(targetDir, { recursive: true });
     }
     const slug = getScreenSlug(spec.name);
-    const filePath = path.join(targetDir, `${slug}.penpot.json`);
-    const manifest = generatePenpotManifest(spec);
-    fs.writeFileSync(filePath, JSON.stringify(manifest, null, 2), 'utf-8');
-    return `ui/${slug}.penpot.json`;
+    const filePath = path.join(targetDir, `${slug}.json`);
+    fs.writeFileSync(filePath, JSON.stringify(spec, null, 2), 'utf-8');
+
+    // Also synchronously write native .fig file to ui/<slug>.fig via OpenPencil engine
+    exportScreenToFigBuffer(spec).then(figBytes => {
+      const figPath = path.join(targetDir, `${slug}.fig`);
+      fs.writeFileSync(figPath, Buffer.from(figBytes));
+    }).catch(err => console.error('[Screens] Error syncing .fig file:', err));
+
+    return `ui/${slug}.fig`;
   } catch (e) {
     console.error('[Screens] Disk sync error:', e);
-    return `ui/${getScreenSlug(spec.name)}.penpot.json`;
+    return `ui/${getScreenSlug(spec.name)}.fig`;
+  }
+}
+
+/**
+ * Saves an automated backup snapshot before modifications or overwrites
+ */
+export function saveScreenBackup(spec: ScreenLayoutSpec): string | null {
+  try {
+    const rootDir = getWorkspaceRootDir();
+    let backupDir = path.join(rootDir, 'packages', 'ai-manager-web', '.ai-manager', 'backups');
+    if (!fs.existsSync(path.join(rootDir, 'packages'))) {
+      backupDir = path.join(rootDir, '.ai-manager', 'backups');
+    }
+    if (!fs.existsSync(backupDir)) {
+      fs.mkdirSync(backupDir, { recursive: true });
+    }
+    const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
+    const slug = getScreenSlug(spec.name || 'screen');
+    const backupPath = path.join(backupDir, `${spec.id}_${slug}_${timestamp}.json`);
+    fs.writeFileSync(backupPath, JSON.stringify(spec, null, 2), 'utf-8');
+    return backupPath;
+  } catch (e) {
+    console.error('[Screens] Failed to create backup snapshot:', e);
+    return null;
   }
 }
 
@@ -139,61 +369,15 @@ export function deleteScreenFromDisk(name: string) {
     const rootDir = getWorkspaceRootDir();
     const targetDir = path.join(rootDir, 'ui');
     const slug = getScreenSlug(name);
-    const filePath = path.join(targetDir, `${slug}.penpot.json`);
-    if (fs.existsSync(filePath)) {
-      fs.unlinkSync(filePath);
-    }
+    const figPath = path.join(targetDir, `${slug}.fig`);
+    const jsonPath = path.join(targetDir, `${slug}.json`);
+    const legacyPath = path.join(targetDir, `${slug}.penpot.json`);
+    if (fs.existsSync(figPath)) fs.unlinkSync(figPath);
+    if (fs.existsSync(jsonPath)) fs.unlinkSync(jsonPath);
+    if (fs.existsSync(legacyPath)) fs.unlinkSync(legacyPath);
   } catch (e) {
     console.error('[Screens] Disk delete error:', e);
   }
-}
-
-/**
- * Transforms layout components into official Penpot Plugin JSON Manifest
- */
-export function generatePenpotManifest(spec: ScreenLayoutSpec) {
-  return {
-    schemaVersion: '2.0',
-    generator: 'AI-Manager Penpot Layout Spec Bridge',
-    exportedAt: new Date().toISOString(),
-    name: spec.name,
-    description: spec.description,
-    theme: spec.theme,
-    board: {
-      id: spec.board.id,
-      name: spec.board.name,
-      x: spec.board.x,
-      y: spec.board.y,
-      width: spec.board.width,
-      height: spec.board.height,
-      fills: [{ fillColor: spec.board.background, fillOpacity: 1 }],
-      shapes: spec.board.components.map(c => mapComponentToPenpotShape(c))
-    }
-  };
-}
-
-function mapComponentToPenpotShape(c: PenpotComponent): any {
-  return {
-    id: c.id,
-    name: c.name,
-    type: c.type === 'text' ? 'text' : c.type === 'frame' ? 'frame' : 'rect',
-    x: c.x,
-    y: c.y,
-    width: c.width,
-    height: c.height,
-    borderRadius: c.borderRadius || 0,
-    fills: c.fills || [{ fillColor: '#1e293b', fillOpacity: 1 }],
-    strokes: c.strokes || [],
-    text: c.text,
-    fontSize: c.fontSize,
-    fontWeight: c.fontWeight,
-    color: c.color,
-    layout: c.layout || 'none',
-    flexDirection: c.flexDir,
-    gap: c.gap,
-    padding: c.padding,
-    children: c.children ? c.children.map(mapComponentToPenpotShape) : []
-  };
 }
 
 export const SCREEN_TEMPLATES: Record<string, any> = {};
@@ -241,12 +425,12 @@ export async function syncDiskScreensToStore(projectId: string = 'acme-api', use
     const targetDir = path.join(rootDir, 'ui');
     if (!fs.existsSync(targetDir)) return;
 
-    const files = fs.readdirSync(targetDir).filter((f) => f.endsWith('.penpot.json'));
+    const files = fs.readdirSync(targetDir).filter((f) => f.endsWith('.json') && !f.endsWith('.penpot.json') || f.endsWith('.penpot.json'));
     const existingList = await localScreenStore.getAll();
     const existingSlugs = new Set(existingList.map((s) => getScreenSlug(s.name)));
 
     for (const filename of files) {
-      const slug = filename.replace(/\.penpot\.json$/, '');
+      const slug = filename.replace(/\.penpot\.json$/, '').replace(/\.json$/, '');
       if (existingSlugs.has(slug)) continue;
 
       const filePath = path.join(targetDir, filename);
@@ -382,6 +566,333 @@ screenRouter.get('/', localOrAuth, async (req: AuthRequest, res: Response) => {
   } catch (err: any) {
     console.error('Error fetching screens:', err);
     return res.status(500).json({ error: 'Failed to fetch layout specs', details: err.message });
+  }
+});
+
+// Helper: Targeted AST Property Diff Mutation Engine
+export function applyTargetedAstDiff(
+  components: LayoutComponent[],
+  options: {
+    selectedCompIds?: string[];
+    prompt?: string;
+    propertyUpdates?: Partial<LayoutComponent>;
+    semanticUpdates?: Partial<SemanticProps>;
+    designTokens?: DesignSystemTokens;
+  }
+): {
+  updatedComponents: LayoutComponent[];
+  astDiffs: AstPropertyDiff[];
+  changesSummary: string;
+} {
+  const { selectedCompIds = [], prompt = '', propertyUpdates, semanticUpdates, designTokens } = options;
+  const p = prompt.toLowerCase();
+  const astDiffs: AstPropertyDiff[] = [];
+  const updated: LayoutComponent[] = JSON.parse(JSON.stringify(components));
+
+  const hasSpecificTarget = selectedCompIds.length > 0;
+  const tokens = designTokens || getDefaultDesignTokens('violet');
+
+  const mutateMatching = (mutateFn: (c: LayoutComponent) => void) => {
+    const walk = (list: LayoutComponent[]) => {
+      for (const c of list) {
+        if (!hasSpecificTarget || selectedCompIds.includes(c.id)) {
+          mutateFn(c);
+        }
+        if (c.children && c.children.length > 0) {
+          walk(c.children);
+        }
+      }
+    };
+    walk(updated);
+  };
+
+  // 1. Direct propertyUpdates if supplied
+  if (propertyUpdates || semanticUpdates) {
+    mutateMatching((c) => {
+      if (propertyUpdates) {
+        for (const [key, val] of Object.entries(propertyUpdates)) {
+          const oldVal = (c as any)[key];
+          if (JSON.stringify(oldVal) !== JSON.stringify(val)) {
+            (c as any)[key] = val;
+            astDiffs.push({
+              componentId: c.id,
+              componentName: c.name,
+              field: key,
+              oldValue: oldVal,
+              newValue: val,
+              description: `Updated ${key} from ${JSON.stringify(oldVal)} to ${JSON.stringify(val)}`
+            });
+          }
+        }
+      }
+      if (semanticUpdates) {
+        const oldSemantic = c.semantic || {};
+        c.semantic = { ...oldSemantic, ...semanticUpdates };
+        astDiffs.push({
+          componentId: c.id,
+          componentName: c.name,
+          field: 'semantic',
+          oldValue: oldSemantic,
+          newValue: c.semantic,
+          description: `Updated semantic configuration on ${c.name}`
+        });
+      }
+    });
+  }
+
+  // 2. Prompt-driven targeted property diffs
+  // A. Color/Theme Mutation
+  if (p.includes('color') || p.includes('theme') || p.includes('emerald') || p.includes('green') || p.includes('blue') || p.includes('violet') || p.includes('navy') || p.includes('dark') || p.includes('light') || p.includes('amber') || p.includes('orange') || p.includes('rose') || p.includes('red')) {
+    let targetColor = tokens.colors.primary;
+    if (p.includes('emerald') || p.includes('green')) targetColor = '#10b981';
+    else if (p.includes('blue') || p.includes('azure')) targetColor = '#3b82f6';
+    else if (p.includes('navy')) targetColor = '#1e3a8a';
+    else if (p.includes('amber') || p.includes('orange')) targetColor = '#f59e0b';
+    else if (p.includes('rose') || p.includes('red')) targetColor = '#ef4444';
+
+    mutateMatching((c) => {
+      const oldFills = JSON.parse(JSON.stringify(c.fills || []));
+      const oldStrokes = JSON.parse(JSON.stringify(c.strokes || []));
+      const isButtonLike = c.type === 'button' || c.type === 'rect' || (c as any).type === 'rectangle' || c.name.toLowerCase().includes('button');
+
+      if (isButtonLike) {
+        c.fills = [{ fillColor: targetColor, color: targetColor } as any];
+        c.color = '#ffffff';
+        c.semantic = { ...(c.semantic || {}), variant: 'primary', colorToken: 'primary' };
+      } else if (c.type === 'badge') {
+        c.color = targetColor;
+        c.fills = [{ fillColor: `${targetColor}22`, color: `${targetColor}22` } as any];
+        c.semantic = { ...(c.semantic || {}), variant: 'success', colorToken: 'accent' };
+      } else if (c.type === 'text') {
+        c.color = targetColor;
+        c.semantic = { ...(c.semantic || {}), colorToken: 'primary' };
+      } else {
+        c.strokes = [{ strokeColor: targetColor, strokeWidth: 1.5 }];
+      }
+
+      if (JSON.stringify(oldFills) !== JSON.stringify(c.fills)) {
+        astDiffs.push({
+          componentId: c.id,
+          componentName: c.name,
+          field: 'fills',
+          oldValue: oldFills,
+          newValue: c.fills,
+          description: `Restyled ${c.name} palette from ${JSON.stringify(oldFills)} to ${targetColor}`
+        });
+      } else if (JSON.stringify(oldStrokes) !== JSON.stringify(c.strokes)) {
+        astDiffs.push({
+          componentId: c.id,
+          componentName: c.name,
+          field: 'strokes',
+          oldValue: oldStrokes,
+          newValue: c.strokes,
+          description: `Restyled ${c.name} stroke to ${targetColor}`
+        });
+      }
+    });
+  }
+
+  // B. Border Radius & Pill Mutation
+  if (p.includes('round') || p.includes('pill') || p.includes('corner') || p.includes('radius')) {
+    const isPill = p.includes('pill') || p.includes('full');
+    const radiusVal = isPill ? tokens.radii.full : tokens.radii.lg;
+    const radiusToken = isPill ? 'full' : 'lg';
+
+    mutateMatching((c) => {
+      const oldRadius = c.borderRadius ?? 0;
+      if (oldRadius !== radiusVal) {
+        c.borderRadius = radiusVal;
+        c.semantic = { ...(c.semantic || {}), radiusToken: radiusToken as any };
+        astDiffs.push({
+          componentId: c.id,
+          componentName: c.name,
+          field: 'borderRadius',
+          oldValue: oldRadius,
+          newValue: radiusVal,
+          description: `Set border radius to ${radiusVal}px (${radiusToken}) on ${c.name}`
+        });
+      }
+    });
+  }
+
+  // C. Glassmorphism / Glow Mutation
+  if (p.includes('glass') || p.includes('glow') || p.includes('blur') || p.includes('frosted')) {
+    mutateMatching((c) => {
+      const oldFills = JSON.parse(JSON.stringify(c.fills || []));
+      c.fills = [{ fillColor: '#1e293bcc', color: '#1e293bcc' } as any];
+      c.strokes = [{ strokeColor: tokens.colors.primary, strokeWidth: 1.5 }];
+      c.borderRadius = Math.max(tokens.radii.lg, c.borderRadius || tokens.radii.md);
+      c.semantic = { ...(c.semantic || {}), variant: 'glassmorphic' };
+
+      if (JSON.stringify(oldFills) !== JSON.stringify(c.fills)) {
+        astDiffs.push({
+          componentId: c.id,
+          componentName: c.name,
+          field: 'fills',
+          oldValue: oldFills,
+          newValue: c.fills,
+          description: `Applied glassmorphic fill and ${tokens.colors.primary} glow to ${c.name}`
+        });
+      }
+    });
+  }
+
+  // D. Typography Scale Mutation
+  if (p.includes('font') || p.includes('size') || p.includes('larger') || p.includes('bold') || p.includes('text')) {
+    mutateMatching((c) => {
+      const oldFont = c.fontSize;
+      if (c.fontSize) c.fontSize = Math.min(tokens.typography.scale['3xl'], Math.round(c.fontSize * 1.3));
+      c.fontWeight = tokens.typography.weights.bold;
+      c.semantic = { ...(c.semantic || {}), weightToken: 'bold' };
+
+      if (oldFont !== c.fontSize) {
+        astDiffs.push({
+          componentId: c.id,
+          componentName: c.name,
+          field: 'fontSize',
+          oldValue: oldFont,
+          newValue: c.fontSize,
+          description: `Scaled typography on ${c.name} to ${c.fontSize}px`
+        });
+      }
+    });
+  }
+
+  return {
+    updatedComponents: updated,
+    astDiffs,
+    changesSummary: `Applied ${astDiffs.length} targeted property diff(s) across ${hasSpecificTarget ? selectedCompIds.length : updated.length} element(s).`
+  };
+}
+
+// GET /api/screens/design-tokens - Get active design tokens for project
+screenRouter.get('/design-tokens', localOrAuth, async (req: AuthRequest, res: Response) => {
+  try {
+    const { projectId = 'global', themeName = 'violet' } = req.query;
+    const projId = String(projectId);
+    const thName = String(themeName);
+
+    let tokens = await designTokensStore.getById(`tokens_${projId}_${thName}`);
+    if (!tokens) {
+      tokens = getDefaultDesignTokens(thName, projId);
+      await designTokensStore.create(tokens);
+    }
+
+    return res.json({
+      success: true,
+      tokens
+    });
+  } catch (err: any) {
+    return res.status(500).json({ error: 'Failed to fetch design tokens', details: err.message });
+  }
+});
+
+// PUT /api/screens/design-tokens - Update design tokens for project
+screenRouter.put('/design-tokens', localOrAuth, async (req: AuthRequest, res: Response) => {
+  try {
+    const { projectId = 'global', themeName = 'violet', tokens: customTokens } = req.body;
+    const projId = String(projectId);
+    const thName = String(themeName);
+
+    const tokenId = `tokens_${projId}_${thName}`;
+    const existing = await designTokensStore.getById(tokenId);
+    const fullTokens: DesignSystemTokens = {
+      ...(existing || getDefaultDesignTokens(thName, projId)),
+      ...(customTokens || {}),
+      id: tokenId,
+      projectId: projId,
+      themeName: thName
+    };
+
+    if (existing) {
+      await designTokensStore.update(tokenId, fullTokens);
+    } else {
+      await designTokensStore.create(fullTokens);
+    }
+
+    return res.json({
+      success: true,
+      tokens: fullTokens
+    });
+  } catch (err: any) {
+    return res.status(500).json({ error: 'Failed to update design tokens', details: err.message });
+  }
+});
+
+// POST /api/screens/modify-element — Atomic Targeted Property Diff Engine
+screenRouter.post('/modify-element', localOrAuth, async (req: AuthRequest, res: Response) => {
+  const logger = AppLogger.createRequestLogger(req.headers['x-request-id'] as string, '/api/screens/modify-element');
+  try {
+    const { screenId, selectedCompIds = [], propertyUpdates, semanticUpdates, prompt } = req.body;
+    logger.logStep('INCOMING_REQUEST', `Modify Element Request | ScreenId: ${screenId || 'none'} | Targets: [${selectedCompIds.join(', ')}] | Prompt: "${prompt || ''}"`, {
+      screenId,
+      selectedCompIds,
+      propertyUpdates,
+      semanticUpdates,
+      prompt
+    });
+
+    if (!screenId) {
+      logger.logResponse(400, 'screenId is required');
+      return res.status(400).json({ error: 'screenId is required.' });
+    }
+
+    let screen: any = null;
+    if (getIsMongoConnected()) {
+      screen = await ScreenModel.findOne({ id: screenId }).lean();
+    }
+    if (!screen) {
+      screen = await localScreenStore.getById(screenId);
+    }
+    if (!screen) {
+      logger.logResponse(404, `Screen ${screenId} not found`);
+      return res.status(404).json({ error: `Screen ${screenId} not found.` });
+    }
+
+    const currentComps = screen.board?.components || screen.layout?.components || [];
+    const designTokens = screen.designTokens || getDefaultDesignTokens('violet', screen.projectId);
+    const { updatedComponents, astDiffs, changesSummary } = applyTargetedAstDiff(currentComps, {
+      selectedCompIds,
+      propertyUpdates,
+      semanticUpdates,
+      prompt,
+      designTokens
+    });
+
+    logger.logStep('AST_DIFF_MUTATION', `Calculated ${astDiffs.length} property diff(s)`, {
+      astDiffs,
+      changesSummary
+    });
+
+    const updatedSpec: ScreenLayoutSpec = {
+      ...screen,
+      board: {
+        ...(screen.board || screen.layout),
+        components: updatedComponents
+      },
+      updatedAt: new Date().toISOString()
+    };
+
+    if (getIsMongoConnected()) {
+      try {
+        await ScreenModel.updateOne({ id: screenId }, { $set: { layout: updatedSpec.board, components: updatedComponents, updatedAt: updatedSpec.updatedAt } });
+      } catch {}
+    }
+    await localScreenStore.update(screenId, updatedSpec);
+    syncScreenToDisk(updatedSpec);
+
+    logger.logResponse(200, `Successfully applied ${astDiffs.length} AST diff(s)`);
+    return res.status(200).json({
+      success: true,
+      mode: 'modify',
+      screen: updatedSpec,
+      astDiffs,
+      changesSummary
+    });
+  } catch (err: any) {
+    logger.logError('MODIFY_ELEMENT', err);
+    logger.logResponse(500, 'Failed to modify element', { error: err.message });
+    return res.status(500).json({ error: 'Failed to modify element', details: err.message });
   }
 });
 
@@ -666,7 +1177,7 @@ screenRouter.delete('/:id', localOrAuth, async (req: AuthRequest, res: Response)
   }
 });
 
-// GET /api/screens/:id/export - Export to official Penpot Plugin JSON manifest
+// GET /api/screens/:id/export - Export to native Figma .fig or JSON spec
 screenRouter.get('/:id/export', localOrAuth, async (req: AuthRequest, res: Response) => {
   try {
     const id = req.params.id as string;
@@ -701,22 +1212,30 @@ screenRouter.get('/:id/export', localOrAuth, async (req: AuthRequest, res: Respo
       updatedAt: screen.updatedAt
     };
 
-    const manifest = generatePenpotManifest(fullSpec);
+    const format = (req.query.format as string) || 'fig';
 
-    res.setHeader('Content-Type', 'application/json');
-    res.setHeader('Content-Disposition', `attachment; filename="${screen.name.toLowerCase().replace(/[^a-z0-9]/g, '-')}.penpot.json"`);
+    if (format === 'json') {
+      res.setHeader('Content-Type', 'application/json');
+      res.setHeader('Content-Disposition', `attachment; filename="${getScreenSlug(screen.name)}.json"`);
+      return res.json(fullSpec);
+    }
 
-    return res.json(manifest);
+    // Default: native .fig binary export via OpenPencil engine
+    const figBytes = await exportScreenToFigBuffer(fullSpec);
+    const slug = getScreenSlug(screen.name);
+    res.setHeader('Content-Type', 'application/octet-stream');
+    res.setHeader('Content-Disposition', `attachment; filename="${slug}.fig"`);
+    return res.send(Buffer.from(figBytes));
   } catch (err: any) {
-    console.error('Error exporting screen to Penpot:', err);
+    console.error('Error exporting screen:', err);
     return res.status(500).json({ error: 'Failed to export screen', details: err.message });
   }
 });
 
-// --------------------------------------------------------------------------
 // POST /api/screens/generate-stitch — Stitch-Grade AI Screen Generator & Modifier
 // --------------------------------------------------------------------------
 screenRouter.post('/generate-stitch', localOrAuth, async (req: AuthRequest, res: Response) => {
+  const logger = AppLogger.createRequestLogger(req.headers['x-request-id'] as string, '/api/screens/generate-stitch');
   try {
     const {
       prompt,
@@ -730,12 +1249,202 @@ screenRouter.post('/generate-stitch', localOrAuth, async (req: AuthRequest, res:
       category = 'dashboard'
     } = req.body;
 
+    logger.logStep('INCOMING_REQUEST', `Prompt: "${prompt}" | Project: ${projectId} | ScreenId: ${screenId || 'none'} | Mode: ${mode}`, {
+      prompt,
+      mode,
+      screenId,
+      projectId,
+      theme: requestedTheme,
+      category,
+      selectedCompIdsCount: Array.isArray(selectedCompIds) ? selectedCompIds.length : 0,
+      selectedScreenIdsCount: Array.isArray(selectedScreenIds) ? selectedScreenIds.length : 0
+    });
+
     if (!prompt || typeof prompt !== 'string' || !prompt.trim()) {
+      logger.logResponse(400, 'Prompt string is required');
       return res.status(400).json({ error: 'A natural language prompt is required.' });
     }
 
     const userId = req.user ? req.user.sub : 'anonymous';
     const isDark = requestedTheme !== 'light';
+
+    // -----------------------------------------------------------------------
+    // INTENT DETECTION GATE: Distinguish GENERATE vs MODIFY vs DISCUSS
+    // -----------------------------------------------------------------------
+    const hasExplicitSelection = Array.isArray(selectedCompIds) && selectedCompIds.length > 0;
+    const isExplicitRedesign = /\b(redesign from scratch|start over|clear and replace|wipe canvas|brand new screen|completely new screen)\b/i.test(prompt);
+    const rawIntent = await detectIntent(prompt, hasExplicitSelection);
+
+    let currentScreenSpec: ScreenLayoutSpec | null = null;
+    if (screenId) {
+      if (getIsMongoConnected()) {
+        const doc = await ScreenModel.findOne({ id: screenId }).lean();
+        if (doc) currentScreenSpec = doc as any;
+      }
+      if (!currentScreenSpec) {
+        currentScreenSpec = await localScreenStore.getById(screenId);
+      }
+    }
+
+    const hasExistingComponents = (currentScreenSpec?.board?.components?.length || existingBoard?.components?.length || 0) > 0;
+
+    let intent: 'GENERATE' | 'MODIFY' | 'DISCUSS' = rawIntent as any;
+    let effectiveMode: 'create' | 'modify' = mode;
+
+    if (rawIntent === 'DISCUSS') {
+      intent = 'DISCUSS';
+    } else if (mode === 'create') {
+      intent = 'GENERATE';
+      effectiveMode = 'create';
+    } else if (mode === 'modify' || hasExplicitSelection) {
+      intent = 'MODIFY';
+      effectiveMode = 'modify';
+    } else if (screenId && hasExistingComponents && !isExplicitRedesign) {
+      intent = 'MODIFY';
+      effectiveMode = 'modify';
+    } else {
+      intent = 'GENERATE';
+      effectiveMode = 'create';
+    }
+
+    logger.logStep('INTENT_DECISION', `Classified Intent: ${intent} (mode: ${effectiveMode}) for prompt: "${prompt}"`, {
+      prompt,
+      rawIntent,
+      intent,
+      mode: effectiveMode,
+      screenId: screenId || 'none',
+      hasExplicitSelection,
+      hasExistingComponents,
+      isExplicitRedesign
+    });
+
+    // Save automated pre-mutation backup snapshot before modifying an existing screen
+    const backupCandidate = currentScreenSpec || (existingBoard ? {
+      id: screenId || `screen_${Date.now()}`,
+      projectId,
+      userId,
+      name: 'Pre-mutation Snapshot',
+      description: 'Auto-saved before modify',
+      board: existingBoard,
+      theme: DEFAULT_SCREEN_THEME,
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString()
+    } as ScreenLayoutSpec : null);
+
+    if (backupCandidate && hasExistingComponents) {
+      const backupPath = saveScreenBackup(backupCandidate);
+      if (backupPath) {
+        logger.logStep('SCREEN_BACKUP', `Saved pre-mutation backup snapshot to ${backupPath}`, { backupPath, screenId });
+      }
+    }
+
+    if (intent === 'DISCUSS') {
+
+      const compList = currentScreenSpec?.board?.components || existingBoard?.components || [];
+      const compNames = compList.slice(0, 8).map((c: any) => c.name || c.type).join(', ');
+
+      const conversationalReply = await callLlmForChatReply(prompt.trim(), {
+        screenName: currentScreenSpec?.name || 'Active Canvas',
+        compCount: compList.length,
+        componentsSummary: compNames
+      });
+
+      logger.logStep('DISCUSS_REPLY', `Conversational AI Reply: "${conversationalReply}"`, {
+        reply: conversationalReply,
+        screenName: currentScreenSpec?.name || 'Active Canvas'
+      });
+
+      const userMsg: ChatMessage = {
+        id: `msg_u_${Date.now()}`,
+        role: 'user',
+        text: prompt,
+        timestamp: new Date().toISOString()
+      };
+
+      const assistantMsg: ChatMessage = {
+        id: `msg_a_${Date.now()}`,
+        role: 'assistant',
+        text: conversationalReply,
+        timestamp: new Date().toISOString(),
+        stepsCount: 0,
+        changesSummary: 'Conversational response (canvas unchanged)',
+        metadata: {
+          mode: 'discuss',
+          theme: isDark ? 'dark' : 'light'
+        }
+      };
+
+      const prevChat = Array.isArray(currentScreenSpec?.chatHistory) ? currentScreenSpec!.chatHistory! : [];
+      const updatedChatHistory = [...prevChat, userMsg, assistantMsg];
+
+      if (currentScreenSpec) {
+        currentScreenSpec.chatHistory = updatedChatHistory;
+        currentScreenSpec.updatedAt = new Date().toISOString();
+
+        if (getIsMongoConnected()) {
+          try {
+            await ScreenModel.updateOne({ id: currentScreenSpec.id }, { $set: { chatHistory: updatedChatHistory, updatedAt: currentScreenSpec.updatedAt } });
+          } catch {}
+        }
+        await localScreenStore.update(currentScreenSpec.id, currentScreenSpec);
+      }
+
+      const targetScreen = currentScreenSpec
+        ? {
+            ...currentScreenSpec,
+            board: {
+              ...(currentScreenSpec.board || (currentScreenSpec as any).layout),
+              components: currentScreenSpec.board?.components || (currentScreenSpec as any).layout?.components || existingBoard?.components || []
+            }
+          }
+        : (existingBoard
+          ? {
+              id: screenId || `screen_discuss_${Date.now()}`,
+              projectId,
+              userId,
+              name: 'Discussion',
+              description: 'Design consultation',
+              board: existingBoard,
+              theme: DEFAULT_SCREEN_THEME,
+              chatHistory: updatedChatHistory,
+              createdAt: new Date().toISOString(),
+              updatedAt: new Date().toISOString()
+            }
+          : {
+              id: screenId || `screen_discuss_${Date.now()}`,
+              projectId,
+              userId,
+              name: 'Design Discussion',
+              description: 'Conversational design consultation',
+              board: {
+                id: `board_discuss_${Date.now()}`,
+                name: 'Discussion Canvas',
+                x: 0,
+                y: 0,
+                width: 1440,
+                height: 900,
+                background: isDark ? '#090d16' : '#f8fafc',
+                components: []
+              },
+              theme: DEFAULT_SCREEN_THEME,
+              chatHistory: updatedChatHistory,
+              createdAt: new Date().toISOString(),
+              updatedAt: new Date().toISOString()
+            });
+
+      logger.logResponse(200, 'DISCUSS intent processed successfully');
+      return res.status(200).json({
+        success: true,
+        intent: 'DISCUSS',
+        mode: 'discuss',
+        reply: conversationalReply,
+        assistantExplanation: conversationalReply,
+        changesSummary: 'Conversational response (canvas unchanged)',
+        screen: targetScreen,
+        chatHistory: updatedChatHistory,
+        generationSteps: []
+      });
+    }
 
     // Support batch multi-screen AI modification
     if (mode === 'modify' && Array.isArray(selectedScreenIds) && selectedScreenIds.length > 1) {
@@ -799,7 +1508,7 @@ screenRouter.post('/generate-stitch', localOrAuth, async (req: AuthRequest, res:
     }
 
     // 1. Prepare base or existing layout
-    let baseComponents: PenpotComponent[] = [];
+    let baseComponents: LayoutComponent[] = [];
     let boardWidth = 1440;
     let boardHeight = 900;
     let screenName = '';
@@ -809,7 +1518,7 @@ screenRouter.post('/generate-stitch', localOrAuth, async (req: AuthRequest, res:
     const pLower = prompt.toLowerCase();
     const isMobilePrompt = pLower.includes('mobile') || pLower.includes('phone') || pLower.includes('ios') || pLower.includes('android');
     const isLandscapePrompt = pLower.includes('landscape') || pLower.includes('game') || pLower.includes('map') || pLower.includes('militia') || pLower.includes('2d');
-    if (mode === 'create') {
+    if (effectiveMode === 'create') {
       if (isMobilePrompt && isLandscapePrompt) {
         boardWidth = 844;
         boardHeight = 390;
@@ -819,30 +1528,36 @@ screenRouter.post('/generate-stitch', localOrAuth, async (req: AuthRequest, res:
       }
     }
 
-    if (mode === 'modify' && screenId) {
-      let existing: any = null;
-      if (getIsMongoConnected()) {
-        existing = await ScreenModel.findOne({ id: screenId }).lean();
-      }
+    if (effectiveMode === 'modify' && screenId) {
+      let existing: any = currentScreenSpec;
       if (!existing) {
-        existing = await localScreenStore.getById(screenId);
+        if (getIsMongoConnected()) {
+          existing = await ScreenModel.findOne({ id: screenId }).lean();
+        }
+        if (!existing) {
+          existing = await localScreenStore.getById(screenId);
+        }
       }
       if (existing) {
         const board = existing.layout || existing.board;
         baseComponents = JSON.parse(JSON.stringify(board.components || []));
         boardWidth = board.width || 1440;
         boardHeight = board.height || 900;
-        screenName = existing.name;
+        screenName = existing.name || '';
         screenDesc = existing.description || '';
         existingChatHistory = Array.isArray(existing.chatHistory) ? existing.chatHistory : [];
+      } else if (existingBoard) {
+        baseComponents = JSON.parse(JSON.stringify(existingBoard.components || []));
+        boardWidth = existingBoard.width || 1440;
+        boardHeight = existingBoard.height || 900;
       }
-    } else if (mode === 'modify' && existingBoard) {
+    } else if (existingBoard) {
       baseComponents = JSON.parse(JSON.stringify(existingBoard.components || []));
       boardWidth = existingBoard.width || 1440;
       boardHeight = existingBoard.height || 900;
     }
 
-    // 2. Synthesize Layout using Stitch AST Layout Engine (LLM + Dynamic Heuristics)
+    // 2. Synthesize layout via AI or fallback engine
     const {
       components,
       title,
@@ -855,7 +1570,7 @@ screenRouter.post('/generate-stitch', localOrAuth, async (req: AuthRequest, res:
       assistantExplanation
     } = await synthesizeStitchLayout({
       prompt: prompt.trim(),
-      mode,
+      mode: effectiveMode,
       baseComponents,
       boardWidth,
       boardHeight,
@@ -868,9 +1583,9 @@ screenRouter.post('/generate-stitch', localOrAuth, async (req: AuthRequest, res:
     const finalBoardWidth = customW || boardWidth;
     const finalBoardHeight = customH || boardHeight;
 
-    const targetId = (mode === 'modify' && screenId)
+    const targetId = (effectiveMode === 'modify' && screenId)
       ? screenId
-      : `screen_stitch_${Date.now()}_${Math.random().toString(36).slice(2, 7)}`;
+      : (screenId || `screen_stitch_${Date.now()}_${Math.random().toString(36).slice(2, 7)}`);
 
     const userMsg: ChatMessage = {
       id: `msg_u_${Date.now()}`,
@@ -882,14 +1597,15 @@ screenRouter.post('/generate-stitch', localOrAuth, async (req: AuthRequest, res:
     const assistantMsg: ChatMessage = {
       id: `msg_a_${Date.now()}`,
       role: 'assistant',
-      text: assistantExplanation || (mode === 'modify'
+      text: assistantExplanation || (effectiveMode === 'modify'
         ? `Applied modifications: **${changesSummary || 'Updated elements'}**.`
         : `Synthesized **${title}** layout with ${components.length} components matching "${prompt}".`),
       timestamp: new Date().toISOString(),
       stepsCount: steps.length,
       changesSummary,
       metadata: {
-        mode,
+        mode: effectiveMode,
+        intent,
         theme: isDark ? 'dark' : 'light',
         dimensions: { width: finalBoardWidth, height: finalBoardHeight }
       }
@@ -913,12 +1629,12 @@ screenRouter.post('/generate-stitch', localOrAuth, async (req: AuthRequest, res:
         components
       },
       chatHistory: [...existingChatHistory, userMsg, assistantMsg],
-      createdAt: new Date().toISOString(),
+      createdAt: (currentScreenSpec?.createdAt) || new Date().toISOString(),
       updatedAt: new Date().toISOString()
     };
 
     // 3. Persist spec
-    if (mode === 'modify' && screenId) {
+    if (effectiveMode === 'modify' && screenId) {
       if (getIsMongoConnected()) {
         try {
           await ScreenModel.updateOne(
@@ -956,21 +1672,31 @@ screenRouter.post('/generate-stitch', localOrAuth, async (req: AuthRequest, res:
     }
 
     const relPath = syncScreenToDisk(fullSpec);
+    logger.logStep('AST_SYNTHESIS_COMPLETE', `Generated screen "${fullSpec.name}" with ${components.length} components (${steps.length} placement steps)`, {
+      screenId: fullSpec.id,
+      name: fullSpec.name,
+      componentsCount: components.length,
+      stepsCount: steps.length
+    });
+    logger.logResponse(201, `Screen "${fullSpec.name}" synthesized with ${components.length} components`);
 
     return res.status(201).json({
       success: true,
-      mode,
+      intent,
+      mode: effectiveMode,
       screen: {
         ...fullSpec,
         filePath: relPath
       },
       generationSteps: steps,
       changesSummary,
+      assistantExplanation: assistantMsg.text,
       assistantMessage: assistantMsg.text,
       chatHistory: fullSpec.chatHistory
     });
   } catch (err: any) {
-    console.error('Error generating Stitch screen:', err);
+    logger.logError('GENERATE_STITCH', err);
+    logger.logResponse(500, 'Failed to generate screen spec', { error: err.message });
     return res.status(500).json({ error: 'Failed to generate screen spec', details: err.message });
   }
 });
@@ -1002,12 +1728,14 @@ screenRouter.post('/:id/chat', localOrAuth, async (req: AuthRequest, res: Respon
       timestamp: new Date().toISOString()
     };
 
-    const isModifyIntent = message.toLowerCase().includes('change') || message.toLowerCase().includes('make') || message.toLowerCase().includes('add') || message.toLowerCase().includes('remove') || message.toLowerCase().includes('set');
-    
-    let assistantReply = `I'm your **Stitch AI Design Assistant**. For "${screen.name}", you can ask me to add platforms, modify colors, resize components, or press **E** on the canvas to edit selected elements in real time.`;
-    if (isModifyIntent) {
-      assistantReply = `I understand you want to "${message}". To apply layout modifications directly to this canvas, you can send this as a design instruction or press **E** on selected elements to watch the AI build them live!`;
-    }
+    const compList = screen.layout?.components || screen.board?.components || [];
+    const compNames = compList.slice(0, 8).map((c: any) => c.name || c.type).join(', ');
+
+    const assistantReply = await callLlmForChatReply(message.trim(), {
+      screenName: screen.name,
+      compCount: compList.length,
+      componentsSummary: compNames
+    });
 
     const assistantMsg: ChatMessage = {
       id: `msg_a_${Date.now()}`,
@@ -1037,12 +1765,201 @@ screenRouter.post('/:id/chat', localOrAuth, async (req: AuthRequest, res: Respon
 });
 
 /**
- * Calls User's Configured LLM (Groq / OpenAI) to generate arbitrary, customized Penpot AST trees
+ * Detects whether user prompt is a generation request (GENERATE) or a discussion/question (DISCUSS)
+ */
+export async function detectIntent(prompt: string, hasSelection: boolean = false): Promise<'GENERATE' | 'DISCUSS'> {
+  const p = prompt.trim().toLowerCase();
+
+  // 1. Definite Greetings & Conversational Chit-Chat (e.g. "hey", "hey you there", "hello there", "hi stitch") -> DISCUSS
+  const greetingsRegex = /^(hey|hello|hi|hiya|howdy|greetings|hola|sup|yo|good\s+(morning|afternoon|evening|day)|thanks|thank\s+you|thx|bye|goodbye|cya)(\s+(there|you\s+there|you|mate|friend|stitch|ai|assistant|how\s+are\s+you|are\s+you\s+there|what'?s\s+up|wassup))?[\s!.,?]*$/i;
+  if (greetingsRegex.test(p)) {
+    return 'DISCUSS';
+  }
+
+  // Conversational presence inquiries -> DISCUSS
+  const conversationalInquiryRegex = /^(are\s+you\s+there|who\s+are\s+you|what\s+can\s+you\s+do|help|how\s+are\s+you)\b[\s!.,?]*$/i;
+  if (conversationalInquiryRegex.test(p)) {
+    return 'DISCUSS';
+  }
+
+  // 2. Definite Questions, Feedback Inquiry, or Explanations -> DISCUSS
+  const questionInquiryRegex = /^(what\s+do\s+you\s+think|what\s+are\s+your\s+thoughts|why\s+is|why\s+are|why\s+did|how\s+does|how\s+do|how\s+can\s+i|can\s+you\s+explain|what\s+is|what\s+are|tell\s+me\s+about|do\s+you\s+like|can\s+we\s+discuss|can\s+we\s+improve|give\s+me\s+feedback|critique|review\s+this|what\s+would\s+happen|is\s+it\s+better|should\s+i\s+use|why\b)/i;
+  if (questionInquiryRegex.test(p)) {
+    const explicitGenFollowup = /(please\s+(generate|create|build|make)|go\s+ahead\s+and\s+(generate|create|build|make))/i;
+    if (!explicitGenFollowup.test(p)) {
+      return 'DISCUSS';
+    }
+  }
+
+  // 3. Definite Generation Verbs + UI Nouns -> GENERATE
+  const strongGenRegex = /^(create|make|generate|design|build|add|insert|append|place|draw|construct|style|transform|convert|render|turn\s+into|give\s+me\s+a)\b/i;
+  const uiNounRegex = /\b(screen|page|layout|diagram|flow|board|wireframe|dashboard|modal|form|navbar|sidebar|header|table|grid|card|button|input|hero|footer|login|signup|register|auth|checkout|cart|settings|profile|view|ui|components?|elements?|section|architecture|pipeline|microservices?|infrastructure|system)\b/i;
+
+  if (strongGenRegex.test(p) && uiNounRegex.test(p)) {
+    return 'GENERATE';
+  }
+
+  // Quick Direct UI / Diagram categories (e.g., "login screen", "crypto dashboard", "ecommerce store", "microservices architecture")
+  const directNounGenRegex = /^(login|signup|register|auth|onboarding|dashboard|landing\s+page|ecommerce|e-commerce|checkout|crm|admin\s+portal|settings\s+page|pricing\s+table|kanban|chat\s+app|music\s+player|analytics\s+view|modern\s+saas|high-throughput|microservices|architecture|serverless|pipeline|database\s+schema|er\s+diagram)\b/i;
+  if (directNounGenRegex.test(p)) {
+    return 'GENERATE';
+  }
+
+  // If prompt explicitly names an architecture or system without inquiry words
+  if (/\b(architecture|microservices|serverless|kafka|redis|postgresql|payment\s+gateway|telemetry\s+pipeline)\b/i.test(p)) {
+    if (!/^(what|why|how|can\s+you\s+explain|tell\s+me|review|critique)\b/i.test(p)) {
+      return 'GENERATE';
+    }
+  }
+
+  // If in targeted edit mode (e.g. selection active) with styling verbs
+  if (hasSelection && /\b(color|round|glow|glass|pill|font|size|larger|smaller|move|delete|remove|align)\b/i.test(p)) {
+    return 'GENERATE';
+  }
+
+  // 4. Ambiguous -> Call Fast Lightweight Classification LLM (low tokens, single word reply)
+  return await callLlmForIntentClassification(prompt);
+}
+
+/**
+ * Lightweight classification LLM call for ambiguous queries (GENERATE vs DISCUSS)
+ */
+export async function callLlmForIntentClassification(prompt: string): Promise<'GENERATE' | 'DISCUSS'> {
+  const creds = loadDecryptedCredentials();
+  const groqKey = creds.groq || process.env.GROQ_API_KEY;
+  const openaiKey = creds.openai || process.env.OPENAI_API_KEY;
+
+  const hasCreationKeyword = /\b(make|create|add|build|design|draw|generate|render|insert|modify|change|turn|convert)\b/i.test(prompt);
+
+  if (!groqKey && !openaiKey) {
+    return hasCreationKeyword ? 'GENERATE' : 'DISCUSS';
+  }
+
+  const endpoint = groqKey ? 'https://api.groq.com/openai/v1/chat/completions' : 'https://api.openai.com/v1/chat/completions';
+  const apiKey = groqKey || openaiKey;
+  const models = groqKey
+    ? ['openai/gpt-oss-120b', 'openai/gpt-oss-20b', 'groq/compound-mini']
+    : ['gpt-4o-mini', 'gpt-3.5-turbo'];
+
+  for (const model of models) {
+    try {
+      const res = await fetch(endpoint, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${apiKey}`
+        },
+        body: JSON.stringify({
+          model,
+          messages: [
+            {
+              role: 'system',
+              content: 'Classify the user message for a UI design studio as either GENERATE or DISCUSS. Output only the single word GENERATE (if user wants to create/modify/render UI or diagrams) or DISCUSS (if asking questions, greeting, or seeking advice/critique).'
+            },
+            {
+              role: 'user',
+              content: prompt
+            }
+          ],
+          temperature: 0,
+          max_tokens: 10
+        })
+      });
+
+      if (res.ok) {
+        const data: any = await res.json();
+        const text = (data.choices?.[0]?.message?.content || '').trim().toUpperCase();
+        if (text.includes('DISCUSS')) return 'DISCUSS';
+        if (text.includes('GENERATE')) return 'GENERATE';
+      }
+    } catch {}
+  }
+  return hasCreationKeyword ? 'GENERATE' : 'DISCUSS';
+}
+
+/**
+ * Intelligent Conversational Chat Reply for DISCUSS intent
+ */
+export async function callLlmForChatReply(
+  prompt: string,
+  context?: {
+    screenName?: string;
+    compCount?: number;
+    componentsSummary?: string;
+  }
+): Promise<string> {
+  const creds = loadDecryptedCredentials();
+  const groqKey = creds.groq || process.env.GROQ_API_KEY;
+  const openaiKey = creds.openai || process.env.OPENAI_API_KEY;
+
+  if (!groqKey && !openaiKey) {
+    if (/^(hey|hello|hi)\b/i.test(prompt)) {
+      return "Hello! I'm your Stitch AI design assistant. How can I help you refine or design your screens today?";
+    }
+    return `Regarding "${prompt}": I am here to help you review, refine, or design your layouts. Let me know if you'd like me to generate or modify any components!`;
+  }
+
+  const endpoint = groqKey ? 'https://api.groq.com/openai/v1/chat/completions' : 'https://api.openai.com/v1/chat/completions';
+  const apiKey = groqKey || openaiKey;
+  const models = groqKey
+    ? ['openai/gpt-oss-120b', 'openai/gpt-oss-20b', 'groq/compound-mini']
+    : ['gpt-4o-mini', 'gpt-3.5-turbo'];
+
+  const contextStr = context?.screenName
+    ? `Current active screen: "${context.screenName}" with ${context.compCount || 0} components.${context.componentsSummary ? ` Elements present: ${context.componentsSummary}` : ''}`
+    : 'No active screen selected on canvas.';
+
+  for (const model of models) {
+    try {
+      const res = await fetch(endpoint, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${apiKey}`
+        },
+        body: JSON.stringify({
+          model,
+          messages: [
+            {
+              role: 'system',
+              content: `You are Stitch AI, a world-class UI/UX design assistant and architecture expert.
+The user is in a visual design studio discussing their UI / diagrams.
+${contextStr}
+Provide a helpful, thoughtful, concise conversational reply (2-4 sentences max). Offer constructive UI/UX suggestions, answer questions directly, or warmly greet the user. Do NOT output raw JSON or code unless asked.`
+            },
+            {
+              role: 'user',
+              content: prompt
+            }
+          ],
+          temperature: 0.7,
+          max_tokens: 300
+        })
+      });
+
+      if (res.ok) {
+        const data: any = await res.json();
+        const content = data.choices?.[0]?.message?.content?.trim();
+        if (content) return content;
+      } else {
+        const errText = await res.text();
+        console.warn(`[Stitch AI Chat] Model "${model}" failed with HTTP ${res.status}: ${errText.substring(0, 150)}`);
+      }
+    } catch (err: any) {
+      console.warn(`[Stitch AI Chat] Network error on model "${model}":`, err.message);
+    }
+  }
+
+  return `I'm here to help with your UI design. What specific changes or ideas would you like to explore?`;
+}
+
+/**
+ * Calls User's Configured LLM (Groq / OpenAI) to generate arbitrary, customized AST trees
  */
 async function callLlmForScreenAst(
   prompt: string,
   mode: string,
-  existingComponents: PenpotComponent[],
+  existingComponents: LayoutComponent[],
   isDark: boolean,
   selectedCompIds: string[] = []
 ): Promise<any | null> {
@@ -1051,74 +1968,133 @@ async function callLlmForScreenAst(
   const openaiKey = creds.openai || process.env.OPENAI_API_KEY;
 
   if (!groqKey && !openaiKey) {
-    return null;
+    throw new Error('No AI API key found. Please configure your Groq or OpenAI API key in /settings. Zero prebuilt templates are allowed.');
   }
 
   const endpoint = groqKey
     ? 'https://api.groq.com/openai/v1/chat/completions'
     : 'https://api.openai.com/v1/chat/completions';
   const apiKey = groqKey || openaiKey;
-  const model = groqKey ? 'llama-3.3-70b-versatile' : 'gpt-4o-mini';
+  const models = groqKey
+    ? ['groq/compound-mini', 'qwen/qwen3.8-27b', 'openai/gpt-oss-20b', 'openai/gpt-oss-120b']
+    : ['gpt-4o-mini', 'gpt-4o', 'gpt-3.5-turbo'];
 
   const isTargetedEdit = mode === 'modify' && selectedCompIds.length > 0;
   const targetedNodes = isTargetedEdit
     ? existingComponents.filter(c => selectedCompIds.includes(c.id))
     : existingComponents;
 
-  const systemPrompt = `You are Stitch AI, a world-class UI design engineer synthesizing Figma and Penpot AST layout specs.
-Given a prompt and context, return a JSON object with:
-- title: string (concise name)
-- description: string
-- components: array of Penpot Schema 2.0 component nodes (Each MUST have: id, name, type, x, y, width, height, fills, strokes, borderRadius, text, fontSize, color).
-${isTargetedEdit ? 'IMPORTANT: You are modifying ONLY the selected components provided in targetedNodes. Return the full modified component list with updated styles/properties for those selected elements.' : 'Generate complete, rich, high-fidelity UI elements matching the user prompt.'}
+  const systemPrompt = `You are an elite vector design AI engine synthesizing Figma/OpenPencil SceneGraph layouts from user prompts.
+Given a user prompt and design context, generate a complete, custom UI layout from scratch strictly conforming to the prompt instructions.
+
+Do NOT use generic boilerplate if the user asks for specific structures. Follow the user's explicit quantities, layouts, dimensions, hierarchies, and themes.
+
+Output a valid JSON object strictly matching this schema:
+{
+  "title": "Concise Descriptive Title",
+  "description": "Short explanation of the generated design",
+  "theme": {
+    "primaryColor": "#hex",
+    "backgroundColor": "#hex",
+    "surfaceColor": "#hex",
+    "textColor": "#hex",
+    "accentColor": "#hex",
+    "borderRadius": number
+  },
+  "boardWidth": 1440,
+  "boardHeight": 900,
+  "components": [
+    {
+      "id": "unique_string_id",
+      "name": "Descriptive Name",
+      "type": "frame",
+      "x": number,
+      "y": number,
+      "width": number,
+      "height": number,
+      "fills": [{ "fillColor": "#hex", "opacity": 1 }],
+      "strokes": [{ "strokeColor": "#hex", "strokeWidth": 1 }],
+      "borderRadius": number,
+      "text": "optional text content",
+      "fontSize": number,
+      "fontWeight": "normal",
+      "color": "#hex",
+      "children": [
+        // nested child components (e.g. text, buttons, sub-frames, inputs)
+      ]
+    }
+  ]
+}
+
+Layout & Coordinate Rules:
+- If isDark is true: background="#0a0e17" or "#0f172a", surfaces="#131b2e", text="#f8fafc" or "#e2e8f0", muted text="#94a3b8", accent="#7c3aed" or "#10b981".
+- If isDark is false: background="#f8fafc", surfaces="#ffffff", text="#0f172a", muted text="#64748b", accent="#7c3aed" or "#0284c7".
+- When creating containers/cards (type "frame" or "card"), position them cleanly on the canvas (e.g. padding 24, staggered x/y coordinates, appropriate widths and heights).
+- When creating child elements inside a container, give them relative x and y coordinates within that container so they fit inside nicely.
+- When user asks for specific counts (e.g. "5 containers with each 10 text", "3 pricing tiers", "4 KPI cards"), create EXACTLY that number of elements with rich, readable sample content matching the theme.
+${isTargetedEdit ? 'TARGETED EDIT MODE: Modify ONLY the selected components provided in targetedNodes according to the user instruction, keeping the rest of the canvas structure intact.' : 'ZERO TEMPLATES: Generate every component dynamically from scratch according to the user prompt.'}
 Return valid JSON only.`;
 
-  try {
-    const controller = new AbortController();
-    const timeout = setTimeout(() => controller.abort(), 12000);
+  let lastError: any = null;
+  for (const model of models) {
+    try {
+      const controller = new AbortController();
+      const timeout = setTimeout(() => controller.abort(), 20000);
 
-    const res = await fetch(endpoint, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': `Bearer ${apiKey}`
-      },
-      body: JSON.stringify({
-        model,
-        messages: [
-          { role: 'system', content: systemPrompt },
-          {
-            role: 'user',
-            content: JSON.stringify({
-              prompt,
-              mode,
-              isDark,
-              selectedCompIds,
-              targetedNodes: targetedNodes.slice(0, 8),
-              totalExisting: existingComponents.length
-            })
+      const res = await fetch(endpoint, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${apiKey}`
+        },
+        body: JSON.stringify({
+          model,
+          messages: [
+            { role: 'system', content: systemPrompt },
+            {
+              role: 'user',
+              content: JSON.stringify({
+                prompt,
+                mode,
+                isDark,
+                selectedCompIds,
+                targetedNodes: targetedNodes.slice(0, 10),
+                totalExisting: existingComponents.length
+              })
+            }
+          ],
+          temperature: 0.3,
+          response_format: { type: 'json_object' }
+        }),
+        signal: controller.signal
+      });
+      clearTimeout(timeout);
+
+      if (res.ok) {
+        const data = await res.json();
+        const content = data.choices?.[0]?.message?.content;
+        if (content) {
+          const parsed = JSON.parse(content);
+          if (parsed && Array.isArray(parsed.components) && parsed.components.length > 0) {
+            console.log(`[Stitch AI LLM] Successfully synthesized AST using model: ${model} (${parsed.components.length} components)`);
+            return {
+              ...parsed,
+              modelUsed: model
+            };
           }
-        ],
-        temperature: 0.3,
-        response_format: { type: 'json_object' }
-      }),
-      signal: controller.signal
-    });
-    clearTimeout(timeout);
-
-    if (!res.ok) return null;
-    const data = await res.json();
-    const content = data.choices?.[0]?.message?.content;
-    if (!content) return null;
-
-    const parsed = JSON.parse(content);
-    if (parsed && Array.isArray(parsed.components) && parsed.components.length > 0) {
-      return parsed;
+        }
+      } else {
+        const errText = await res.text();
+        lastError = new Error(`Model ${model} error (HTTP ${res.status}): ${errText.slice(0, 200)}`);
+        console.warn(`[Stitch AI LLM] Model "${model}" failed with HTTP ${res.status}: ${errText.slice(0, 300)}`);
+      }
+    } catch (err: any) {
+      lastError = err;
+      console.warn(`[Stitch AI LLM] Model "${model}" network/timeout error:`, err.message);
     }
-  } catch (err: any) {
-    console.warn('[Stitch AI LLM] Falling back to category synthesizer:', err.message);
   }
-  return null;
+
+  throw lastError || new Error('Failed to synthesize layout with LLM. Check API key or prompt.');
 }
 /**
  * Intelligent Stitch AST Layout Synthesis Engine (LLM + Diverse Category Generators)
@@ -1126,7 +2102,7 @@ Return valid JSON only.`;
 async function synthesizeStitchLayout(options: {
   prompt: string;
   mode: 'create' | 'modify';
-  baseComponents: PenpotComponent[];
+  baseComponents: LayoutComponent[];
   boardWidth: number;
   boardHeight: number;
   isDark: boolean;
@@ -1166,8 +2142,46 @@ async function synthesizeStitchLayout(options: {
   // Try LLM generation first if API keys exist
   const llmResult = await callLlmForScreenAst(prompt, mode, baseComponents, isDark, selectedCompIds);
   if (llmResult && Array.isArray(llmResult.components) && llmResult.components.length > 0) {
-    const finalTitle = llmResult.title || derivedTitle;
-    const components = llmResult.components;
+    const finalTitle = existingName || llmResult.title || derivedTitle;
+    let components = llmResult.components;
+
+    // IF in MODIFY mode on an existing screen:
+    if (mode === 'modify' && baseComponents.length > 0) {
+      if (selectedCompIds && selectedCompIds.length > 0) {
+        // Targeted mutation: update ONLY selected components in baseComponents
+        const updatedBase: LayoutComponent[] = JSON.parse(JSON.stringify(baseComponents));
+        const mutateMatching = (list: LayoutComponent[]) => {
+          for (let i = 0; i < list.length; i++) {
+            if (selectedCompIds.includes(list[i].id)) {
+              const matchedNew = llmResult.components.find((c: any) => c.id === list[i].id) || llmResult.components[0];
+              if (matchedNew) {
+                list[i] = {
+                  ...list[i],
+                  ...matchedNew,
+                  id: list[i].id, // retain stable ID
+                  x: matchedNew.x !== undefined ? matchedNew.x : list[i].x,
+                  y: matchedNew.y !== undefined ? matchedNew.y : list[i].y
+                };
+              }
+            }
+            if (list[i] && list[i].children && list[i].children!.length > 0) {
+              mutateMatching(list[i].children!);
+            }
+          }
+        };
+        mutateMatching(updatedBase);
+        components = updatedBase;
+      } else {
+        // Non-targeted modify: If LLM returned fewer components than baseComponents without explicit wipe intent, merge by ID or append new components!
+        const isExplicitRedesign = /\b(redesign from scratch|start over|clear and replace|wipe canvas|brand new screen)\b/i.test(prompt);
+        if (!isExplicitRedesign && components.length < baseComponents.length) {
+          const updatedBase: LayoutComponent[] = JSON.parse(JSON.stringify(baseComponents));
+          const newComps = components.filter((c: any) => !updatedBase.some(bc => bc.id === c.id || bc.name === c.name));
+          components = [...updatedBase, ...newComps];
+        }
+      }
+    }
+
     const steps = components.map((c: any, idx: number) => ({
       step: idx + 1,
       name: c.name || `Component ${idx + 1}`,
@@ -1179,13 +2193,19 @@ async function synthesizeStitchLayout(options: {
       action: `AI Synthesizing ${c.name || c.type} (${idx + 1}/${components.length})`
     }));
 
+    const modelTag = llmResult.modelUsed ? ` (via Groq ${llmResult.modelUsed})` : '';
     return {
       components,
       title: finalTitle,
       description: llmResult.description || `Generated by AI: ${prompt}`,
       theme: llmResult.theme || theme,
       steps,
-      changesSummary: `Synthesized ${components.length} custom AI components for ${finalTitle}`
+      changesSummary: mode === 'modify'
+        ? `Modified elements in ${finalTitle}${modelTag}`
+        : `Synthesized ${components.length} custom AI components for ${finalTitle}${modelTag}`,
+      assistantExplanation: mode === 'modify'
+        ? `I applied your modifications to **${finalTitle}** (${components.length} components retained) matching "${prompt}".`
+        : `I synthesized **${finalTitle}** with ${components.length} components matching your prompt "${prompt}" using Groq LLM (${llmResult.modelUsed || 'AI Engine'}).`
     };
   }
 
@@ -1193,15 +2213,15 @@ async function synthesizeStitchLayout(options: {
   // CASE 1: MODIFY EXISTING SCREEN (WHOLE OR TARGETED MULTI-ELEMENT SELECTION)
   // =========================================================================
   if (mode === 'modify' && baseComponents.length > 0) {
-    let updated: PenpotComponent[] = JSON.parse(JSON.stringify(baseComponents));
+    let updated: LayoutComponent[] = JSON.parse(JSON.stringify(baseComponents));
     const changes: string[] = [];
     const steps: Array<{ step: number; name: string; type: string; x: number; y: number; width: number; height: number; action: string }> = [];
 
     const hasSpecificTarget = selectedCompIds.length > 0;
 
     // Helper to mutate matching elements in-place recursively
-    const mutateMatchingComps = (mutateFn: (c: PenpotComponent) => void) => {
-      const walk = (list: PenpotComponent[]) => {
+    const mutateMatchingComps = (mutateFn: (c: LayoutComponent) => void) => {
+      const walk = (list: LayoutComponent[]) => {
         for (const c of list) {
           if (!hasSpecificTarget || selectedCompIds.includes(c.id)) {
             mutateFn(c);
@@ -1308,9 +2328,9 @@ async function synthesizeStitchLayout(options: {
 
     // 5. Append New Search Input Filter
     if (p.includes('search') || p.includes('filter')) {
-      const headerFrame = updated.find((c: PenpotComponent) => c.name.toLowerCase().includes('header') || c.type === 'frame');
+      const headerFrame = updated.find((c: LayoutComponent) => c.name.toLowerCase().includes('header') || c.type === 'frame');
       if (headerFrame && headerFrame.children) {
-        const searchInput: PenpotComponent = {
+        const searchInput: LayoutComponent = {
           id: `input-search-${Date.now()}`,
           name: 'Search Input Filter',
           type: 'input',
@@ -1334,7 +2354,7 @@ async function synthesizeStitchLayout(options: {
     // 6. Append Metric KPI Card
     if (p.includes('metric') || p.includes('kpi') || p.includes('stat') || p.includes('add card')) {
       const nextX = 292 + (updated.filter((c: any) => c.type === 'card' && c.y === 104).length % 4) * 280;
-      const kpiCard: PenpotComponent = {
+      const kpiCard: LayoutComponent = {
         id: `kpi-card-${Date.now()}`,
         name: 'AI Metric Card',
         type: 'card',
@@ -1356,7 +2376,7 @@ async function synthesizeStitchLayout(options: {
 
     // 7. Append Data Table Grid
     if (p.includes('table') || p.includes('grid') || p.includes('list')) {
-      const newTable: PenpotComponent = {
+      const newTable: LayoutComponent = {
         id: `table-grid-${Date.now()}`,
         name: 'Data Table Grid',
         type: 'table',
@@ -1407,6 +2427,182 @@ async function synthesizeStitchLayout(options: {
   // CASE 2: DIVERSE CATEGORY GENERATORS FOR BRAND NEW SCREENS (NEVER THE SAME)
   // =========================================================================
 
+  // Category -1: GREETINGS / HELLO / WELCOME / QUICK START LAUNCHPAD
+  if (
+    p === 'hey' ||
+    p === 'hello' ||
+    p === 'hi' ||
+    p === 'start' ||
+    p === 'help' ||
+    p === 'test' ||
+    p.startsWith('hey ') ||
+    p.startsWith('hello ') ||
+    p.startsWith('hi ') ||
+    p.includes('greeting') ||
+    p.includes('welcome')
+  ) {
+    const comps: LayoutComponent[] = [
+      // Top Welcome Banner
+      {
+        id: `welcome-banner-${Date.now()}`,
+        name: 'Stitch AI Studio Welcome Banner',
+        type: 'frame',
+        x: 40,
+        y: 30,
+        width: boardWidth - 80,
+        height: 160,
+        fills: [{ fillColor: isDark ? '#1e1b4b' : '#ede9fe' }],
+        strokes: [{ strokeColor: primaryAccent, strokeWidth: 1.5 }],
+        borderRadius: 18,
+        padding: 28,
+        children: [
+          { id: 'w-logo', name: 'Badge', type: 'badge', text: '✨ STITCH AI DESIGN STUDIO', fontSize: 11, fontWeight: 'bold', color: primaryAccent, fills: [{ fillColor: `${primaryAccent}22` }], borderRadius: 99, x: 28, y: 20, width: 200, height: 26 },
+          { id: 'w-title', name: 'Title', type: 'text', text: 'Welcome! What would you like to design today?', fontSize: 24, fontWeight: 'bold', color: isDark ? '#ffffff' : '#312e81', x: 28, y: 56, width: 800, height: 36 },
+          { id: 'w-sub', name: 'Subtitle', type: 'text', text: 'Type any natural language prompt (e.g. "Food delivery app", "Crypto trading terminal", "Music player") or explore the live blueprints below.', fontSize: 13, color: isDark ? '#c7d2fe' : '#4338ca', x: 28, y: 96, width: 900, height: 24 }
+        ]
+      },
+      // 6 Blueprint Category Cards
+      {
+        id: `bp-card-1-${Date.now()}`,
+        name: 'Blueprint: E-Commerce Store',
+        type: 'card',
+        x: 40,
+        y: 214,
+        width: Math.floor((boardWidth - 80 - 40) / 3),
+        height: 180,
+        fills: [{ fillColor: surface }],
+        strokes: [{ strokeColor: surfaceBorder, strokeWidth: 1 }],
+        borderRadius: 14,
+        padding: 20,
+        children: [
+          { id: 'bp-icon-1', name: 'Icon', type: 'text', text: '🛍️ E-Commerce Storefront', fontSize: 16, fontWeight: 'bold', color: primaryAccent, x: 20, y: 18, width: 280, height: 24 },
+          { id: 'bp-desc-1', name: 'Desc', type: 'text', text: 'Product catalog, price filters, shopping cart, and one-click checkout CTA.', fontSize: 12, color: textSecondary, x: 20, y: 50, width: 280, height: 38 },
+          { id: 'bp-btn-1', name: 'Action', type: 'button', text: 'Prompt: "E-Commerce store" ➔', fontSize: 12, fontWeight: 'bold', color: '#ffffff', fills: [{ fillColor: primaryAccent }], borderRadius: 8, x: 20, y: 110, width: 240, height: 36 }
+        ]
+      },
+      {
+        id: `bp-card-2-${Date.now()}`,
+        name: 'Blueprint: Real-Time Chat',
+        type: 'card',
+        x: 40 + Math.floor((boardWidth - 80 - 40) / 3) + 20,
+        y: 214,
+        width: Math.floor((boardWidth - 80 - 40) / 3),
+        height: 180,
+        fills: [{ fillColor: surface }],
+        strokes: [{ strokeColor: surfaceBorder, strokeWidth: 1 }],
+        borderRadius: 14,
+        padding: 20,
+        children: [
+          { id: 'bp-icon-2', name: 'Icon', type: 'text', text: '💬 Real-Time Messenger', fontSize: 16, fontWeight: 'bold', color: emeraldAccent, x: 20, y: 18, width: 280, height: 24 },
+          { id: 'bp-desc-2', name: 'Desc', type: 'text', text: 'Channels drawer, active thread with message bubbles, composer bar.', fontSize: 12, color: textSecondary, x: 20, y: 50, width: 280, height: 38 },
+          { id: 'bp-btn-2', name: 'Action', type: 'button', text: 'Prompt: "Chat messenger" ➔', fontSize: 12, fontWeight: 'bold', color: '#ffffff', fills: [{ fillColor: emeraldAccent }], borderRadius: 8, x: 20, y: 110, width: 240, height: 36 }
+        ]
+      },
+      {
+        id: `bp-card-3-${Date.now()}`,
+        name: 'Blueprint: 2D Combat Arena',
+        type: 'card',
+        x: 40 + (Math.floor((boardWidth - 80 - 40) / 3) + 20) * 2,
+        y: 214,
+        width: Math.floor((boardWidth - 80 - 40) / 3),
+        height: 180,
+        fills: [{ fillColor: surface }],
+        strokes: [{ strokeColor: surfaceBorder, strokeWidth: 1 }],
+        borderRadius: 14,
+        padding: 20,
+        children: [
+          { id: 'bp-icon-3', name: 'Icon', type: 'text', text: '🎮 2D Mobile Battleground', fontSize: 16, fontWeight: 'bold', color: cyanAccent, x: 20, y: 18, width: 280, height: 24 },
+          { id: 'bp-desc-3', name: 'Desc', type: 'text', text: 'Multi-tier floating platforms, weapons drops, radar, and mobile joysticks.', fontSize: 12, color: textSecondary, x: 20, y: 50, width: 280, height: 38 },
+          { id: 'bp-btn-3', name: 'Action', type: 'button', text: 'Prompt: "2D game arena" ➔', fontSize: 12, fontWeight: 'bold', color: '#ffffff', fills: [{ fillColor: cyanAccent }], borderRadius: 8, x: 20, y: 110, width: 240, height: 36 }
+        ]
+      },
+      {
+        id: `bp-card-4-${Date.now()}`,
+        name: 'Blueprint: Crypto Trading',
+        type: 'card',
+        x: 40,
+        y: 414,
+        width: Math.floor((boardWidth - 80 - 40) / 3),
+        height: 180,
+        fills: [{ fillColor: surface }],
+        strokes: [{ strokeColor: surfaceBorder, strokeWidth: 1 }],
+        borderRadius: 14,
+        padding: 20,
+        children: [
+          { id: 'bp-icon-4', name: 'Icon', type: 'text', text: '📈 Crypto Trading Terminal', fontSize: 16, fontWeight: 'bold', color: amberAccent, x: 20, y: 18, width: 280, height: 24 },
+          { id: 'bp-desc-4', name: 'Desc', type: 'text', text: 'Candlestick charts, live orderbook, wallet balance, buy/sell triggers.', fontSize: 12, color: textSecondary, x: 20, y: 50, width: 280, height: 38 },
+          { id: 'bp-btn-4', name: 'Action', type: 'button', text: 'Prompt: "Crypto exchange" ➔', fontSize: 12, fontWeight: 'bold', color: '#ffffff', fills: [{ fillColor: amberAccent }], borderRadius: 8, x: 20, y: 110, width: 240, height: 36 }
+        ]
+      },
+      {
+        id: `bp-card-5-${Date.now()}`,
+        name: 'Blueprint: Food Delivery',
+        type: 'card',
+        x: 40 + Math.floor((boardWidth - 80 - 40) / 3) + 20,
+        y: 414,
+        width: Math.floor((boardWidth - 80 - 40) / 3),
+        height: 180,
+        fills: [{ fillColor: surface }],
+        strokes: [{ strokeColor: surfaceBorder, strokeWidth: 1 }],
+        borderRadius: 14,
+        padding: 20,
+        children: [
+          { id: 'bp-icon-5', name: 'Icon', type: 'text', text: '🍔 Food & Restaurant App', fontSize: 16, fontWeight: 'bold', color: roseAccent, x: 20, y: 18, width: 280, height: 24 },
+          { id: 'bp-desc-5', name: 'Desc', type: 'text', text: 'Restaurant menu cards, delivery tracking badge, order checkout list.', fontSize: 12, color: textSecondary, x: 20, y: 50, width: 280, height: 38 },
+          { id: 'bp-btn-5', name: 'Action', type: 'button', text: 'Prompt: "Food delivery" ➔', fontSize: 12, fontWeight: 'bold', color: '#ffffff', fills: [{ fillColor: roseAccent }], borderRadius: 8, x: 20, y: 110, width: 240, height: 36 }
+        ]
+      },
+      {
+        id: `bp-card-6-${Date.now()}`,
+        name: 'Blueprint: Auth & SSO',
+        type: 'card',
+        x: 40 + (Math.floor((boardWidth - 80 - 40) / 3) + 20) * 2,
+        y: 414,
+        width: Math.floor((boardWidth - 80 - 40) / 3),
+        height: 180,
+        fills: [{ fillColor: surface }],
+        strokes: [{ strokeColor: surfaceBorder, strokeWidth: 1 }],
+        borderRadius: 14,
+        padding: 20,
+        children: [
+          { id: 'bp-icon-6', name: 'Icon', type: 'text', text: '🔐 Enterprise SSO Auth', fontSize: 16, fontWeight: 'bold', color: primaryAccent, x: 20, y: 18, width: 280, height: 24 },
+          { id: 'bp-desc-6', name: 'Desc', type: 'text', text: 'GitHub OAuth buttons, email/password inputs, AES-256 security notice.', fontSize: 12, color: textSecondary, x: 20, y: 50, width: 280, height: 38 },
+          { id: 'bp-btn-6', name: 'Action', type: 'button', text: 'Prompt: "Login portal" ➔', fontSize: 12, fontWeight: 'bold', color: '#ffffff', fills: [{ fillColor: primaryAccent }], borderRadius: 8, x: 20, y: 110, width: 240, height: 36 }
+        ]
+      },
+      // Bottom Quick Tips & Keyboard Shortcuts Footer
+      {
+        id: `welcome-footer-${Date.now()}`,
+        name: 'Studio Keyboard Shortcuts & Tips',
+        type: 'frame',
+        x: 40,
+        y: 614,
+        width: boardWidth - 80,
+        height: 80,
+        fills: [{ fillColor: isDark ? '#0c111d' : '#f1f5f9' }],
+        strokes: [{ strokeColor: surfaceBorder, strokeWidth: 1 }],
+        borderRadius: 14,
+        padding: 20,
+        children: [
+          { id: 'wf-tips', name: 'Tips', type: 'text', text: '💡 Quick Controls: Select any element and press "E" for instant AI transformation. Use "H" or hold Spacebar to Pan. Drag 8 anchor points to resize.', fontSize: 12, color: textPrimary, x: 20, y: 28, width: boardWidth - 120, height: 24 }
+        ]
+      }
+    ];
+
+    return {
+      components: comps,
+      title: 'Stitch AI Launchpad',
+      description: 'Interactive Design Studio Welcome Artboard & Blueprint Showcase',
+      theme,
+      steps: [
+        { step: 1, name: 'Welcome Banner', type: 'frame', x: 40, y: 30, width: boardWidth - 80, height: 160, action: 'Creating Studio Welcome Artboard' },
+        { step: 2, name: 'Blueprint Cards', type: 'card', x: 40, y: 214, width: boardWidth - 80, height: 380, action: 'Rendering 6 Concept Blueprints' },
+        { step: 3, name: 'Shortcuts & Controls Bar', type: 'frame', x: 40, y: 614, width: boardWidth - 80, height: 80, action: 'Adding Keyboard Shortcuts Footer' }
+      ],
+      changesSummary: 'Synthesized interactive Stitch AI Studio Welcome Launchpad with 6 blueprint starter cards'
+    };
+  }
+
   // Category 0: 2D GAME ARENA / MINI MILITIA MAP / PLATFORMER LEVEL / MOBILE COMBAT
   if (
     p.includes('minimilitia') ||
@@ -1426,7 +2622,7 @@ async function synthesizeStitchLayout(options: {
     const h = isMobile ? 390 : boardHeight;
     const gameBg = isDark ? '#080d1a' : '#1e293b';
 
-    const comps: PenpotComponent[] = [
+    const comps: LayoutComponent[] = [
       // 1. Sky / Battle Cavern Background Frame
       {
         id: `game-arena-${Date.now()}`,
@@ -1703,7 +2899,7 @@ async function synthesizeStitchLayout(options: {
   if (p.includes('auth') || p.includes('login') || p.includes('signup') || p.includes('register') || p.includes('sso') || p.includes('password')) {
     const cardX = Math.round((boardWidth - 440) / 2);
     const cardY = 160;
-    const comps: PenpotComponent[] = [
+    const comps: LayoutComponent[] = [
       {
         id: `auth-card-${Date.now()}`,
         name: 'Auth Modal Card',
@@ -1746,7 +2942,7 @@ async function synthesizeStitchLayout(options: {
 
   // Category B: E-COMMERCE / STORE / PRODUCT CATALOG / CHECKOUT
   if (p.includes('shop') || p.includes('ecommerce') || p.includes('store') || p.includes('product') || p.includes('cart') || p.includes('checkout')) {
-    const comps: PenpotComponent[] = [
+    const comps: LayoutComponent[] = [
       {
         id: `ecom-header-${Date.now()}`,
         name: 'Store Navigation Bar',
@@ -1833,7 +3029,7 @@ async function synthesizeStitchLayout(options: {
 
   // Category C: CHAT / MESSAGING / CONVERSATION
   if (p.includes('chat') || p.includes('message') || p.includes('conversation') || p.includes('messenger') || p.includes('assistant') || p.includes('bot')) {
-    const comps: PenpotComponent[] = [
+    const comps: LayoutComponent[] = [
       {
         id: `chat-sidebar-${Date.now()}`,
         name: 'Channels & Contacts Drawer',
@@ -1868,7 +3064,7 @@ async function synthesizeStitchLayout(options: {
         padding: 24,
         children: [
           { id: 'feed-header', name: 'Feed Header', type: 'text', text: '🚀 Core Engineering Team (12 Members · 🟢 8 Online)', fontSize: 16, fontWeight: 'bold', color: textPrimary, x: 24, y: 20, width: 700, height: 28 },
-          { id: 'msg-1', name: 'Incoming Message', type: 'card', text: 'Alex D. (Staff Architect):\n"Can we verify the Penpot Schema 2.0 AST exporter on the staging branch?"', fontSize: 13, fills: [{ fillColor: isDark ? '#1e293b' : '#f1f5f9' }], borderRadius: 12, color: textPrimary, x: 24, y: 80, width: 680, height: 80 },
+          { id: 'msg-1', name: 'Incoming Message', type: 'card', text: 'Alex D. (Staff Architect):\n"Can we verify the OpenPencil .fig binary exporter on the staging branch?"', fontSize: 13, fills: [{ fillColor: isDark ? '#1e293b' : '#f1f5f9' }], borderRadius: 12, color: textPrimary, x: 24, y: 80, width: 680, height: 80 },
           { id: 'msg-2', name: 'Outgoing Response', type: 'card', text: 'You:\n"Yes! The 53 unit tests passed with 100% success rate and verified on Atlas."', fontSize: 13, fills: [{ fillColor: `${primaryAccent}33` }], strokes: [{ strokeColor: primaryAccent, strokeWidth: 1 }], borderRadius: 12, color: textPrimary, x: 316, y: 180, width: 680, height: 80 },
           { id: 'msg-input', name: 'Message Input Bar', type: 'input', text: 'Type a message or press "/" for AI commands...', fontSize: 13, fills: [{ fillColor: isDark ? '#0c111d' : '#f8fafc' }], strokes: [{ strokeColor: surfaceBorder, strokeWidth: 1 }], borderRadius: 12, color: textPrimary, x: 24, y: 720, width: 850, height: 48 },
           { id: 'msg-send-btn', name: 'Send Button', type: 'button', text: 'Send ➔', fontSize: 13, fontWeight: 'bold', color: '#ffffff', fills: [{ fillColor: primaryAccent }], borderRadius: 10, x: 890, y: 720, width: 106, height: 48 }
@@ -1899,7 +3095,7 @@ async function synthesizeStitchLayout(options: {
       { name: '✅ Deployed', count: '8 Tasks', color: emeraldAccent, tasks: ['Atlas DB Persistence', 'Flow Audit graph'] }
     ];
 
-    const comps: PenpotComponent[] = [];
+    const comps: LayoutComponent[] = [];
     cols.forEach((col, idx) => {
       const cX = 40 + idx * 348;
       comps.push({
@@ -1950,7 +3146,7 @@ async function synthesizeStitchLayout(options: {
       { name: 'Enterprise Team', price: '$99 / mo', desc: 'Multi-user workspace isolation & SLAs', badge: 'Full Power', highlight: false }
     ];
 
-    const comps: PenpotComponent[] = [
+    const comps: LayoutComponent[] = [
       {
         id: `pricing-header-${Date.now()}`,
         name: 'Pricing Page Header',
@@ -1985,7 +3181,7 @@ async function synthesizeStitchLayout(options: {
           { id: `t-title-${idx}`, name: 'Title', type: 'text', text: t.name, fontSize: 20, fontWeight: 'bold', color: textPrimary, x: 32, y: 64, width: 296, height: 30 },
           { id: `t-price-${idx}`, name: 'Price', type: 'text', text: t.price, fontSize: 28, fontWeight: 'bold', color: t.highlight ? primaryAccent : emeraldAccent, x: 32, y: 104, width: 296, height: 40 },
           { id: `t-desc-${idx}`, name: 'Description', type: 'text', text: t.desc, fontSize: 13, color: textSecondary, x: 32, y: 154, width: 296, height: 36 },
-          { id: `t-feats-${idx}`, name: 'Features', type: 'text', text: '✓ Unlimited Penpot Schema 2.0 Export\n✓ Live Progressive Element Streaming\n✓ MongoDB Atlas & SQLite Sync\n✓ AES-256 Encrypted Credential Vault\n✓ Flow Audit AST Call Graphs', fontSize: 13, color: textPrimary, x: 32, y: 210, width: 296, height: 160 },
+          { id: `t-feats-${idx}`, name: 'Features', type: 'text', text: '✓ Unlimited OpenPencil Native .fig Export\n✓ Live Progressive Element Streaming\n✓ MongoDB Atlas & SQLite Sync\n✓ AES-256 Encrypted Credential Vault\n✓ Flow Audit AST Call Graphs', fontSize: 13, color: textPrimary, x: 32, y: 210, width: 296, height: 160 },
           { id: `t-btn-${idx}`, name: 'CTA Button', type: 'button', text: t.highlight ? 'Start 14-Day Free Pro Trial ➔' : 'Select Plan', fontSize: 14, fontWeight: 'bold', color: '#ffffff', fills: [{ fillColor: t.highlight ? primaryAccent : (isDark ? '#334155' : '#0f172a') }], borderRadius: 10, x: 32, y: 590, width: 296, height: 48 }
         ]
       });
@@ -2014,11 +3210,11 @@ async function synthesizeStitchLayout(options: {
   // Category F: DYNAMIC OPEN-ENDED SEMANTIC AST SYNTHESIZER (ZERO REPETITION)
   // Decomposes the prompt into custom domain entities, metrics, cards, and tables
   // =========================================================================
-  const components: PenpotComponent[] = [];
+  const components: LayoutComponent[] = [];
   const steps: Array<{ step: number; name: string; type: string; x: number; y: number; width: number; height: number; action: string }> = [];
 
   // 1. Top Navigation Bar customized to prompt domain
-  const navBar: PenpotComponent = {
+  const navBar: LayoutComponent = {
     id: `dyn-nav-${Date.now()}`,
     name: `${derivedTitle} Navigation Header`,
     type: 'frame',
@@ -2108,7 +3304,7 @@ async function synthesizeStitchLayout(options: {
   const mainFeatureWidth = Math.floor((boardWidth - 80) * 0.64);
   const sideFeatureWidth = boardWidth - 80 - mainFeatureWidth - 24;
 
-  const mainFeature: PenpotComponent = {
+  const mainFeature: LayoutComponent = {
     id: `dyn-main-feat-${Date.now()}`,
     name: `${derivedTitle} Primary Workspace`,
     type: 'frame',
@@ -2141,7 +3337,7 @@ async function synthesizeStitchLayout(options: {
   components.push(mainFeature);
 
   // 4. Side Entity Controller / Action Feed
-  const sideFeature: PenpotComponent = {
+  const sideFeature: LayoutComponent = {
     id: `dyn-side-feat-${Date.now()}`,
     name: `${derivedTitle} Action Console`,
     type: 'frame',
@@ -2165,7 +3361,7 @@ async function synthesizeStitchLayout(options: {
   steps.push({ step: 3, name: 'Workspace Feature Panels', type: 'frame', x: 40, y: 254, width: boardWidth - 80, height: 340, action: `Positioning Main Waveform & Control Panels` });
 
   // 5. Bottom Entity Data Table
-  const bottomTable: PenpotComponent = {
+  const bottomTable: LayoutComponent = {
     id: `dyn-table-${Date.now()}`,
     name: `${derivedTitle} Entity Grid`,
     type: 'table',

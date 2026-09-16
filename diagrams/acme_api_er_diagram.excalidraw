@@ -20,7 +20,7 @@
       "type": "text",
       "x": 116,
       "y": 116,
-      "text": "TABLE: erer\n------------------\n🔑 id: INTEGER\n  name: TEXT",
+      "text": "TABLE: empty_logs\n------------------\n🔑 id: INTEGER\n  note: TEXT",
       "fontSize": 13,
       "fontFamily": 3
     },
@@ -40,7 +40,7 @@
       "type": "text",
       "x": 416,
       "y": 116,
-      "text": "TABLE: ererer\n------------------\n🔑 id: INTEGER\n  name: TEXT",
+      "text": "TABLE: orders\n------------------\n  user_id: INTEGER\n  amount: REAL",
       "fontSize": 13,
       "fontFamily": 3
     }
