@@ -1,11 +1,13 @@
 # Progress
 
-- **Native OpenPencil In-App Vector Studio & Zero-Template AI Generation (Completed & Verified)**:
-  - Built pure React in-app `OpenPencilCanvas` vector engine rendering Figma-compatible `SceneGraph` nodes with pan, zoom, 8-point handle selection, and selection HUD.
-  - Eliminated external iframe dependencies (`app.openpencil.dev`).
-  - Implemented BYOK AI generation loop calling real Groq LLMs (`groq/compound-mini`, `qwen/qwen3.8-27b`, `openai/gpt-oss-20b`, `openai/gpt-oss-120b`) from Settings key with zero prebuilt template fallbacks.
-  - Implemented and verified Sub-Step 3: Targeted In-Place AI Mutation on selected node IDs with intact sibling preservation.
-  - Test Suite: 19/19 passing (100% green).
+- **100% Real OpenPencil Canvas & Figma UI 3 Manual + AI Studio (Completed & Verified)**:
+  - Integrated official `@open-pencil/scene-graph` types (`SceneGraph`, `SceneNode`, `NodeType`, `Fill`, `Stroke`, `Color`) across frontend canvas and backend Kiwi `.fig` binary export.
+  - Rebuilt Right Design Inspector to exact OpenPencil specifications (Position, Dimensions with `❖ ▾`, Appearance blend/opacity/radius/corner smoothing, Fill swatch preview, Stroke swatch, Effects, and Export).
+  - Wired full interactive top sub-menu dropdowns (`File`, `Edit`, `View`, `Object`, `Text`, `Arrange`) with high z-index and zero badge occlusion.
+  - Multi-file tab strip with independent SceneGraph instances: clicking `+` or `File -> New File` creates a brand new document tab with clean canvas and board state.
+  - Connected Document Settings modal for real-time document renaming, canvas background surface selection, and canvas alignment dot grid toggle.
+  - Connected `showGrid={showGrid}` prop to toggle dot grid rendering on/off.
+  - Test Suite: 3/3 passing, TypeScript build: 0 errors.
 - **UI Structure & Visual Layout**: Flowstep screens built and visually complete in `packages/ai-manager-web`:
   - `/onboarding` (Screen 1)
   - `/dashboard` (Screen 2)

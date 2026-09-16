@@ -1,0 +1,27 @@
+{
+  "id": "screen_1789558272832_5gnk5",
+  "projectId": "acme-api",
+  "userId": "local-dev-user",
+  "name": "Untitled 3",
+  "description": "",
+  "board": {
+    "id": "board_1789558272832",
+    "name": "Untitled 3",
+    "x": 0,
+    "y": 0,
+    "width": 1440,
+    "height": 900,
+    "background": "#090d16",
+    "components": []
+  },
+  "theme": {
+    "primaryColor": "#7c3aed",
+    "backgroundColor": "#090d16",
+    "surfaceColor": "#131b2e",
+    "textColor": "#f8fafc",
+    "accentColor": "#10b981",
+    "borderRadius": 12
+  },
+  "createdAt": "2026-09-16T11:31:12.836Z",
+  "updatedAt": "2026-09-16T11:50:44.544Z"
+}

@@ -1,41 +1,23 @@
-### ✅ Complete Implementation & Verification Report
+## Summary of Fixes Applied
 
-Following the `/frontend_design` and `/code_review` guidelines, here is the full status of all steps and the live fixes applied:
+1. **Top Submenu Dropdowns (`File`, `Edit`, `View`, `Object`, `Text`, `Arrange`)**:
+   - Fixed dropdown z-index (`z-[9999]`) and clipping by adding `whitespace-nowrap`, `min-w-[220px]`, and `overflow-visible` to the sub-menu container.
+   - Relocated the floating selection pill in `OpenPencilCanvas.tsx` from `top-7 left-7` to `bottom-4 left-4 z-20 pointer-events-none` so it never collides with or obscures the dropdown menus.
+   - Removed the duplicate `Arrange` menu block from `ScreensPage.tsx`.
 
----
+2. **New File Document Creation**:
+   - Upgraded tab strip state (`openTabs`) to manage independent `SceneGraph` instances and `screenId` bindings for each open file.
+   - Clicking `+` or `File -> New File` (Ctrl+Alt+N) creates a brand new document tab (e.g., `Untitled 2`) with a clean board and fresh canvas scene graph instead of appending layers to the existing document.
+   - Added tab switching and closing logic.
 
-### 🎨 1. Frontend & UX Enhancements (`/frontend_design`)
-- **Responsive AI Command Dock**:
-  - **Live Typing & Submitting**: Upgraded the input bar to retain autofocus, high-contrast text, clear placeholder cues, and instant Enter / Ctrl+Enter dispatch.
-  - **Interactive State Feedback**: When generating or mutating, the dock displays an active animated spinner and status telemetry (`⚡ Synthesizing custom layout with Groq AI...`).
-  - **Targeted Selection HUD**: When an element is selected on the canvas, the dock automatically toggles to **Targeted Mutation Mode** (`🎯 Targeted: [Node ID]`) with a 1-click `Clear Selection` button.
-  - **Contrast & Rendering Pipeline**: Added solid contrast fills and stroke borders across all SceneGraph node types (`TEXT`, `FRAME`, `RECTANGLE`, `ELLIPSE`), ensuring crisp legibility on both dark and light modes.
+3. **Settings and Grid Icons**:
+   - **Settings Gear Icon**: Connected to `showDocSettingsModal` popup allowing document renaming (synced live to tab & screen), canvas background surface switching (`Light #F5F5F5`, `Dark #1E1E1E`, `Navy #0E131F`, `White #FFFFFF`), and grid toggle.
+   - **Grid Icon**: Wired `showGrid={showGrid}` prop directly into `OpenPencilCanvas.tsx` with active indicator highlighting `#0d99ff` and toggleable dot grid rendering.
 
----
-
-### 🔍 2. Code Review & Architecture (`/code_review`)
-
-| Category | Status | Details |
-| :--- | :---: | :--- |
-| **Functionality** | ✅ | Both fresh synthesis (`mode: create`) and in-place targeted mutation (`mode: modify`) operate with real Groq LLM outputs. |
-| **Zero Prebuilt Templates** | ✅ | All hardcoded template fallbacks have been removed. The AI constructs custom vector nodes from scratch strictly according to the prompt. |
-| **Model Routing & Reliability** | ✅ | Prioritized fast high-TPM models (`groq/compound-mini`, `qwen/qwen3.8-27b`, `openai/gpt-oss-20b`, `openai/gpt-oss-120b`) to eliminate rate limits. |
-| **Security & BYOK** | ✅ | API keys are decrypted on-device from `.ai-manager/credentials.enc` using AES-256-GCM; never logged or exposed. |
-| **Test Suite** | ✅ | **19/19 Tests Passing (100% Green)** across auth, dbServices, flowAudit, and stitchAi. |
-
----
-
-### 🧪 3. Verified Proof: Targeted Mutation (Sub-Step 3)
-
-We verified targeted in-place mutation on a live server:
-- **Base Screen**: Created 3 analytics cards (`Analytics Card 1`, `Analytics Card 2`, `Analytics Card 3`).
-- **Targeted Node**: Selected `Analytics Card 1`.
-- **Prompt**: `"Change fill color to emerald green (#10b981) and make border radius 24px"`.
-- **Result (`HTTP 201`)**:
-  - `Analytics Card 1`: Fill updated to `#10b981`, border radius updated to `24px`.
-  - `Analytics Card 2` & `3`: **100% Untouched and Preserved**.
-
----
-
-### 🌐 Ready to use:
-Dev server is active at **[http://localhost:5173/screens](http://localhost:5173/screens)**. You can now type any prompt or select elements to mutate them in place!
+4. **Verification Proof**:
+   - TypeScript compiler check: `npx tsc --noEmit` exited with code 0 (0 errors).
+   - Unit tests: `npx vitest run tests/screensUi.test.ts` passed 3/3 tests.
+   - Visual Browser Subagent verification executed:
+     - `file_dropdown_open_1789560361627.png`: File menu verified open cleanly without clipping.
+     - `document_settings_modal_1789560377630.png`: Document Settings modal verified functional.
+     - `new_untitled_2_tab_1789560436177.png`: New document file creation verified with separate tab and clean canvas.

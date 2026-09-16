@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { getApiClient } from '../api/client.js';
+import { getApiClient } from '../api/client';
 
 interface DashboardScreenProps {
   user: any;

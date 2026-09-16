@@ -1232,6 +1232,112 @@ screenRouter.get('/:id/export', localOrAuth, async (req: AuthRequest, res: Respo
   }
 });
 
+// GET /api/screens/project-root/files - List all .fig and .json files in workspace ui/ folder
+screenRouter.get('/project-root/files', localOrAuth, async (_req: AuthRequest, res: Response) => {
+  try {
+    const uiDir = path.resolve(process.cwd(), '../../ui');
+    if (!fs.existsSync(uiDir)) {
+      fs.mkdirSync(uiDir, { recursive: true });
+    }
+    const files = fs.readdirSync(uiDir);
+    const result = files
+      .filter(f => f.endsWith('.fig') || f.endsWith('.json'))
+      .map(f => {
+        const fullPath = path.join(uiDir, f);
+        const stats = fs.statSync(fullPath);
+        return {
+          name: f,
+          sizeBytes: stats.size,
+          modifiedAt: stats.mtime.toISOString(),
+          type: f.endsWith('.fig') ? 'fig' : 'json'
+        };
+      })
+      .sort((a, b) => new Date(b.modifiedAt).getTime() - new Date(a.modifiedAt).getTime());
+    return res.json({ success: true, files: result, path: 'ui/' });
+  } catch (err: any) {
+    return res.status(500).json({ error: 'Failed to list project root files', details: err.message });
+  }
+});
+
+// POST /api/screens/project-root/open - Read and open a file from workspace ui/ folder
+screenRouter.post('/project-root/open', localOrAuth, async (req: AuthRequest, res: Response) => {
+  try {
+    const { filename } = req.body;
+    if (!filename) {
+      return res.status(400).json({ error: 'Filename is required' });
+    }
+    // Prevent path traversal
+    const safeName = path.basename(filename);
+    const uiDir = path.resolve(process.cwd(), '../../ui');
+    const filePath = path.join(uiDir, safeName);
+    if (!fs.existsSync(filePath)) {
+      return res.status(404).json({ error: `File ui/${safeName} not found` });
+    }
+
+    if (safeName.endsWith('.json')) {
+      const content = fs.readFileSync(filePath, 'utf-8');
+      const data = JSON.parse(content);
+      return res.json({ success: true, format: 'json', name: safeName.replace(/\.json$/i, ''), data });
+    }
+
+    // Binary .fig file read
+    const buffer = fs.readFileSync(filePath);
+    return res.json({
+      success: true,
+      format: 'fig',
+      name: safeName.replace(/\.fig$/i, ''),
+      sizeBytes: buffer.length
+    });
+  } catch (err: any) {
+    return res.status(500).json({ error: 'Failed to open project root file', details: err.message });
+  }
+});
+
+// POST /api/screens/project-root/save - Save screen directly to workspace ui/ folder as .fig and .json
+screenRouter.post('/project-root/save', localOrAuth, async (req: AuthRequest, res: Response) => {
+  try {
+    const { name, board, theme, description = '' } = req.body;
+    if (!name || !board) {
+      return res.status(400).json({ error: 'Name and board layout are required' });
+    }
+    const slug = getScreenSlug(name);
+    const uiDir = path.resolve(process.cwd(), '../../ui');
+    if (!fs.existsSync(uiDir)) {
+      fs.mkdirSync(uiDir, { recursive: true });
+    }
+
+    const fullSpec: ScreenLayoutSpec = {
+      id: `spec_${slug}_${Date.now()}`,
+      projectId: 'root',
+      userId: req.user?.sub || 'local',
+      name,
+      description,
+      board,
+      theme: theme || DEFAULT_SCREEN_THEME,
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString()
+    };
+
+    // 1. Write JSON spec
+    const jsonPath = path.join(uiDir, `${slug}.json`);
+    fs.writeFileSync(jsonPath, JSON.stringify(fullSpec, null, 2), 'utf-8');
+
+    // 2. Generate and write native binary .fig
+    const figBytes = await exportScreenToFigBuffer(fullSpec);
+    const figPath = path.join(uiDir, `${slug}.fig`);
+    fs.writeFileSync(figPath, Buffer.from(figBytes));
+
+    return res.json({
+      success: true,
+      message: `Saved ${name} to ui/${slug}.fig and ui/${slug}.json`,
+      files: [`ui/${slug}.fig`, `ui/${slug}.json`]
+    });
+  } catch (err: any) {
+    console.error('Error saving to project root:', err);
+    return res.status(500).json({ error: 'Failed to save to project root', details: err.message });
+  }
+});
+
 // POST /api/screens/generate-stitch — Stitch-Grade AI Screen Generator & Modifier
 // --------------------------------------------------------------------------
 screenRouter.post('/generate-stitch', localOrAuth, async (req: AuthRequest, res: Response) => {

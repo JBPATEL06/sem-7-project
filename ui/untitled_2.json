@@ -1,0 +1,186 @@
+{
+  "id": "screen_1789560486267_psnx8",
+  "projectId": "acme-api",
+  "userId": "local-dev-user",
+  "name": "Untitled 2",
+  "description": "Added three new container cards to the dark‑mode artboard, each with a sample title.",
+  "board": {
+    "id": "board_screen_1789560486267_psnx8",
+    "name": "Untitled 2 Canvas",
+    "x": 0,
+    "y": 0,
+    "width": 1440,
+    "height": 900,
+    "background": "#0a0e17",
+    "components": [
+      {
+        "id": "artboard_components",
+        "name": "Root Artboard",
+        "type": "frame",
+        "x": -20,
+        "y": 36,
+        "width": 1440,
+        "height": 900,
+        "fills": [
+          {
+            "fillColor": "#0a0e17",
+            "opacity": 1
+          }
+        ],
+        "strokes": [],
+        "borderRadius": 0,
+        "text": "",
+        "fontSize": 0,
+        "fontWeight": "normal",
+        "color": "#f8fafc",
+        "children": [
+          {
+            "id": "container_1",
+            "name": "Container Card 1",
+            "type": "frame",
+            "x": 24,
+            "y": 24,
+            "width": 400,
+            "height": 250,
+            "fills": [
+              {
+                "fillColor": "#131b2e",
+                "opacity": 1
+              }
+            ],
+            "strokes": [
+              {
+                "strokeColor": "#7c3aed",
+                "strokeWidth": 1
+              }
+            ],
+            "borderRadius": 8,
+            "text": "",
+            "fontSize": 0,
+            "fontWeight": "normal",
+            "color": "#f8fafc",
+            "children": [
+              {
+                "id": "container_1_title",
+                "name": "Title",
+                "type": "frame",
+                "x": 16,
+                "y": 16,
+                "width": 200,
+                "height": 28,
+                "fills": [],
+                "strokes": [],
+                "borderRadius": 0,
+                "text": "Container 1",
+                "fontSize": 20,
+                "fontWeight": "normal",
+                "color": "#f8fafc",
+                "children": []
+              }
+            ]
+          },
+          {
+            "id": "container_2",
+            "name": "Container Card 2",
+            "type": "frame",
+            "x": 452,
+            "y": 24,
+            "width": 400,
+            "height": 250,
+            "fills": [
+              {
+                "fillColor": "#131b2e",
+                "opacity": 1
+              }
+            ],
+            "strokes": [
+              {
+                "strokeColor": "#7c3aed",
+                "strokeWidth": 1
+              }
+            ],
+            "borderRadius": 8,
+            "text": "",
+            "fontSize": 0,
+            "fontWeight": "normal",
+            "color": "#f8fafc",
+            "children": [
+              {
+                "id": "container_2_title",
+                "name": "Title",
+                "type": "frame",
+                "x": 16,
+                "y": 16,
+                "width": 200,
+                "height": 28,
+                "fills": [],
+                "strokes": [],
+                "borderRadius": 0,
+                "text": "Container 2",
+                "fontSize": 20,
+                "fontWeight": "normal",
+                "color": "#f8fafc",
+                "children": []
+              }
+            ]
+          },
+          {
+            "id": "container_3",
+            "name": "Container Card 3",
+            "type": "frame",
+            "x": 880,
+            "y": 24,
+            "width": 400,
+            "height": 250,
+            "fills": [
+              {
+                "fillColor": "#131b2e",
+                "opacity": 1
+              }
+            ],
+            "strokes": [
+              {
+                "strokeColor": "#7c3aed",
+                "strokeWidth": 1
+              }
+            ],
+            "borderRadius": 8,
+            "text": "",
+            "fontSize": 0,
+            "fontWeight": "normal",
+            "color": "#f8fafc",
+            "children": [
+              {
+                "id": "container_3_title",
+                "name": "Title",
+                "type": "frame",
+                "x": 16,
+                "y": 16,
+                "width": 200,
+                "height": 28,
+                "fills": [],
+                "strokes": [],
+                "borderRadius": 0,
+                "text": "Container 3",
+                "fontSize": 20,
+                "fontWeight": "normal",
+                "color": "#f8fafc",
+                "children": []
+              }
+            ]
+          }
+        ]
+      }
+    ]
+  },
+  "theme": {
+    "primaryColor": "#7c3aed",
+    "backgroundColor": "#090d16",
+    "surfaceColor": "#131b2e",
+    "textColor": "#f8fafc",
+    "accentColor": "#10b981",
+    "borderRadius": 12
+  },
+  "createdAt": "2026-09-16T12:08:06.267Z",
+  "updatedAt": "2026-09-16T12:24:38.627Z"
+}

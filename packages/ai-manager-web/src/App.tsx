@@ -22,8 +22,8 @@ const AppContent: React.FC = () => {
 
   // Determine initial route from pathname or hash if provided
   const getInitialRoute = (): NavRoute => {
-    const path = window.location.pathname.replace('/', '') || window.location.hash.replace('#/', '').replace('#', '');
-    if (path === 'git') return 'git-view';
+    const rawPath = window.location.pathname.replace(/^\/+|\/+$/g, '') || window.location.hash.replace('#/', '').replace('#', '');
+    if (rawPath === 'git') return 'git-view';
     if (
       [
         'onboarding',
@@ -37,9 +37,9 @@ const AppContent: React.FC = () => {
         'screens',
         'settings',
         'admin'
-      ].includes(path)
+      ].includes(rawPath)
     ) {
-      return path as NavRoute;
+      return rawPath as NavRoute;
     }
     return 'dashboard';
   };
@@ -71,12 +71,22 @@ const AppContent: React.FC = () => {
     return () => window.removeEventListener('popstate', handlePopState);
   }, []);
 
+  // Screens Studio: Render full-bleed exact OpenPencil UI directly
+  if (currentRoute === 'screens') {
+    return (
+      <ScreensPage
+        selectedProject={{ id: selectedProject, name: selectedProject }}
+        onNavigateDashboard={() => handleNavigate('dashboard')}
+      />
+    );
+  }
+
   // Show loading spinner during initial session verification
   if (isLoading) {
     return (
-      <div className="min-h-screen w-full bg-background flex flex-col items-center justify-center gap-3">
-        <div className="size-8 border-3 border-primary border-t-transparent rounded-full animate-spin" />
-        <span className="text-xs font-mono text-muted-foreground">Verifying local session...</span>
+      <div className="min-h-screen w-full bg-[#1e1e1e] flex flex-col items-center justify-center gap-3">
+        <div className="size-8 border-3 border-[#3b82f6] border-t-transparent rounded-full animate-spin" />
+        <span className="text-xs font-mono text-slate-400">Verifying local session...</span>
       </div>
     );
   }
@@ -143,8 +153,6 @@ const AppContent: React.FC = () => {
         return <GitViewPage projectId={selectedProject} />;
       case 'diagrams':
         return <DiagramsPage projectId={selectedProject} />;
-      case 'screens':
-        return <ScreensPage selectedProject={{ id: selectedProject, name: selectedProject }} />;
       case 'settings':
         return <SettingsPage />;
       case 'admin':
