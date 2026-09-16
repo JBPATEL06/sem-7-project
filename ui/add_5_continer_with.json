@@ -1,0 +1,580 @@
+{
+  "id": "screen_stitch_1789540534695_hz0pw",
+  "projectId": "acme-api",
+  "userId": "local-dev-user",
+  "name": "Add 5 Continer With",
+  "description": "Stitch AI Semantic Spec: add 5 continer with each have 10 text",
+  "theme": {
+    "primaryColor": "#7c3aed",
+    "backgroundColor": "#f8fafc",
+    "surfaceColor": "#ffffff",
+    "textColor": "#0f172a",
+    "accentColor": "#10b981",
+    "borderRadius": 12
+  },
+  "board": {
+    "id": "board_screen_stitch_1789540534695_hz0pw",
+    "name": "Add 5 Continer With Canvas",
+    "x": 0,
+    "y": 0,
+    "width": 1440,
+    "height": 900,
+    "background": "#f8fafc",
+    "components": [
+      {
+        "id": "dyn-nav-1789540534695",
+        "name": "Add 5 Continer With Navigation Header",
+        "type": "frame",
+        "x": 40,
+        "y": 24,
+        "width": 1360,
+        "height": 70,
+        "fills": [
+          {
+            "fillColor": "#ffffff"
+          }
+        ],
+        "strokes": [
+          {
+            "strokeColor": "#e2e8f0",
+            "strokeWidth": 1
+          }
+        ],
+        "borderRadius": 14,
+        "padding": 20,
+        "children": [
+          {
+            "id": "dyn-logo",
+            "name": "Brand Title",
+            "type": "text",
+            "text": "❖ Add 5 Continer With",
+            "fontSize": 18,
+            "fontWeight": "bold",
+            "color": "#7c3aed",
+            "x": 24,
+            "y": 22,
+            "width": 340,
+            "height": 28
+          },
+          {
+            "id": "dyn-search",
+            "name": "Search Filter",
+            "type": "input",
+            "text": "🔍 Search in add 5 continer with...",
+            "fontSize": 12,
+            "fills": [
+              {
+                "fillColor": "#f8fafc"
+              }
+            ],
+            "strokes": [
+              {
+                "strokeColor": "#e2e8f0",
+                "strokeWidth": 1
+              }
+            ],
+            "borderRadius": 8,
+            "color": "#64748b",
+            "x": 380,
+            "y": 16,
+            "width": 440,
+            "height": 38
+          },
+          {
+            "id": "dyn-action-btn",
+            "name": "Primary Action",
+            "type": "button",
+            "text": "+ New add",
+            "fontSize": 13,
+            "fontWeight": "bold",
+            "color": "#ffffff",
+            "fills": [
+              {
+                "fillColor": "#7c3aed"
+              }
+            ],
+            "borderRadius": 8,
+            "x": 1160,
+            "y": 16,
+            "width": 140,
+            "height": 38
+          }
+        ]
+      },
+      {
+        "id": "dyn-kpi-1-1789540534695",
+        "name": "Metric Card: Total add Managed",
+        "type": "card",
+        "x": 40,
+        "y": 114,
+        "width": 325,
+        "height": 120,
+        "fills": [
+          {
+            "fillColor": "#ffffff"
+          }
+        ],
+        "strokes": [
+          {
+            "strokeColor": "#e2e8f0",
+            "strokeWidth": 1
+          }
+        ],
+        "borderRadius": 14,
+        "padding": 16,
+        "children": [
+          {
+            "id": "kpi-lbl-0",
+            "name": "Label",
+            "type": "text",
+            "text": "Total add Managed",
+            "fontSize": 12,
+            "color": "#64748b",
+            "x": 16,
+            "y": 16,
+            "width": 293,
+            "height": 20
+          },
+          {
+            "id": "kpi-val-0",
+            "name": "Value",
+            "type": "text",
+            "text": "1,420 Active",
+            "fontSize": 20,
+            "fontWeight": "bold",
+            "color": "#0f172a",
+            "x": 16,
+            "y": 44,
+            "width": 293,
+            "height": 30
+          },
+          {
+            "id": "kpi-sub-0",
+            "name": "Sub",
+            "type": "text",
+            "text": "Real-time sync",
+            "fontSize": 11,
+            "fontWeight": "600",
+            "color": "#7c3aed",
+            "x": 16,
+            "y": 80,
+            "width": 293,
+            "height": 20
+          }
+        ]
+      },
+      {
+        "id": "dyn-kpi-2-1789540534695",
+        "name": "Metric Card: Operational Efficiency",
+        "type": "card",
+        "x": 385,
+        "y": 114,
+        "width": 325,
+        "height": 120,
+        "fills": [
+          {
+            "fillColor": "#ffffff"
+          }
+        ],
+        "strokes": [
+          {
+            "strokeColor": "#e2e8f0",
+            "strokeWidth": 1
+          }
+        ],
+        "borderRadius": 14,
+        "padding": 16,
+        "children": [
+          {
+            "id": "kpi-lbl-1",
+            "name": "Label",
+            "type": "text",
+            "text": "Operational Efficiency",
+            "fontSize": 12,
+            "color": "#64748b",
+            "x": 16,
+            "y": 16,
+            "width": 293,
+            "height": 20
+          },
+          {
+            "id": "kpi-val-1",
+            "name": "Value",
+            "type": "text",
+            "text": "98.6%",
+            "fontSize": 20,
+            "fontWeight": "bold",
+            "color": "#0f172a",
+            "x": 16,
+            "y": 44,
+            "width": 293,
+            "height": 30
+          },
+          {
+            "id": "kpi-sub-1",
+            "name": "Sub",
+            "type": "text",
+            "text": "+4.2% optimization",
+            "fontSize": 11,
+            "fontWeight": "600",
+            "color": "#10b981",
+            "x": 16,
+            "y": 80,
+            "width": 293,
+            "height": 20
+          }
+        ]
+      },
+      {
+        "id": "dyn-kpi-3-1789540534695",
+        "name": "Metric Card: Active Collaborators",
+        "type": "card",
+        "x": 730,
+        "y": 114,
+        "width": 325,
+        "height": 120,
+        "fills": [
+          {
+            "fillColor": "#ffffff"
+          }
+        ],
+        "strokes": [
+          {
+            "strokeColor": "#e2e8f0",
+            "strokeWidth": 1
+          }
+        ],
+        "borderRadius": 14,
+        "padding": 16,
+        "children": [
+          {
+            "id": "kpi-lbl-2",
+            "name": "Label",
+            "type": "text",
+            "text": "Active Collaborators",
+            "fontSize": 12,
+            "color": "#64748b",
+            "x": 16,
+            "y": 16,
+            "width": 293,
+            "height": 20
+          },
+          {
+            "id": "kpi-val-2",
+            "name": "Value",
+            "type": "text",
+            "text": "24 Members",
+            "fontSize": 20,
+            "fontWeight": "bold",
+            "color": "#0f172a",
+            "x": 16,
+            "y": 44,
+            "width": 293,
+            "height": 30
+          },
+          {
+            "id": "kpi-sub-2",
+            "name": "Sub",
+            "type": "text",
+            "text": "8 currently online",
+            "fontSize": 11,
+            "fontWeight": "600",
+            "color": "#06b6d4",
+            "x": 16,
+            "y": 80,
+            "width": 293,
+            "height": 20
+          }
+        ]
+      },
+      {
+        "id": "dyn-kpi-4-1789540534695",
+        "name": "Metric Card: System Health",
+        "type": "card",
+        "x": 1075,
+        "y": 114,
+        "width": 325,
+        "height": 120,
+        "fills": [
+          {
+            "fillColor": "#ffffff"
+          }
+        ],
+        "strokes": [
+          {
+            "strokeColor": "#e2e8f0",
+            "strokeWidth": 1
+          }
+        ],
+        "borderRadius": 14,
+        "padding": 16,
+        "children": [
+          {
+            "id": "kpi-lbl-3",
+            "name": "Label",
+            "type": "text",
+            "text": "System Health",
+            "fontSize": 12,
+            "color": "#64748b",
+            "x": 16,
+            "y": 16,
+            "width": 293,
+            "height": 20
+          },
+          {
+            "id": "kpi-val-3",
+            "name": "Value",
+            "type": "text",
+            "text": "All Systems Normal",
+            "fontSize": 20,
+            "fontWeight": "bold",
+            "color": "#0f172a",
+            "x": 16,
+            "y": 44,
+            "width": 293,
+            "height": 30
+          },
+          {
+            "id": "kpi-sub-3",
+            "name": "Sub",
+            "type": "text",
+            "text": "Zero latency spikes",
+            "fontSize": 11,
+            "fontWeight": "600",
+            "color": "#f59e0b",
+            "x": 16,
+            "y": 80,
+            "width": 293,
+            "height": 20
+          }
+        ]
+      },
+      {
+        "id": "dyn-main-feat-1789540534695",
+        "name": "Add 5 Continer With Primary Workspace",
+        "type": "frame",
+        "x": 40,
+        "y": 254,
+        "width": 870,
+        "height": 340,
+        "fills": [
+          {
+            "fillColor": "#ffffff"
+          }
+        ],
+        "strokes": [
+          {
+            "strokeColor": "#e2e8f0",
+            "strokeWidth": 1
+          }
+        ],
+        "borderRadius": 16,
+        "padding": 24,
+        "children": [
+          {
+            "id": "feat-header",
+            "name": "Header",
+            "type": "text",
+            "text": "📈 Add 5 Continer With Live Analytics & Flow Stream",
+            "fontSize": 16,
+            "fontWeight": "bold",
+            "color": "#0f172a",
+            "x": 24,
+            "y": 20,
+            "width": 822,
+            "height": 28
+          },
+          {
+            "id": "feat-sub",
+            "name": "Sub",
+            "type": "text",
+            "text": "Real-time activity and entity telemetry updated live for add 5 continer with each have 10 text",
+            "fontSize": 12,
+            "color": "#64748b",
+            "x": 24,
+            "y": 52,
+            "width": 822,
+            "height": 20
+          },
+          {
+            "id": "feat-chart-canvas",
+            "name": "Telemetry Waveform Chart",
+            "type": "chart",
+            "x": 24,
+            "y": 86,
+            "width": 822,
+            "height": 220,
+            "fills": [
+              {
+                "fillColor": "#f8fafc"
+              }
+            ],
+            "strokes": [
+              {
+                "strokeColor": "#e2e8f0",
+                "strokeWidth": 1
+              }
+            ],
+            "borderRadius": 12,
+            "text": "Live Telemetry Waveform (Add 5 Continer With)"
+          }
+        ]
+      },
+      {
+        "id": "dyn-side-feat-1789540534695",
+        "name": "Add 5 Continer With Action Console",
+        "type": "frame",
+        "x": 934,
+        "y": 254,
+        "width": 466,
+        "height": 340,
+        "fills": [
+          {
+            "fillColor": "#ffffff"
+          }
+        ],
+        "strokes": [
+          {
+            "strokeColor": "#e2e8f0",
+            "strokeWidth": 1
+          }
+        ],
+        "borderRadius": 16,
+        "padding": 20,
+        "children": [
+          {
+            "id": "side-title",
+            "name": "Title",
+            "type": "text",
+            "text": "⚡ Quick Controls",
+            "fontSize": 15,
+            "fontWeight": "bold",
+            "color": "#0f172a",
+            "x": 20,
+            "y": 20,
+            "width": 426,
+            "height": 24
+          },
+          {
+            "id": "ctrl-1",
+            "name": "Control 1",
+            "type": "button",
+            "text": "⚙️ Configure add",
+            "fontSize": 13,
+            "fontWeight": "600",
+            "color": "#0f172a",
+            "fills": [
+              {
+                "fillColor": "#f1f5f9"
+              }
+            ],
+            "borderRadius": 8,
+            "x": 20,
+            "y": 60,
+            "width": 426,
+            "height": 44
+          },
+          {
+            "id": "ctrl-2",
+            "name": "Control 2",
+            "type": "button",
+            "text": "📊 Export add Report",
+            "fontSize": 13,
+            "fontWeight": "600",
+            "color": "#0f172a",
+            "fills": [
+              {
+                "fillColor": "#f1f5f9"
+              }
+            ],
+            "borderRadius": 8,
+            "x": 20,
+            "y": 114,
+            "width": 426,
+            "height": 44
+          },
+          {
+            "id": "ctrl-3",
+            "name": "Control 3",
+            "type": "button",
+            "text": "🚀 Run Automated Pipeline",
+            "fontSize": 13,
+            "fontWeight": "bold",
+            "color": "#ffffff",
+            "fills": [
+              {
+                "fillColor": "#7c3aed"
+              }
+            ],
+            "borderRadius": 8,
+            "x": 20,
+            "y": 168,
+            "width": 426,
+            "height": 44
+          },
+          {
+            "id": "ctrl-notice",
+            "name": "Notice",
+            "type": "text",
+            "text": "● All 8 semantic parameters verified",
+            "fontSize": 11,
+            "color": "#10b981",
+            "x": 20,
+            "y": 240,
+            "width": 426,
+            "height": 20
+          }
+        ]
+      },
+      {
+        "id": "dyn-table-1789540534695",
+        "name": "Add 5 Continer With Entity Grid",
+        "type": "table",
+        "x": 40,
+        "y": 614,
+        "width": 1360,
+        "height": 260,
+        "fills": [
+          {
+            "fillColor": "#ffffff"
+          }
+        ],
+        "strokes": [
+          {
+            "strokeColor": "#e2e8f0",
+            "strokeWidth": 1
+          }
+        ],
+        "borderRadius": 16,
+        "text": "📋 Add 5 Continer With Data Entities & Activity Log (add 5 continer with each have 10 text)"
+      }
+    ]
+  },
+  "chatHistory": [
+    {
+      "id": "msg_u_1789540534695",
+      "role": "user",
+      "text": "add 5 continer with each have 10 text",
+      "timestamp": "2026-09-16T06:35:34.695Z"
+    },
+    {
+      "id": "msg_a_1789540534695",
+      "role": "assistant",
+      "text": "Synthesized **Add 5 Continer With** layout with 8 components matching \"add 5 continer with each have 10 text\".",
+      "timestamp": "2026-09-16T06:35:34.695Z",
+      "stepsCount": 4,
+      "changesSummary": "Synthesized tailored Add 5 Continer With interface with 8 custom domain components",
+      "metadata": {
+        "mode": "create",
+        "intent": "GENERATE",
+        "theme": "light",
+        "dimensions": {
+          "width": 1440,
+          "height": 900
+        }
+      }
+    }
+  ],
+  "createdAt": "2026-09-16T06:35:34.695Z",
+  "updatedAt": "2026-09-16T06:35:34.695Z"
+}

@@ -1,0 +1,523 @@
+{
+  "id": "screen_stitch_1789542819178_2bzzq",
+  "projectId": "acme-api",
+  "userId": "local-dev-user",
+  "name": "5 Dark Containers with 10 Text Items Each",
+  "description": "Five dark-themed containers, each holding ten distinct title‑description text blocks.",
+  "theme": {
+    "primaryColor": "#7c3aed",
+    "backgroundColor": "#0a0e17",
+    "surfaceColor": "#131b2e",
+    "textColor": "#f8fafc",
+    "accentColor": "#7c3aed",
+    "borderRadius": 8
+  },
+  "board": {
+    "id": "board_screen_stitch_1789542819178_2bzzq",
+    "name": "5 Dark Containers with 10 Text Items Each Canvas",
+    "x": 0,
+    "y": 0,
+    "width": 1440,
+    "height": 900,
+    "background": "#0a0e17",
+    "components": [
+      {
+        "id": "container0",
+        "name": "Container 1",
+        "type": "frame",
+        "x": 24,
+        "y": 24,
+        "width": 260,
+        "height": 460,
+        "fills": [
+          {
+            "fillColor": "#131b2e",
+            "opacity": 1
+          }
+        ],
+        "strokes": [
+          {
+            "strokeColor": "#7c3aed",
+            "strokeWidth": 1
+          }
+        ],
+        "borderRadius": 8,
+        "text": "",
+        "fontSize": 0,
+        "fontWeight": "normal",
+        "color": "#f8fafc",
+        "children": [
+          {
+            "id": "container0_item0",
+            "name": "Item 1",
+            "type": "frame",
+            "x": 12,
+            "y": 12,
+            "width": 236,
+            "height": 36,
+            "fills": [
+              {
+                "fillColor": "#131b2e",
+                "opacity": 1
+              }
+            ],
+            "strokes": [],
+            "borderRadius": 0,
+            "text": "Container 1 - Item 1\nDescription for item 1 in container 1",
+            "fontSize": 14,
+            "fontWeight": "normal",
+            "color": "#f8fafc"
+          },
+          {
+            "id": "container0_item1",
+            "name": "Item 2",
+            "type": "frame",
+            "x": 12,
+            "y": 52,
+            "width": 236,
+            "height": 36,
+            "fills": [
+              {
+                "fillColor": "#131b2e",
+                "opacity": 1
+              }
+            ],
+            "strokes": [],
+            "borderRadius": 0,
+            "text": "Container 1 - Item 2\nDescription for item 2 in container 1",
+            "fontSize": 14,
+            "fontWeight": "normal",
+            "color": "#f8fafc"
+          },
+          {
+            "id": "container0_item2",
+            "name": "Item 3",
+            "type": "frame",
+            "x": 12,
+            "y": 92,
+            "width": 236,
+            "height": 36,
+            "fills": [
+              {
+                "fillColor": "#131b2e",
+                "opacity": 1
+              }
+            ],
+            "strokes": [],
+            "borderRadius": 0,
+            "text": "Container 1 - Item 3\nDescription for item 3 in container 1",
+            "fontSize": 14,
+            "fontWeight": "normal",
+            "color": "#f8fafc"
+          },
+          {
+            "id": "container0_item3",
+            "name": "Item 4",
+            "type": "frame",
+            "x": 12,
+            "y": 132,
+            "width": 236,
+            "height": 36,
+            "fills": [
+              {
+                "fillColor": "#131b2e",
+                "opacity": 1
+              }
+            ],
+            "strokes": [],
+            "borderRadius": 0,
+            "text": "Container 1 - Item 4\nDescription for item 4 in container 1",
+            "fontSize": 14,
+            "fontWeight": "normal",
+            "color": "#f8fafc"
+          },
+          {
+            "id": "container0_item4",
+            "name": "Item 5",
+            "type": "frame",
+            "x": 12,
+            "y": 172,
+            "width": 236,
+            "height": 36,
+            "fills": [
+              {
+                "fillColor": "#131b2e",
+                "opacity": 1
+              }
+            ],
+            "strokes": [],
+            "borderRadius": 0,
+            "text": "Container 1 - Item 5\nDescription for item 5 in container 1",
+            "fontSize": 14,
+            "fontWeight": "normal",
+            "color": "#f8fafc"
+          },
+          {
+            "id": "container0_item5",
+            "name": "Item 6",
+            "type": "frame",
+            "x": 12,
+            "y": 212,
+            "width": 236,
+            "height": 36,
+            "fills": [
+              {
+                "fillColor": "#131b2e",
+                "opacity": 1
+              }
+            ],
+            "strokes": [],
+            "borderRadius": 0,
+            "text": "Container 1 - Item 6\nDescription for item 6 in container 1",
+            "fontSize": 14,
+            "fontWeight": "normal",
+            "color": "#f8fafc"
+          },
+          {
+            "id": "container0_item6",
+            "name": "Item 7",
+            "type": "frame",
+            "x": 12,
+            "y": 252,
+            "width": 236,
+            "height": 36,
+            "fills": [
+              {
+                "fillColor": "#131b2e",
+                "opacity": 1
+              }
+            ],
+            "strokes": [],
+            "borderRadius": 0,
+            "text": "Container 1 - Item 7\nDescription for item 7 in container 1",
+            "fontSize": 14,
+            "fontWeight": "normal",
+            "color": "#f8fafc"
+          },
+          {
+            "id": "container0_item7",
+            "name": "Item 8",
+            "type": "frame",
+            "x": 12,
+            "y": 292,
+            "width": 236,
+            "height": 36,
+            "fills": [
+              {
+                "fillColor": "#131b2e",
+                "opacity": 1
+              }
+            ],
+            "strokes": [],
+            "borderRadius": 0,
+            "text": "Container 1 - Item 8\nDescription for item 8 in container 1",
+            "fontSize": 14,
+            "fontWeight": "normal",
+            "color": "#f8fafc"
+          },
+          {
+            "id": "container0_item8",
+            "name": "Item 9",
+            "type": "frame",
+            "x": 12,
+            "y": 332,
+            "width": 236,
+            "height": 36,
+            "fills": [
+              {
+                "fillColor": "#131b2e",
+                "opacity": 1
+              }
+            ],
+            "strokes": [],
+            "borderRadius": 0,
+            "text": "Container 1 - Item 9\nDescription for item 9 in container 1",
+            "fontSize": 14,
+            "fontWeight": "normal",
+            "color": "#f8fafc"
+          },
+          {
+            "id": "container0_item9",
+            "name": "Item 10",
+            "type": "frame",
+            "x": 12,
+            "y": 372,
+            "width": 236,
+            "height": 36,
+            "fills": [
+              {
+                "fillColor": "#131b2e",
+                "opacity": 1
+              }
+            ],
+            "strokes": [],
+            "borderRadius": 0,
+            "text": "Container 1 - Item 10\nDescription for item 10 in container 1",
+            "fontSize": 14,
+            "fontWeight": "normal",
+            "color": "#f8fafc"
+          }
+        ]
+      },
+      {
+        "id": "container1",
+        "name": "Container 2",
+        "type": "frame",
+        "x": 308,
+        "y": 24,
+        "width": 260,
+        "height": 460,
+        "fills": [
+          {
+            "fillColor": "#131b2e",
+            "opacity": 1
+          }
+        ],
+        "strokes": [
+          {
+            "strokeColor": "#7c3aed",
+            "strokeWidth": 1
+          }
+        ],
+        "borderRadius": 8,
+        "text": "",
+        "fontSize": 0,
+        "fontWeight": "normal",
+        "color": "#f8fafc",
+        "children": [
+          {
+            "id": "container1_item0",
+            "name": "Item 1",
+            "type": "frame",
+            "x": 12,
+            "y": 12,
+            "width": 236,
+            "height": 36,
+            "fills": [
+              {
+                "fillColor": "#131b2e",
+                "opacity": 1
+              }
+            ],
+            "strokes": [],
+            "borderRadius": 0,
+            "text": "Container 2 - Item 1\nDescription for item 1 in container 2",
+            "fontSize": 14,
+            "fontWeight": "normal",
+            "color": "#f8fafc"
+          },
+          {
+            "id": "container1_item1",
+            "name": "Item 2",
+            "type": "frame",
+            "x": 12,
+            "y": 52,
+            "width": 236,
+            "height": 36,
+            "fills": [
+              {
+                "fillColor": "#131b2e",
+                "opacity": 1
+              }
+            ],
+            "strokes": [],
+            "borderRadius": 0,
+            "text": "Container 2 - Item 2\nDescription for item 2 in container 2",
+            "fontSize": 14,
+            "fontWeight": "normal",
+            "color": "#f8fafc"
+          },
+          {
+            "id": "container1_item2",
+            "name": "Item 3",
+            "type": "frame",
+            "x": 12,
+            "y": 92,
+            "width": 236,
+            "height": 36,
+            "fills": [
+              {
+                "fillColor": "#131b2e",
+                "opacity": 1
+              }
+            ],
+            "strokes": [],
+            "borderRadius": 0,
+            "text": "Container 2 - Item 3\nDescription for item 3 in container 2",
+            "fontSize": 14,
+            "fontWeight": "normal",
+            "color": "#f8fafc"
+          },
+          {
+            "id": "container1_item3",
+            "name": "Item 4",
+            "type": "frame",
+            "x": 12,
+            "y": 132,
+            "width": 236,
+            "height": 36,
+            "fills": [
+              {
+                "fillColor": "#131b2e",
+                "opacity": 1
+              }
+            ],
+            "strokes": [],
+            "borderRadius": 0,
+            "text": "Container 2 - Item 4\nDescription for item 4 in container 2",
+            "fontSize": 14,
+            "fontWeight": "normal",
+            "color": "#f8fafc"
+          },
+          {
+            "id": "container1_item4",
+            "name": "Item 5",
+            "type": "frame",
+            "x": 12,
+            "y": 172,
+            "width": 236,
+            "height": 36,
+            "fills": [
+              {
+                "fillColor": "#131b2e",
+                "opacity": 1
+              }
+            ],
+            "strokes": [],
+            "borderRadius": 0,
+            "text": "Container 2 - Item 5\nDescription for item 5 in container 2",
+            "fontSize": 14,
+            "fontWeight": "normal",
+            "color": "#f8fafc"
+          },
+          {
+            "id": "container1_item5",
+            "name": "Item 6",
+            "type": "frame",
+            "x": 12,
+            "y": 212,
+            "width": 236,
+            "height": 36,
+            "fills": [
+              {
+                "fillColor": "#131b2e",
+                "opacity": 1
+              }
+            ],
+            "strokes": [],
+            "borderRadius": 0,
+            "text": "Container 2 - Item 6\nDescription for item 6 in container 2",
+            "fontSize": 14,
+            "fontWeight": "normal",
+            "color": "#f8fafc"
+          },
+          {
+            "id": "container1_item6",
+            "name": "Item 7",
+            "type": "frame",
+            "x": 12,
+            "y": 252,
+            "width": 236,
+            "height": 36,
+            "fills": [
+              {
+                "fillColor": "#131b2e",
+                "opacity": 1
+              }
+            ],
+            "strokes": [],
+            "borderRadius": 0,
+            "text": "Container 2 - Item 7\nDescription for item 7 in container 2",
+            "fontSize": 14,
+            "fontWeight": "normal",
+            "color": "#f8fafc"
+          },
+          {
+            "id": "container1_item7",
+            "name": "Item 8",
+            "type": "frame",
+            "x": 12,
+            "y": 292,
+            "width": 236,
+            "height": 36,
+            "fills": [
+              {
+                "fillColor": "#131b2e",
+                "opacity": 1
+              }
+            ],
+            "strokes": [],
+            "borderRadius": 0,
+            "text": "Container 2 - Item 8\nDescription for item 8 in container 2",
+            "fontSize": 14,
+            "fontWeight": "normal",
+            "color": "#f8fafc"
+          },
+          {
+            "id": "container1_item8",
+            "name": "Item 9",
+            "type": "frame",
+            "x": 12,
+            "y": 332,
+            "width": 236,
+            "height": 36,
+            "fills": [
+              {
+                "fillColor": "#131b2e",
+                "opacity": 1
+              }
+            ],
+            "strokes": [],
+            "borderRadius": 0,
+            "text": "Container 2 - Item 9\nDescription for item 9 in container 2",
+            "fontSize": 14,
+            "fontWeight": "normal",
+            "color": "#f8fafc"
+          },
+          {
+            "id": "container1_item9",
+            "name": "Item 10",
+            "type": "frame",
+            "x": 12,
+            "y": 372,
+            "width": 236,
+            "height": 36,
+            "fills": [
+              {
+                "fillColor": "#131b2e",
+                "opacity": 1
+              }
+            ]
+          }
+        ]
+      }
+    ]
+  },
+  "chatHistory": [
+    {
+      "id": "msg_u_1789542819178",
+      "role": "user",
+      "text": "5 containers each having 10 text items with distinct titles and descriptions",
+      "timestamp": "2026-09-16T07:13:39.178Z"
+    },
+    {
+      "id": "msg_a_1789542819178",
+      "role": "assistant",
+      "text": "I synthesized **5 Dark Containers with 10 Text Items Each** with 2 components matching your prompt \"5 containers each having 10 text items with distinct titles and descriptions\" using Groq LLM (openai/gpt-oss-120b).",
+      "timestamp": "2026-09-16T07:13:39.178Z",
+      "stepsCount": 2,
+      "changesSummary": "Synthesized 2 custom AI components for 5 Dark Containers with 10 Text Items Each (via Groq openai/gpt-oss-120b)",
+      "metadata": {
+        "mode": "create",
+        "intent": "GENERATE",
+        "theme": "dark",
+        "dimensions": {
+          "width": 1440,
+          "height": 900
+        }
+      }
+    }
+  ],
+  "createdAt": "2026-09-16T07:13:39.178Z",
+  "updatedAt": "2026-09-16T07:13:39.178Z"
+}

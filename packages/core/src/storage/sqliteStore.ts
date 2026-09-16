@@ -693,7 +693,7 @@ export async function saveIndexToSqlite(
     insertClient.free();
 
     const insertQuery = db.prepare(`
-      INSERT INTO context_queries (id, file, line, enclosingFunction, enclosingClass, dbType, operation, target, clientRefId, resolved, unresolvedReason)
+      INSERT OR REPLACE INTO context_queries (id, file, line, enclosingFunction, enclosingClass, dbType, operation, target, clientRefId, resolved, unresolvedReason)
       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
     `);
 
@@ -715,7 +715,7 @@ export async function saveIndexToSqlite(
     insertQuery.free();
 
     const insertFunction = db.prepare(`
-      INSERT INTO context_functions (id, name, file, line, endLine, className, touchesDb, transitiveTouchesDb)
+      INSERT OR REPLACE INTO context_functions (id, name, file, line, endLine, className, touchesDb, transitiveTouchesDb)
       VALUES (?, ?, ?, ?, ?, ?, ?, ?)
     `);
 
@@ -734,7 +734,7 @@ export async function saveIndexToSqlite(
     insertFunction.free();
 
     const insertEdge = db.prepare(`
-      INSERT INTO context_call_edges (callerId, calleeId, file, line)
+      INSERT OR IGNORE INTO context_call_edges (callerId, calleeId, file, line)
       VALUES (?, ?, ?, ?)
     `);
 
@@ -744,7 +744,7 @@ export async function saveIndexToSqlite(
     insertEdge.free();
 
     const insertRef = db.prepare(`
-      INSERT INTO context_symbol_references (id, declarationId, file, line, refType)
+      INSERT OR REPLACE INTO context_symbol_references (id, declarationId, file, line, refType)
       VALUES (?, ?, ?, ?, ?)
     `);
 
@@ -754,7 +754,7 @@ export async function saveIndexToSqlite(
     insertRef.free();
 
     const insertHash = db.prepare(`
-      INSERT INTO context_file_hashes (file, contentHash, lastScanned)
+      INSERT OR REPLACE INTO context_file_hashes (file, contentHash, lastScanned)
       VALUES (?, ?, ?)
     `);
 

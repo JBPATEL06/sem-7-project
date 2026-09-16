@@ -1,6 +1,11 @@
 # Progress
 
-## Done
+- **Native OpenPencil In-App Vector Studio & Zero-Template AI Generation (Completed & Verified)**:
+  - Built pure React in-app `OpenPencilCanvas` vector engine rendering Figma-compatible `SceneGraph` nodes with pan, zoom, 8-point handle selection, and selection HUD.
+  - Eliminated external iframe dependencies (`app.openpencil.dev`).
+  - Implemented BYOK AI generation loop calling real Groq LLMs (`groq/compound-mini`, `qwen/qwen3.8-27b`, `openai/gpt-oss-20b`, `openai/gpt-oss-120b`) from Settings key with zero prebuilt template fallbacks.
+  - Implemented and verified Sub-Step 3: Targeted In-Place AI Mutation on selected node IDs with intact sibling preservation.
+  - Test Suite: 19/19 passing (100% green).
 - **UI Structure & Visual Layout**: Flowstep screens built and visually complete in `packages/ai-manager-web`:
   - `/onboarding` (Screen 1)
   - `/dashboard` (Screen 2)
@@ -77,30 +82,29 @@
   - Implemented strict ownership access control rejecting unauthorized updates/deletions with `403 Forbidden`.
   - Implemented server startup migration assigning legacy unowned Atlas records to the seeded admin account.
   - Verified provably via `scripts/testDataIsolation.ts` (cross-user isolation, 403 attack rejections, admin global visibility, 100% Atlas records userId migration).
-- **Academic Milestone Day 4 — Penpot Layout Spec Plugin Bridge (Completed & Verified)**:
-  - Implemented `packages/ai-manager-web/server/screenRoutes.ts` with multi-user `userId` isolation and CRUD endpoints (`GET /api/screens`, `POST /api/screens`, `PUT /api/screens/:id`, `DELETE /api/screens/:id`).
-  - Added template presets (`saas-dashboard`, `auth-portal`, `kanban-board`) for rapid UI specification.
-  - Implemented AI Prompt-to-Layout Generator (`POST /api/screens/generate`) creating structured layout trees from natural language prompts.
-  - Implemented official Penpot Plugin Manifest export (`GET /api/screens/:id/export?format=penpot`) generating Schema 2.0 JSON manifests.
-  - Built `src/hooks/useScreens.ts` and `src/pages/ScreensPage.tsx` with wireframe canvas, property inspector (dimensions, padding, border radius, color tokens), zoom controls, and AST JSON viewer.
-  - Wired `/screens` route in `src/App.tsx` and sidebar navigation item in `src/components/Layout.tsx`.
-  - Executed standalone test suite `scripts/testScreens.ts` with 8/8 tests passing (CRUD cycle, AI generation, Penpot export, cross-user 403 blocks, admin access).
+- **Academic Milestone Day 4 — Layout Spec Generation, Custom React Canvas & OpenPencil Headless `.fig` Export (Completed & Verified)**:
+  - Implemented `packages/ai-manager-web/server/screenRoutes.ts` and `server/figExporter.ts` powered by `@open-pencil/fig`, `@open-pencil/kiwi`, and `@open-pencil/scene-graph`.
+  - Generates binary `.fig` files (Kiwi container archives with document, canvas, artboard frames, visual shapes, colors, fonts, strokes, and border radii) directly from `ScreenLayoutSpec` AST.
+  - Endpoints: `GET /api/screens`, `POST /api/screens`, `PUT /api/screens/:id`, `DELETE /api/screens/:id`, `POST /api/screens/generate-stitch`, and native `.fig` export `GET /api/screens/:id/export?format=fig`.
+  - Automatically writes both JSON specs and native binary `ui/<screen_slug>.fig` files to disk.
+  - Built `src/hooks/useScreens.ts` and `src/pages/ScreensPage.tsx` with custom React canvas (untouched), property inspector, layers tree, and "Export .fig" toolbar button.
+  - Executed round-trip binary parse test via `scripts/testFigExport.ts` (22 decoded node changes) and Vitest suite (19/19 tests passing).
   - **Figma UI 3 & Performance Canvas Engine Overhaul**: Zero-lag drag & resize engine (RAF-throttling, `transition: none` on active items, 4px grid snap), isolated canvas scrolling (`overscroll-contain`, no page scroll leaks), 8-point perimeter resize handles, modern Figma UI 3 floating frosted bottom toolbar dock (`[V]`, `[F]`, `[R]`, `[T]`, `[❖]`, `[H]`, AI Gen, Present, Export, Zoom) aligned to Obsidian dark theme, and complete coordinate isolation between frames and child elements (preventing multi-element displacement and layout gaps).
-  - **Comprehensive Light / White Theme Engine**: Full Light/Dark theme adaptivity across all pages and Penpot/Figma Specs studio (`ScreensPage.tsx`, `Layout.tsx`, `GitViewPage.tsx`). Left sidebar, center dot grid canvas (`#f1f5f9`), property inspector, modal dialogs, and floating frosted toolbar dock (`bg-white/95`) seamlessly respond to the TopBar theme toggle and synchronize with `localStorage` and `data-theme` CSS tokens.
+  - **Comprehensive Light / White Theme Engine**: Full Light/Dark theme adaptivity across all pages and Figma & Screens studio (`ScreensPage.tsx`, `Layout.tsx`, `GitViewPage.tsx`). Left sidebar, center dot grid canvas (`#f1f5f9`), property inspector, modal dialogs, and floating frosted toolbar dock (`bg-white/95`) seamlessly respond to the TopBar theme toggle and synchronize with `localStorage` and `data-theme` CSS tokens.
   - **Collapsible Navigation & Design Studio Sidebars**:
     - **Global Sidebar**: TopBar & Sidebar Header toggle buttons (`PanelLeftClose`/`PanelLeftOpen`) + `Ctrl+B` / `Cmd+B` shortcut + `localStorage` persistence (`ai_manager_sidebar_collapsed`) with smooth width transition.
     - **Studio Side Panels**: Independent Left Layers toggle, Right Inspector toggle, and Floating Dock **Zen Mode** button (`Sidebar` icon) with `localStorage` persistence, maximizing available canvas workspace.
   - **Infinite Canvas & Board Workspace (Figma & Miro Style)**:
-    - **Penpot Specs Studio (`ScreensPage.tsx`)**: 16,000px × 10,000px vast infinite field with seamless tiled dot grid pattern, 360-degree freehand panning, auto-centering on screen selection (`centerArtboard`), and `Shift + 1` / `Shift + 0` quick center view shortcuts.
+    - **Screens Studio (`ScreensPage.tsx`)**: 16,000px × 10,000px vast infinite field with seamless tiled dot grid pattern, 360-degree freehand panning, auto-centering on screen selection (`centerArtboard`), and `Shift + 1` / `Shift + 0` quick center view shortcuts.
     - **Diagram Studio (`DiagramsPage.tsx`)**: Edge-to-edge full viewport infinite Excalidraw board with **Fit View** (`Maximize2`) auto-framing action.
   - **Modular Git Branches Deployed to GitHub (`https://github.com/JBPATEL06/sem-7-project`)**:
-    - `coreWrokingFigma`: Penpot / Figma Specs studio codebase.
+    - `coreWrokingFigma`: Figma & Screens studio codebase.
     - `coreWrokingDiagram`: Excalidraw diagram canvas codebase.
     - `coreWrokingGit`: Git View & History Visualizer codebase.
   - **Direct Workspace File Persistence & UI Polish**:
-    - **Local Persistence Folders**: Created root `ui/` and `diagrams/` folders storing native files (`ui/<screen_slug>.penpot.json` in Penpot Schema 2.0 and `diagrams/<diagram_slug>.excalidraw` in Excalidraw JSON format) accessible directly by local AI agents (Antigravity), CLI tools, or native desktop apps.
+    - **Local Persistence Folders**: Created root `ui/` and `diagrams/` folders storing native files (`ui/<screen_slug>.fig` in native Figma Kiwi binary archive and `diagrams/<diagram_slug>.excalidraw` in Excalidraw JSON format) accessible directly by local AI agents (Antigravity), CLI tools, or native desktop apps.
     - **Transparent File Path Badges**: Studio headers display repo file path badges (`📁 ui/...` and `📁 diagrams/...`) with 1-click clipboard copy.
-    - **Semantic Names & Inline Renaming**: Replaced random IDs with clean human-readable names and enabled double-click inline renaming in the Penpot Layers tree.
+    - **Semantic Names & Inline Renaming**: Replaced random IDs with clean human-readable names and enabled double-click inline renaming in the Layers tree.
   - **Multi-Database Control Plane & Live Engine Drivers (SQL & NoSQL)**:
     - **Drivers Built**:
       - PostgreSQL / Supabase (`pg` Pool with latency testing, column & index introspection via `information_schema`, parameterized query execution).
@@ -131,19 +135,19 @@
     - **Right Panel (AST Inspector)**: Enclosing file, line ranges, class names, database operations list, and copyable OpenTelemetry span JSON preview.
   - Created automated test suite `packages/ai-manager-web/tests/flowAudit.test.ts` (3/3 passing).
 - **Stitch-Grade AI Generation & Modification Engine (`/screens` & `/diagrams`) (Completed & Verified)**:
-  - **Penpot Layout Spec Generation (`POST /api/screens/generate-stitch`)**:
-    - Generates complete Penpot Schema 2.0 AST trees with auto-layout frames, headers, search inputs, KPI cards, activity charts, diagnostics panels, and data tables.
+  - **Screen Layout Spec & Native `.fig` Generation (`POST /api/screens/generate-stitch`)**:
+    - Generates complete Layout AST trees with auto-layout frames, headers, search inputs, KPI cards, activity charts, diagnostics panels, and data tables.
     - Supports two distinct operational modes:
       - `mode: 'create'`: Generates brand new screen artboard and AST nodes.
       - `mode: 'modify'`: Modifies and extends existing screen AST trees in-place based on user prompts without losing prior customizations.
     - Returns granular `generationSteps` list for client-side progressive element placement simulation.
-    - Synchronizes directly to `ui/<screen_slug>.penpot.json`.
+    - Synchronizes directly to `ui/<screen_slug>.fig` (native binary via OpenPencil engine) and `ui/<screen_slug>.json`.
   - **Live Progressive Placement Animation & HUD**:
     - Canvas reveals components progressively step-by-step with coordinate and element name badges (`✨ AI Placing: [name] ([x], [y])`).
     - Glowing blueprint laser shimmers (`ring-2 ring-violet-400/80 animate-pulse` + ghost laser bounding box) highlight the currently placing element.
     - Floating HUD badge at top of canvas displays live progress percentage (`0% ➔ 100%`).
   - **100% Granular Element Editability**:
-    - Every generated element (frames, buttons, inputs, tables, cards, text layers) remains standard Penpot Schema 2.0 AST nodes that the user can click, drag, 8-point resize, restyle in the inspector, and edit inline.
+    - Every generated element (frames, buttons, inputs, tables, cards, text layers) remains standard Layout AST nodes that the user can click, drag, 8-point resize, restyle in the inspector, and edit inline.
   - **AI Diagram Synthesis Engine (`POST /api/diagrams/generate-ai`)**:
     - Synthesizes architecture flows, relational database ER schemas, and telemetry pipelines into native Excalidraw scenes with connected directional arrows.
     - Automatically synchronizes to `diagrams/<diagram_slug>.excalidraw`.
@@ -159,18 +163,28 @@
     - **Targeted AST Mutation & LLM Generation Engine**:
       - Backend endpoint `POST /api/screens/generate-stitch` accepts `selectedCompIds: string[]` and `selectedScreenIds: string[]`.
       - Supports targeting specific elements for AST mutations (glassmorphism glows, color palettes, pill radius, typography scaling, component additions, custom prompts) and batch processing across multiple screens simultaneously.
-      - Seamlessly synchronizes updated AST schemas directly to `ui/<screen_slug>.penpot.json`.
-- **Stitch AI Conversational Chat UI & 2D Mobile Combat Arena Generator (Completed & Verified)**:
-  - **Zero Pre-baked Presets**: Completely eliminated all hardcoded templates and static presets. All screens are generated on demand from natural language semantic prompts.
-  - **Stitch AI Chat UI (`/screens`)**:
-    - Added dedicated `💬 Stitch AI` tab to the Left Sidebar in `ScreensPage.tsx` with conversational message history, user prompt cards, structured AI assistant explanations, generation step breakdowns, and interactive follow-up chips.
-    - Added floating dock `💬 Stitch Chat` quick toggle.
-    - Built backend endpoint `POST /api/screens/:id/chat` with persistence in MongoDB and local disk store (`ui/<slug>.penpot.json`).
-  - **2D Mobile Combat Arena & Mini Militia Map Synthesizer**:
-    - Added Category 0 synthesizer generating 2D battleground arenas, bedrock terrain, 3 tactical floating platforms (Left Outpost, Right Sniper Ledge, Central Highwalk), subterranean supply bunkers, explosive barrels, weapon pickups (RPG, medkit), and top combat HUD telemetry (Health, Boost %, Deathmatch Kill counter).
-    - Added on-screen dual-thumb mobile touch controls (Left Analog Joystick & Fire / Rocket Boost triggers).
-    - Automatic viewport detection for mobile landscape (`844x390`) and mobile portrait (`390x844`).
-  - **Verification**: Full Vitest suite passing (19/19 tests in 4 test files) and production build clean (0 TS errors).
+      - Seamlessly synchronizes updated AST schemas directly to `ui/<screen_slug>.fig` and `ui/<screen_slug>.json`.
+- **Project Workspace Detail View & Scoped Sandbox Console (`/projects/:id`) (Completed & Verified)**:
+  - **Backend Single Project Endpoint**: Added `GET /api/projects/:id` in `server/projects.ts` with ownership and RBAC enforcement.
+  - **Project Detail Page (`ProjectDetailPage.tsx`)**:
+    - **Header & Breadcrumbs**: Seamless navigation between all projects and specific project workspace, showing status badges, file root directories with 1-click clipboard copy, and quick studio shortcuts.
+    - **Overview & AST Diagnostics**: Displays file count, SQLite database volume, AST health score, and workspace architecture drivers.
+    - **Quick Query Console**: Interactive SQL execution terminal scoped to the project's SQLite sandbox (`.ai-manager/dbs/:id.sqlite`) with query execution timing and dynamic tabular result preview.
+    - **Integrated Studios Launchpad**: 1-click launchpads connecting directly to Stitch Screen Studio, Excalidraw Diagram Studio, AST Flow Auditor, and Git View.
+    - **Project Danger Zone**: Full delete confirmation modal unlinking workspace configurations with safety boundaries.
+  - **Projects Page Cards Integration**: Cards in `ProjectsPage.tsx` equipped with "Workspace →" action buttons for instant drill-in.
+  - **Verification**: Full Vitest suite passing (19/19 tests) and TypeScript type check clean (0 errors).
+- **Groq Active Model Migration & Explicit Error Diagnostics (Completed & Verified)**:
+  - Replaced decommissioned Groq model identifiers (`llama-3.3-70b-versatile`, `llama3-70b-8192`, `mixtral-8x7b-32768`) in `screenRoutes.ts` and `diagramRoutes.ts` with verified active Groq models: `openai/gpt-oss-120b` (primary) and `openai/gpt-oss-20b` (secondary fallback), alongside `groq/compound-mini` and `qwen/qwen3.8-27b`.
+  - Replaced silent error swallowing with explicit `console.warn` diagnostics capturing non-200 HTTP statuses and response bodies.
+  - Added `modelUsed` tracking across AST generation steps, metadata, and responses.
+  - Verified non-static real generation with prompt `"hey"` (5 components) and `"login screen with email and password"` (7 components). All 19 tests in Vitest passing 100%.
+- **OpenPencil Native .fig Binary Engine & Embedded Studio (Completed & Verified)**:
+  - Completely replaced all legacy Penpot artifacts, code paths, and manifests with `@open-pencil/fig`, `@open-pencil/kiwi`, and `@open-pencil/scene-graph`.
+  - Built headless binary `.fig` exporter (`exportScreenToFigBuffer` in `server/figExporter.ts`) encoding Kiwi scene graph binary containers matching Figma specification.
+  - Export endpoints and disk synchronization generate native `ui/<screen_slug>.fig` files (binary) and `ui/<screen_slug>.json` (AST spec).
+  - Transformed `ScreensPage.tsx` into a pure OpenPencil Studio interface (`https://app.openpencil.dev`) with integrated floating AI prompt dock, full AI screen synthesizer modal (`✨ Generate with AI`), conversational AI assistant drawer (`💬 AI Assistant`), code/AST inspector (`💻 Code & Spec`), and direct `.fig` download.
+  - Purged all legacy Penpot aliases, routes, files (`public/penpot-plugin`), and UI labels. 100% clean TypeScript build (`0 errors`) and all 19/19 Vitest tests passing.
 
 
 ## In Progress / Unwired Interactive Features (Mock/Static Only)

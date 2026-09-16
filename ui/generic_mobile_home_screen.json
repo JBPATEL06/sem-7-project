@@ -1,0 +1,313 @@
+{
+  "id": "screen_stitch_1789540434314_14aoi",
+  "projectId": "acme-api",
+  "userId": "local-dev-user",
+  "name": "Generic Mobile Home Screen",
+  "description": "A simple mobile home screen layout with header, search bar, list items, and bottom navigation.",
+  "theme": {
+    "primaryColor": "#7c3aed",
+    "backgroundColor": "#f8fafc",
+    "surfaceColor": "#ffffff",
+    "textColor": "#0f172a",
+    "accentColor": "#10b981",
+    "borderRadius": 12
+  },
+  "board": {
+    "id": "board_screen_stitch_1789540434314_14aoi",
+    "name": "Generic Mobile Home Screen Canvas",
+    "x": 0,
+    "y": 0,
+    "width": 1440,
+    "height": 900,
+    "background": "#f8fafc",
+    "components": [
+      {
+        "id": "comp1",
+        "name": "Header",
+        "type": "rectangle",
+        "x": 0,
+        "y": 0,
+        "width": 375,
+        "height": 80,
+        "fills": [
+          {
+            "type": "solid",
+            "color": "#FFFFFF"
+          }
+        ],
+        "strokes": [],
+        "borderRadius": 0,
+        "text": "App Title",
+        "fontSize": 24,
+        "color": "#000000"
+      },
+      {
+        "id": "comp2",
+        "name": "SearchBar",
+        "type": "rectangle",
+        "x": 16,
+        "y": 96,
+        "width": 343,
+        "height": 40,
+        "fills": [
+          {
+            "type": "solid",
+            "color": "#F0F0F0"
+          }
+        ],
+        "strokes": [],
+        "borderRadius": 8,
+        "text": "Search...",
+        "fontSize": 16,
+        "color": "#888888"
+      },
+      {
+        "id": "comp3",
+        "name": "ListItem1",
+        "type": "rectangle",
+        "x": 0,
+        "y": 152,
+        "width": 375,
+        "height": 80,
+        "fills": [
+          {
+            "type": "solid",
+            "color": "#FFFFFF"
+          }
+        ],
+        "strokes": [],
+        "borderRadius": 0,
+        "text": "",
+        "fontSize": null,
+        "color": null
+      },
+      {
+        "id": "comp4",
+        "name": "Avatar1",
+        "type": "ellipse",
+        "x": 16,
+        "y": 164,
+        "width": 48,
+        "height": 48,
+        "fills": [
+          {
+            "type": "solid",
+            "color": "#CCCCCC"
+          }
+        ],
+        "strokes": [],
+        "borderRadius": 24,
+        "text": "",
+        "fontSize": null,
+        "color": null
+      },
+      {
+        "id": "comp5",
+        "name": "ItemTitle1",
+        "type": "text",
+        "x": 80,
+        "y": 172,
+        "width": 200,
+        "height": 24,
+        "fills": [],
+        "strokes": [],
+        "borderRadius": 0,
+        "text": "Item One",
+        "fontSize": 18,
+        "color": "#000000"
+      },
+      {
+        "id": "comp6",
+        "name": "ItemSubtitle1",
+        "type": "text",
+        "x": 80,
+        "y": 200,
+        "width": 200,
+        "height": 20,
+        "fills": [],
+        "strokes": [],
+        "borderRadius": 0,
+        "text": "Subtitle",
+        "fontSize": 14,
+        "color": "#666666"
+      },
+      {
+        "id": "comp7",
+        "name": "ListItem2",
+        "type": "rectangle",
+        "x": 0,
+        "y": 240,
+        "width": 375,
+        "height": 80,
+        "fills": [
+          {
+            "type": "solid",
+            "color": "#FFFFFF"
+          }
+        ],
+        "strokes": [],
+        "borderRadius": 0,
+        "text": "",
+        "fontSize": null,
+        "color": null
+      },
+      {
+        "id": "comp8",
+        "name": "Avatar2",
+        "type": "ellipse",
+        "x": 16,
+        "y": 252,
+        "width": 48,
+        "height": 48,
+        "fills": [
+          {
+            "type": "solid",
+            "color": "#CCCCCC"
+          }
+        ],
+        "strokes": [],
+        "borderRadius": 24,
+        "text": "",
+        "fontSize": null,
+        "color": null
+      },
+      {
+        "id": "comp9",
+        "name": "ItemTitle2",
+        "type": "text",
+        "x": 80,
+        "y": 260,
+        "width": 200,
+        "height": 24,
+        "fills": [],
+        "strokes": [],
+        "borderRadius": 0,
+        "text": "Item Two",
+        "fontSize": 18,
+        "color": "#000000"
+      },
+      {
+        "id": "comp10",
+        "name": "ItemSubtitle2",
+        "type": "text",
+        "x": 80,
+        "y": 288,
+        "width": 200,
+        "height": 20,
+        "fills": [],
+        "strokes": [],
+        "borderRadius": 0,
+        "text": "Subtitle",
+        "fontSize": 14,
+        "color": "#666666"
+      },
+      {
+        "id": "comp11",
+        "name": "BottomNav",
+        "type": "rectangle",
+        "x": 0,
+        "y": 732,
+        "width": 375,
+        "height": 80,
+        "fills": [
+          {
+            "type": "solid",
+            "color": "#FFFFFF"
+          }
+        ],
+        "strokes": [],
+        "borderRadius": 0,
+        "text": "",
+        "fontSize": null,
+        "color": null
+      },
+      {
+        "id": "comp12",
+        "name": "NavHome",
+        "type": "rectangle",
+        "x": 48,
+        "y": 752,
+        "width": 40,
+        "height": 40,
+        "fills": [
+          {
+            "type": "solid",
+            "color": "#007AFF"
+          }
+        ],
+        "strokes": [],
+        "borderRadius": 20,
+        "text": "",
+        "fontSize": null,
+        "color": null
+      },
+      {
+        "id": "comp13",
+        "name": "NavSearch",
+        "type": "rectangle",
+        "x": 152,
+        "y": 752,
+        "width": 40,
+        "height": 40,
+        "fills": [
+          {
+            "type": "solid",
+            "color": "#CCCCCC"
+          }
+        ],
+        "strokes": [],
+        "borderRadius": 20,
+        "text": "",
+        "fontSize": null,
+        "color": null
+      },
+      {
+        "id": "comp14",
+        "name": "NavProfile",
+        "type": "rectangle",
+        "x": 256,
+        "y": 752,
+        "width": 40,
+        "height": 40,
+        "fills": [
+          {
+            "type": "solid",
+            "color": "#CCCCCC"
+          }
+        ],
+        "strokes": [],
+        "borderRadius": 20,
+        "text": "",
+        "fontSize": null,
+        "color": null
+      }
+    ]
+  },
+  "chatHistory": [
+    {
+      "id": "msg_u_1789540434314",
+      "role": "user",
+      "text": "hey genrate some screen",
+      "timestamp": "2026-09-16T06:33:54.314Z"
+    },
+    {
+      "id": "msg_a_1789540434314",
+      "role": "assistant",
+      "text": "I synthesized **Generic Mobile Home Screen** with 14 components matching your prompt \"hey genrate some screen\" using Groq LLM (openai/gpt-oss-120b).",
+      "timestamp": "2026-09-16T06:33:54.314Z",
+      "stepsCount": 14,
+      "changesSummary": "Synthesized 14 custom AI components for Generic Mobile Home Screen (via Groq openai/gpt-oss-120b)",
+      "metadata": {
+        "mode": "create",
+        "intent": "GENERATE",
+        "theme": "light",
+        "dimensions": {
+          "width": 1440,
+          "height": 900
+        }
+      }
+    }
+  ],
+  "createdAt": "2026-09-16T06:33:54.314Z",
+  "updatedAt": "2026-09-16T06:33:54.314Z"
+}

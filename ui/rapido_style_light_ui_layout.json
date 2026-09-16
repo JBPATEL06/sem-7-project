@@ -1,0 +1,376 @@
+{
+  "id": "screen_stitch_1789543707257_142gz",
+  "projectId": "acme-api",
+  "userId": "local-dev-user",
+  "name": "Rapido Style Light UI Layout",
+  "description": "A clean Rapido‑inspired dashboard with header, sidebar navigation, main KPI cards and footer, using a light theme.",
+  "theme": {
+    "primaryColor": "#7c3aed",
+    "backgroundColor": "#f8fafc",
+    "surfaceColor": "#ffffff",
+    "textColor": "#0f172a",
+    "accentColor": "#7c3aed",
+    "borderRadius": 8
+  },
+  "board": {
+    "id": "board_screen_stitch_1789543707257_142gz",
+    "name": "Rapido Style Light UI Layout Canvas",
+    "x": 0,
+    "y": 0,
+    "width": 1440,
+    "height": 900,
+    "background": "#f8fafc",
+    "components": [
+      {
+        "id": "header",
+        "name": "Header",
+        "type": "frame",
+        "x": 0,
+        "y": 0,
+        "width": 1440,
+        "height": 80,
+        "fills": [
+          {
+            "fillColor": "#ffffff",
+            "opacity": 1
+          }
+        ],
+        "strokes": [],
+        "borderRadius": 0,
+        "text": "",
+        "fontSize": 0,
+        "fontWeight": "normal",
+        "color": "",
+        "children": [
+          {
+            "id": "header-title",
+            "name": "Header Title",
+            "type": "frame",
+            "x": 24,
+            "y": 20,
+            "width": 300,
+            "height": 40,
+            "fills": [],
+            "strokes": [],
+            "borderRadius": 0,
+            "text": "Rapido Dashboard",
+            "fontSize": 24,
+            "fontWeight": "normal",
+            "color": "#0f172a",
+            "children": []
+          }
+        ]
+      },
+      {
+        "id": "sidebar",
+        "name": "Sidebar Navigation",
+        "type": "frame",
+        "x": 0,
+        "y": 80,
+        "width": 240,
+        "height": 760,
+        "fills": [
+          {
+            "fillColor": "#f1f5f9",
+            "opacity": 1
+          }
+        ],
+        "strokes": [],
+        "borderRadius": 0,
+        "text": "",
+        "fontSize": 0,
+        "fontWeight": "normal",
+        "color": "",
+        "children": [
+          {
+            "id": "nav-item-1",
+            "name": "Nav Item 1",
+            "type": "frame",
+            "x": 24,
+            "y": 24,
+            "width": 192,
+            "height": 32,
+            "fills": [],
+            "strokes": [],
+            "borderRadius": 0,
+            "text": "Overview",
+            "fontSize": 16,
+            "fontWeight": "normal",
+            "color": "#0f172a",
+            "children": []
+          },
+          {
+            "id": "nav-item-2",
+            "name": "Nav Item 2",
+            "type": "frame",
+            "x": 24,
+            "y": 72,
+            "width": 192,
+            "height": 32,
+            "fills": [],
+            "strokes": [],
+            "borderRadius": 0,
+            "text": "Analytics",
+            "fontSize": 16,
+            "fontWeight": "normal",
+            "color": "#0f172a",
+            "children": []
+          },
+          {
+            "id": "nav-item-3",
+            "name": "Nav Item 3",
+            "type": "frame",
+            "x": 24,
+            "y": 120,
+            "width": 192,
+            "height": 32,
+            "fills": [],
+            "strokes": [],
+            "borderRadius": 0,
+            "text": "Reports",
+            "fontSize": 16,
+            "fontWeight": "normal",
+            "color": "#0f172a",
+            "children": []
+          },
+          {
+            "id": "nav-item-4",
+            "name": "Nav Item 4",
+            "type": "frame",
+            "x": 24,
+            "y": 168,
+            "width": 192,
+            "height": 32,
+            "fills": [],
+            "strokes": [],
+            "borderRadius": 0,
+            "text": "Settings",
+            "fontSize": 16,
+            "fontWeight": "normal",
+            "color": "#0f172a",
+            "children": []
+          }
+        ]
+      },
+      {
+        "id": "main",
+        "name": "Main Content Area",
+        "type": "frame",
+        "x": 240,
+        "y": 80,
+        "width": 1200,
+        "height": 760,
+        "fills": [
+          {
+            "fillColor": "#f8fafc",
+            "opacity": 1
+          }
+        ],
+        "strokes": [],
+        "borderRadius": 0,
+        "text": "",
+        "fontSize": 0,
+        "fontWeight": "normal",
+        "color": "",
+        "children": [
+          {
+            "id": "card-1",
+            "name": "KPI Card 1",
+            "type": "frame",
+            "x": 24,
+            "y": 24,
+            "width": 300,
+            "height": 200,
+            "fills": [
+              {
+                "fillColor": "#ffffff",
+                "opacity": 1
+              }
+            ],
+            "strokes": [
+              {
+                "strokeColor": "#e2e8f0",
+                "strokeWidth": 1
+              }
+            ],
+            "borderRadius": 8,
+            "text": "",
+            "fontSize": 0,
+            "fontWeight": "normal",
+            "color": "",
+            "children": [
+              {
+                "id": "card-1-title",
+                "name": "Card Title",
+                "type": "frame",
+                "x": 16,
+                "y": 16,
+                "width": 268,
+                "height": 24,
+                "fills": [],
+                "strokes": [],
+                "borderRadius": 0,
+                "text": "Total Users",
+                "fontSize": 18,
+                "fontWeight": "normal",
+                "color": "#0f172a",
+                "children": []
+              },
+              {
+                "id": "card-1-value",
+                "name": "Card Value",
+                "type": "frame",
+                "x": 16,
+                "y": 56,
+                "width": 268,
+                "height": 48,
+                "fills": [],
+                "strokes": [],
+                "borderRadius": 0,
+                "text": "12,345",
+                "fontSize": 36,
+                "fontWeight": "normal",
+                "color": "#7c3aed",
+                "children": []
+              }
+            ]
+          },
+          {
+            "id": "card-2",
+            "name": "KPI Card 2",
+            "type": "frame",
+            "x": 348,
+            "y": 24,
+            "width": 300,
+            "height": 200,
+            "fills": [
+              {
+                "fillColor": "#ffffff",
+                "opacity": 1
+              }
+            ],
+            "strokes": [
+              {
+                "strokeColor": "#e2e8f0",
+                "strokeWidth": 1
+              }
+            ],
+            "borderRadius": 8,
+            "text": "",
+            "fontSize": 0,
+            "fontWeight": "normal",
+            "color": "",
+            "children": [
+              {
+                "id": "card-2-title",
+                "name": "Card Title",
+                "type": "frame",
+                "x": 16,
+                "y": 16,
+                "width": 268,
+                "height": 24,
+                "fills": [],
+                "strokes": [],
+                "borderRadius": 0,
+                "text": "Revenue",
+                "fontSize": 18,
+                "fontWeight": "normal",
+                "color": "#0f172a",
+                "children": []
+              },
+              {
+                "id": "card-2-value",
+                "name": "Card Value",
+                "type": "frame",
+                "x": 16,
+                "y": 56,
+                "width": 268,
+                "height": 48,
+                "fills": [],
+                "strokes": [],
+                "borderRadius": 0,
+                "text": "$84,210",
+                "fontSize": 36,
+                "fontWeight": "normal",
+                "color": "#7c3aed",
+                "children": []
+              }
+            ]
+          },
+          {
+            "id": "card-3",
+            "name": "KPI Card 3",
+            "type": "frame",
+            "x": 24,
+            "y": 248,
+            "width": 300,
+            "height": 200,
+            "fills": [
+              {
+                "fillColor": "#ffffff",
+                "opacity": 1
+              }
+            ],
+            "strokes": [
+              {
+                "strokeColor": "#e2e8f0",
+                "strokeWidth": 1
+              }
+            ],
+            "borderRadius": 8,
+            "text": "",
+            "fontSize": 0,
+            "fontWeight": "normal",
+            "color": "",
+            "children": [
+              {
+                "id": "card-3-title",
+                "name": "Card Title",
+                "type": "frame",
+                "x": 16,
+                "y": 16,
+                "width": 268,
+                "height": 24,
+                "fills": [],
+                "strokes": [],
+                "borderRadius": 0,
+                "text": "New Sign‑ups",
+                "fontSize": 18,
+                "fontWeight": "normal",
+                "color": "#0f172a",
+                "children": []
+              }
+            ]
+          }
+        ]
+      }
+    ]
+  },
+  "chatHistory": [
+    {
+      "id": "msg_u_1789543707257",
+      "role": "user",
+      "text": "genrate rapido style ui ux",
+      "timestamp": "2026-09-16T07:28:27.257Z"
+    },
+    {
+      "id": "msg_a_1789543707257",
+      "role": "assistant",
+      "text": "I synthesized **Rapido Style Light UI Layout** with 3 components matching your prompt \"genrate rapido style ui ux\" using Groq LLM (openai/gpt-oss-120b).",
+      "timestamp": "2026-09-16T07:28:27.257Z",
+      "stepsCount": 3,
+      "changesSummary": "Synthesized 3 custom AI components for Rapido Style Light UI Layout (via Groq openai/gpt-oss-120b)",
+      "metadata": {
+        "mode": "create",
+        "intent": "GENERATE",
+        "theme": "light",
+        "dimensions": {
+          "width": 1440,
+          "height": 900
+        }
+      }
+    }
+  ],
+  "createdAt": "2026-09-16T07:28:27.257Z",
+  "updatedAt": "2026-09-16T07:28:27.257Z"
+}

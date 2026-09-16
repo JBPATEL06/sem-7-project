@@ -84,7 +84,7 @@ export const Layout: React.FC<LayoutProps> = ({
     { id: 'projects', label: 'Projects', icon: LayoutGrid },
     { id: 'db-manager', label: 'DB Manager', icon: Database },
     { id: 'diagrams', label: 'Diagrams', icon: Layers },
-    { id: 'screens', label: 'Penpot Specs', icon: Monitor },
+    { id: 'screens', label: 'Screens Studio', icon: Monitor },
     { id: 'qa', label: 'QA', icon: ShieldCheck },
     { id: 'flow-audit', label: 'Flow Audit', icon: GitBranch },
     { id: 'git-view', label: 'Git View', icon: GitCommitHorizontal },
