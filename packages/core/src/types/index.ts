@@ -180,3 +180,138 @@ export interface SyncedProjectInfo {
   fileId?: string;
   lastModified?: string;
 }
+
+// --------------------------------------------------------------------------
+// Universal Graphify Context System Types
+// --------------------------------------------------------------------------
+
+export type GraphNodeType =
+  | 'file'          // Source code / config file
+  | 'function'      // Function, method, class method
+  | 'route'         // Express / Next.js / Fastify API route
+  | 'table'         // Database table, collection, schema
+  | 'prd_spec'      // Product spec / PRD value prop (product.md)
+  | 'doc_section'   // Architecture & tech decision (architecture.md)
+  | 'plan_item'     // Roadmap item & milestone (plans.md)
+  | 'progress_item' // Shipped, in-progress, or broken feature (progress.md)
+  | 'issue'         // Open bug, gap, or tech debt (issues.md)
+  | 'audit_finding' // QA schema violation, N+1 query flag, safety risk
+  | 'test_suite'    // Vitest / Jest test file and test cases
+  | 'ai_trace';     // AI Assistant edit history, model used, prompt log
+
+export type GraphEdgeType =
+  | 'IMPORTS'            // File imports module/file
+  | 'CALLS'              // Function calls function
+  | 'TOUCHES_DB'          // Function executes query on table/collection
+  | 'HANDLES_ROUTE'       // Route is handled by function/controller
+  | 'IMPLEMENTS_SPEC'    // Code implements PRD spec
+  | 'DOCUMENTED_IN'      // Symbol documented in docs
+  | 'HAS_ISSUE'          // Symbol / file has open issue
+  | 'PLANNED_BY'         // File/feature scheduled in plan
+  | 'STATUS_OF'          // Progress status tracking a plan/feature
+  | 'AUDITED_BY'         // Symbol flagged by QA audit
+  | 'VERIFIED_BY'        // Symbol tested by test suite
+  | 'MODIFIED_BY_AI'     // Node modified by AI model
+  | 'AUTHORED_BY_USER';  // Node authored by human user
+
+export interface GraphNode {
+  id: string;
+  type: GraphNodeType;
+  label: string;
+  file?: string;
+  line?: number;
+  endLine?: number;
+  metadata?: Record<string, any>;
+  createdAt?: string;
+  updatedAt?: string;
+}
+
+export interface GraphEdge {
+  id: string;
+  sourceId: string;
+  targetId: string;
+  type: GraphEdgeType;
+  metadata?: Record<string, any>;
+}
+
+export interface GraphStats {
+  totalNodes: number;
+  totalEdges: number;
+  nodesByType: Record<GraphNodeType, number>;
+  edgesByType: Record<GraphEdgeType, number>;
+  dbTouchCount: number;
+  openIssuesCount: number;
+  auditFindingsCount: number;
+  aiTracesCount: number;
+  healthScore: number;
+}
+
+export interface ImpactAnalysis {
+  targetNodeId: string;
+  targetLabel: string;
+  targetType: GraphNodeType;
+  directCallers: GraphNode[];
+  transitiveCallers: GraphNode[];
+  affectedRoutes: GraphNode[];
+  affectedTables: GraphNode[];
+  affectedTests: GraphNode[];
+  linkedIssues: GraphNode[];
+  blastRadiusScore: number; // 0 - 100
+}
+
+export interface ProjectContextBundle {
+  projectId: string;
+  timestamp: string;
+  prd: {
+    overview: string;
+    valueProps: string[];
+    targetUsers: string[];
+    scopeBoundaries: string[];
+  };
+  architecture: {
+    techStack: string[];
+    keyDecisions: string[];
+    folderStructure: string[];
+  };
+  plans: {
+    nextUp: string[];
+    roadmap: string[];
+  };
+  progress: {
+    done: string[];
+    inProgress: string[];
+    broken: string[];
+  };
+  issues: {
+    openBugs: Array<{ severity: string; description: string }>;
+    knownGaps: string[];
+  };
+  qaHealth: {
+    healthScore: number;
+    schemaIssuesCount: number;
+    astSafetyIssuesCount: number;
+    testsPassing: boolean;
+  };
+  aiLineage: {
+    recentAiEditsCount: number;
+    activeModels: string[];
+  };
+}
+
+export interface FileContextReport {
+  file: string;
+  functions: GraphNode[];
+  routes: GraphNode[];
+  dbTouches: GraphNode[];
+  linkedIssues: GraphNode[];
+  linkedPlans: GraphNode[];
+  qaFindings: GraphNode[];
+  verifiedByTests: GraphNode[];
+  aiHistory: Array<{
+    timestamp: string;
+    model: string;
+    provider: string;
+    promptPreview?: string;
+  }>;
+}
+

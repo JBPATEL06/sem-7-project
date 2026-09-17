@@ -11,11 +11,78 @@ const CREDS_FILE = path.resolve(process.cwd(), '.ai-manager/credentials.enc');
 const DBS_DIR = path.resolve(process.cwd(), '.ai-manager/dbs');
 const PROJECTS_FILE = path.resolve(process.cwd(), '.ai-manager/projects.json');
 
+export interface OpenPencilModelConfig {
+  id: string;
+  name: string;
+  provider: 'openai-compatible' | 'groq' | 'grok' | 'openai' | 'anthropic' | 'custom';
+  baseUrl?: string;
+  apiKey?: string;
+  modelId: string;
+  enableTools?: boolean;
+}
+
+export interface OpenPencilAiAssignments {
+  designAgent: string; // model id
+  review: string; // model id or 'same-as-design'
+  fastTasks: string; // model id or 'same-as-design'
+  vision: string; // model id or 'none'
+}
+
 export interface StoredCredentials {
   groq?: string;
   github?: string;
   openai?: string;
+  grok?: string;
+  aiModels?: OpenPencilModelConfig[];
+  aiAssignments?: OpenPencilAiAssignments;
+  rememberInBrowser?: boolean;
   updatedAt?: string;
+}
+
+export function getDefaultOpenPencilModels(): OpenPencilModelConfig[] {
+  return [
+    {
+      id: 'model_groq_primary',
+      name: 'Design model (Groq 120B)',
+      provider: 'groq',
+      baseUrl: 'https://api.groq.com/openai/v1',
+      modelId: 'openai/gpt-oss-120b',
+      enableTools: true
+    },
+    {
+      id: 'model_groq_fast',
+      name: 'Fast Tasks (Groq 20B)',
+      provider: 'groq',
+      baseUrl: 'https://api.groq.com/openai/v1',
+      modelId: 'openai/gpt-oss-20b',
+      enableTools: true
+    },
+    {
+      id: 'model_grok_2',
+      name: 'xAI Grok-2',
+      provider: 'grok',
+      baseUrl: 'https://api.x.ai/v1',
+      modelId: 'grok-2',
+      enableTools: true
+    },
+    {
+      id: 'model_openai_gpt4o',
+      name: 'OpenAI GPT-4o',
+      provider: 'openai',
+      baseUrl: 'https://api.openai.com/v1',
+      modelId: 'gpt-4o',
+      enableTools: true
+    }
+  ];
+}
+
+export function getDefaultAiAssignments(): OpenPencilAiAssignments {
+  return {
+    designAgent: 'model_groq_primary',
+    review: 'same-as-design',
+    fastTasks: 'model_groq_fast',
+    vision: 'none'
+  };
 }
 
 export function loadDecryptedCredentials(): StoredCredentials {
@@ -134,9 +201,9 @@ settingsRouter.post('/keys', localOrAuth, async (req: AuthRequest, res: Response
     const trimmed = keyValue.trim();
 
     if (trimmed.length === 0) {
-      delete creds[keyType as keyof StoredCredentials];
+      delete (creds as any)[keyType];
     } else {
-      creds[keyType as keyof StoredCredentials] = trimmed;
+      (creds as any)[keyType] = trimmed;
     }
 
     saveEncryptedCredentials(creds);
@@ -374,3 +441,132 @@ settingsRouter.post('/reset', localOrAuth, async (req: AuthRequest, res: Respons
     res.status(500).json({ error: `Failed to reset indexed data: ${err.message}` });
   }
 });
+
+// GET /api/settings/ai-config — Retrieve OpenPencil AI Models & Role Assignments
+settingsRouter.get('/ai-config', localOrAuth, async (req: AuthRequest, res: Response): Promise<void> => {
+  try {
+    const creds = loadDecryptedCredentials();
+    const rawModels = (creds.aiModels && creds.aiModels.length > 0) ? creds.aiModels : getDefaultOpenPencilModels();
+    const assignments = creds.aiAssignments || getDefaultAiAssignments();
+
+    // Map models with status indicator and masked keys for secure UI display
+    const models = rawModels.map(m => {
+      let key = m.apiKey;
+      if (!key) {
+        if (m.provider === 'groq') key = creds.groq || process.env.GROQ_API_KEY;
+        else if (m.provider === 'grok') key = creds.grok || process.env.GROK_API_KEY || process.env.XAI_API_KEY;
+        else if (m.provider === 'openai') key = creds.openai || process.env.OPENAI_API_KEY;
+      }
+      const hasKey = Boolean(key && key.trim().length > 0);
+      return {
+        id: m.id,
+        name: m.name,
+        provider: m.provider,
+        baseUrl: m.baseUrl || '',
+        modelId: m.modelId,
+        enableTools: m.enableTools !== false,
+        hasKey,
+        maskedKey: hasKey ? maskKey(key) : 'Needs key'
+      };
+    });
+
+    res.status(200).json({
+      success: true,
+      models,
+      assignments,
+      rememberInBrowser: creds.rememberInBrowser !== false
+    });
+  } catch (err: any) {
+    console.error('[settings/ai-config/get] Error:', err);
+    res.status(500).json({ error: `Failed to load AI config: ${err.message}` });
+  }
+});
+
+// POST /api/settings/ai-config — Update OpenPencil AI Models & Role Assignments
+settingsRouter.post('/ai-config', localOrAuth, async (req: AuthRequest, res: Response): Promise<void> => {
+  try {
+    const { models, assignments, rememberInBrowser } = req.body;
+    const creds = loadDecryptedCredentials();
+
+    if (Array.isArray(models)) {
+      // Preserve existing API keys if masked or unchanged
+      const updatedModels: OpenPencilModelConfig[] = models.map((m: any) => {
+        const existing = creds.aiModels?.find(em => em.id === m.id);
+        let apiKey = m.apiKey;
+        if (!apiKey || apiKey.includes('••••')) {
+          apiKey = existing?.apiKey;
+        }
+        return {
+          id: m.id || `model_${Date.now()}_${Math.random().toString(36).slice(2, 6)}`,
+          name: m.name || 'AI Model',
+          provider: m.provider || 'openai-compatible',
+          baseUrl: m.baseUrl || '',
+          apiKey: apiKey || '',
+          modelId: m.modelId || 'openai/gpt-oss-120b',
+          enableTools: m.enableTools !== false
+        };
+      });
+      creds.aiModels = updatedModels;
+
+      // Update active provider keys in credentials store if provided
+      for (const m of updatedModels) {
+        if (m.apiKey && m.apiKey.trim().length > 0) {
+          if (m.provider === 'groq') {
+            creds.groq = m.apiKey;
+            process.env.GROQ_API_KEY = m.apiKey;
+          } else if (m.provider === 'grok') {
+            creds.grok = m.apiKey;
+            process.env.GROK_API_KEY = m.apiKey;
+          } else if (m.provider === 'openai') {
+            creds.openai = m.apiKey;
+            process.env.OPENAI_API_KEY = m.apiKey;
+          }
+        }
+      }
+    }
+
+    if (assignments && typeof assignments === 'object') {
+      creds.aiAssignments = {
+        designAgent: assignments.designAgent || 'model_groq_primary',
+        review: assignments.review || 'same-as-design',
+        fastTasks: assignments.fastTasks || 'same-as-design',
+        vision: assignments.vision || 'none'
+      };
+    }
+
+    if (rememberInBrowser !== undefined) {
+      creds.rememberInBrowser = Boolean(rememberInBrowser);
+    }
+
+    saveEncryptedCredentials(creds);
+
+    logActivity({
+      projectId: 'global',
+      projectName: 'Settings',
+      action: 'AI Config Updated',
+      detail: `Configured ${creds.aiModels?.length || 0} OpenPencil models with updated role assignments`,
+      status: 'success'
+    });
+
+    res.status(200).json({
+      success: true,
+      message: 'OpenPencil AI models and assignments saved successfully.',
+      models: creds.aiModels?.map(m => ({
+        id: m.id,
+        name: m.name,
+        provider: m.provider,
+        baseUrl: m.baseUrl,
+        modelId: m.modelId,
+        enableTools: m.enableTools,
+        hasKey: Boolean(m.apiKey || creds[m.provider as keyof StoredCredentials]),
+        maskedKey: maskKey(m.apiKey || creds[m.provider as keyof StoredCredentials] as string)
+      })),
+      assignments: creds.aiAssignments,
+      rememberInBrowser: creds.rememberInBrowser
+    });
+  } catch (err: any) {
+    console.error('[settings/ai-config/post] Error:', err);
+    res.status(500).json({ error: `Failed to save AI config: ${err.message}` });
+  }
+});
+

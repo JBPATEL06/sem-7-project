@@ -1,0 +1,141 @@
+{
+  "id": "screen_stitch_1789642121518_mlk1n",
+  "projectId": "global",
+  "userId": "local-dev-user",
+  "name": "Add KPI Metric Cards",
+  "description": "Two KPI metric cards for Monthly Churn and Latency added to a dark-themed board.",
+  "theme": {
+    "primaryColor": "#7c3aed",
+    "backgroundColor": "#0f172a",
+    "surfaceColor": "#131b2e",
+    "textColor": "#f8fafc",
+    "accentColor": "#10b981",
+    "borderRadius": 8
+  },
+  "board": {
+    "id": "board_screen_stitch_1789642121518_mlk1n",
+    "name": "Add KPI Metric Cards Canvas",
+    "x": 0,
+    "y": 0,
+    "width": 1440,
+    "height": 900,
+    "background": "#0f172a",
+    "components": [
+      {
+        "id": "kpi_churn_card",
+        "name": "KPI Card - Monthly Churn",
+        "type": "frame",
+        "x": 40,
+        "y": 120,
+        "width": 280,
+        "height": 200,
+        "fills": [
+          {
+            "fillColor": "#131b2e",
+            "opacity": 1
+          }
+        ],
+        "strokes": [
+          {
+            "strokeColor": "#0f172a",
+            "strokeWidth": 1
+          }
+        ],
+        "borderRadius": 8,
+        "children": [
+          {
+            "id": "kpi_churn_title",
+            "name": "Title",
+            "type": "text",
+            "x": 16,
+            "y": 16,
+            "text": "Monthly Churn",
+            "fontSize": 18,
+            "fontWeight": "normal",
+            "color": "#94a3b8"
+          },
+          {
+            "id": "kpi_churn_value",
+            "name": "Value",
+            "type": "text",
+            "x": 16,
+            "y": 60,
+            "text": "12%",
+            "fontSize": 32,
+            "fontWeight": "normal",
+            "color": "#f8fafc"
+          }
+        ]
+      },
+      {
+        "id": "kpi_latency_card",
+        "name": "KPI Card - Latency",
+        "type": "frame",
+        "x": 360,
+        "y": 120,
+        "width": 280,
+        "height": 200,
+        "fills": [
+          {
+            "fillColor": "#131b2e",
+            "opacity": 1
+          }
+        ],
+        "strokes": [
+          {
+            "strokeColor": "#0f172a",
+            "strokeWidth": 1
+          }
+        ],
+        "borderRadius": 8,
+        "children": [
+          {
+            "id": "kpi_latency_title",
+            "name": "Title",
+            "type": "text",
+            "x": 16,
+            "y": 16,
+            "text": "Latency",
+            "fontSize": 18,
+            "fontWeight": "normal",
+            "color": "#94a3b8"
+          },
+          {
+            "id": "kpi_latency_value",
+            "name": "Value",
+            "type": "text",
+            "x": 16,
+            "y": 60,
+            "text": "200ms",
+            "fontSize": 32,
+            "fontWeight": "normal",
+            "color": "#f8fafc"
+          }
+        ]
+      }
+    ]
+  },
+  "chatHistory": [
+    {
+      "id": "msg_u_1789642123421",
+      "role": "user",
+      "text": "Add 2 new KPI metric cards for monthly churn and latency",
+      "timestamp": "2026-09-17T10:48:43.421Z"
+    },
+    {
+      "id": "msg_a_1789642123421",
+      "role": "assistant",
+      "text": "Two KPI metric cards for Monthly Churn and Latency added to a dark-themed board.",
+      "timestamp": "2026-09-17T10:48:43.421Z",
+      "stepsCount": 2,
+      "changesSummary": "Synthesized 2 components using Design model (Groq 120B) (openai/gpt-oss-20b)",
+      "metadata": {
+        "mode": "modify",
+        "intent": "MODIFY",
+        "theme": "dark"
+      }
+    }
+  ],
+  "createdAt": "2026-09-17T10:48:43.421Z",
+  "updatedAt": "2026-09-17T10:48:43.421Z"
+}

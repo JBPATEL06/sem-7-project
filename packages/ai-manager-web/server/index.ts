@@ -21,6 +21,7 @@ import { gitRouter } from './gitRoutes.js';
 import { diagramRouter } from './diagramRoutes.js';
 import { screenRouter } from './screenRoutes.js';
 import { flowAuditRouter } from './flowAuditRoutes.js';
+import { graphifyRouter } from './graphifyRoutes.js';
 import contextRouter from './contextRoutes.js';
 import { PgDriver } from './drivers/pgDriver.js';
 import { RedisDriver } from './drivers/redisDriver.js';
@@ -69,7 +70,9 @@ app.use('/api/git', gitRouter);
 app.use('/api/diagrams', diagramRouter);
 app.use('/api/screens', screenRouter);
 app.use('/api/flow-audit', flowAuditRouter);
+app.use('/api/graphify', graphifyRouter);
 app.use('/api', contextRouter);
+
 
 
 
