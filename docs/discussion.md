@@ -2380,6 +2380,62 @@
 - Created `docs/plan/cleanup-audit.md`.
 - Updated `claude_reply.txt`.
 
+## [2026-09-18] Session 64: Pre-Cleanup Snapshots, Figma Canvas Preservation & Feature Mapping
+
+**What was discussed:**
+- User provided follow-up instructions:
+  1. Mandatory full GitHub backup before any cleanup action with dedicated README.
+  2. Standalone preservation of `coreWrokingFigma` custom canvas code into `backup/figma-custom-canvas` (not merged/deleted).
+  3. Paused new folder architecture proposal until Claude provides design.
+  4. Comprehensive feature usage mapping (`docs/plan/feature-map.md`) to enable informed joint keep/cut decisions.
+
+**Decisions made:**
+- Created and pushed `backup/pre-cleanup-2026-09-18` containing full repo snapshot and `BACKUP_README.md`.
+- Preserved `coreWrokingFigma` custom canvas engine as standalone branch `backup/figma-custom-canvas` with `README_FIGMA_CUSTOM_CANVAS_BACKUP.md` pushed to GitHub.
+- Created `docs/plan/feature-map.md` with a detailed 14-point feature inventory covering function, caller flow, and file locations.
+- Paused Step 3 folder restructuring per user request.
+
+**Changes made to code/project:**
+- Created `BACKUP_README.md` and pushed `backup/pre-cleanup-2026-09-18` to origin.
+- Created `README_FIGMA_CUSTOM_CANVAS_BACKUP.md` and pushed `backup/figma-custom-canvas` to origin.
+- Created `docs/plan/feature-map.md`.
+- Pushed active feature branch updates to `feature/vibe-coding-context-management-system`.
+- Updated `claude_reply.txt`.
+
+## [2026-09-18] Session 65: Repo Structure & Dependency Reconnaissance for Architecture Design
+
+**What was discussed:**
+- User requested complete read-only architectural reconnaissance of the repository before Claude designs the new folder architecture.
+- Documented full recursive directory trees for `packages/ai-manager-web/src/` and `packages/ai-manager-web/server/`.
+- Documented root-level monorepo structure, configurations, and packages (`ai-manager-web`, `core`, `db-context-indexer`, `open-pencil`).
+- Mapped all shared/reused code dependencies across the 10 core "KEEP" features (shared UI components, hooks, server utilities, middleware, cross-package dependencies).
+- Documented root `package.json` workspaces wiring.
+
+**Decisions made:**
+- Outputted complete read-only reference document in `docs/plan/repo-structure-snapshot.md`.
+- No folder restructuring executed; paused until Claude provides the architecture blueprint.
+
+**Changes made to code/project:**
+- Created `docs/plan/repo-structure-snapshot.md`.
+- Updated `claude_reply.txt`.
+
+## [2026-09-18] Session 66: Approved New Architecture Adoption & Migration Plan
+
+**What was discussed:**
+- User provided the finalized architectural blueprint designed by Claude (`packages/ai-manager-web/src/features/` + `packages/ai-manager-web/server/modules/` + `server/mcp/` + `server/context-index/` + `server/chat/`).
+- Adopted the new architecture blueprint and structured a 4-phase safe execution plan.
+
+**Decisions made:**
+- Saved the complete target blueprint in `docs/plan/new-architecture-design.md`.
+- Grouped execution into 4 safe phases: (1) Dead code & root cleanup, (2) Frontend features/shared migration, (3) Server modules/shared migration, (4) MCP wrappers & chat scaffolding.
+
+**Changes made to code/project:**
+- Created `docs/plan/new-architecture-design.md`.
+- Updated `claude_reply.txt`.
+
+
+
+
 
 
 
