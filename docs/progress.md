@@ -1,4 +1,28 @@
 # Progress
+- **Clean Architecture & Feature-Driven Restructuring (Phases 1, 2 & 3 Completed & Verified)**:
+  - **Phase 1: Dead Code & Redundant File Pruning**:
+    - Deleted `packages/.dbci/` (dead duplicate cache index).
+    - Deleted 11 dead `*Screen.tsx` mockup components in `packages/ai-manager-web/src/components/`.
+    - Deleted dead server files (`modules.ts`, `contextRoutes.ts`, `testDbGapFixes.ts`) and cleaned route mounts in `server/index.ts`.
+    - Preserved `temp/screens_page_backup.tsx` as `ScreensPage_alt_backup.tsx` on standalone backup branch `backup/figma-custom-canvas`, then safely removed from `temp/`.
+    - Deleted duplicate `claude_reply.txt` files from subdirectories.
+  - **Phase 2: Frontend Migration to `src/features/` & `src/shared/`**:
+    - Configured `@/*` path aliases in `tsconfig.json` and `vite.config.ts`.
+    - Created `src/shared/` with clean barrel exports (`@/shared/ui`, `@/shared/context`, `@/shared/api`, `@/shared/types`, `@/shared/components`).
+    - Migrated all 11 features into `src/features/` with pages, components, hooks, and clean barrel exports (`index.ts`): `cockpit/`, `graphify/`, `db-manager/`, `diagrams/`, `screens/`, `qa/`, `git/`, `auth/`, `settings/`, `dashboard/`, `chat/`.
+    - Rewrote `App.tsx` and `main.tsx` to consume feature barrels and shared components.
+    - Added AI Chat navigation and route (`/chat`).
+    - Removed legacy folders `src/pages/`, `src/components/`, `src/hooks/`, `src/context/`, `src/api/`, `src/types/`.
+    - Verified compilation: `npx tsc --noEmit` exited with code 0 (zero errors).
+    - Verified test suite: `npm test` exited with code 0 (all 7 test files, 29/29 tests passing).
+  - **Phase 3: Backend Modularization into `server/modules/` & `server/shared/`**:
+    - Reorganized `server/` into domain-isolated modules (`auth/`, `admin/`, `projects/`, `db/` + `drivers/`, `diagrams/`, `screens/`, `qa/`, `git/`, `graphify/`, `settings/`, `dashboard/`) with dedicated `index.ts` barrel exports.
+    - Extracted shared cross-cutting concerns into `server/shared/` (`middleware/`, `utils/`, `workspace.ts`).
+    - Cleaned `server/index.ts` to import purely from `./modules/index.js`.
+    - Removed legacy flat route files (`adminRoutes.ts`, `auth.ts`, `dashboardRoutes.ts`, `dbRoutes.ts`, `diagramRoutes.ts`, `figExporter.ts`, `flowAuditRoutes.ts`, `generateContextFig.ts`, `gitRoutes.ts`, `graphifyRoutes.ts`, `projects.ts`, `qaRoutes.ts`, `screenRoutes.ts`, `settingsRoutes.ts`) and legacy folders (`drivers/`, `graphify/`, `qa/`, `screens/`, `utils/`).
+    - Updated all test suites in `packages/ai-manager-web/tests/` to target new module locations.
+    - Verified compilation: `npx tsc --noEmit` exited with code 0 (zero errors).
+    - Verified test suite: `npm test` exited with code 0 (all 7 test files, 29/29 tests passing).
 - **3-Panel Vibe Coding Context Cockpit & Native OpenPencil Fig Engine (Completed & Verified)**:
   - **Living Context Cockpit (`ProjectsPage.tsx`)**: 3-panel layout integrating Forge Pipeline & Prompt History (Left), Living Architecture & Graphify Visualizer & System Logs (Center), and Multi-Tab Inspector with Prisma/Mongoose schemas, 16 active REST endpoints, and git lineage (Right). Zero-fallback live AST indexing.
   - **1-Click AI Prompt Context Bundle**: Generates token-optimized PRD, tech stack, schema, and tasks prompt context formatted for LLM coding agents (Claude, GPT, Cursor).

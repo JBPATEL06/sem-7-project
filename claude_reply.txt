@@ -1,83 +1,44 @@
-# New Architecture Blueprint Adopted & Phased Migration Plan
+# Clarifications on Master MCP Architecture & Service Consolidation
 
-Claude dwara design kiya gaya new folder architecture blueprint bohot clean, modular aur symmetric hai! Isme frontend (`src/features/`) aur backend (`server/modules/`) ek-dusre ko exactly mirror karte hain, cross-cutting concerns `shared/` mein isolated hain, aur `mcp/` + `context-index/` + `chat/` cleanly separate modules hain.
+## 1. Package Size: Pre-Implementation Estimates & Measured Baseline
+Section 4 of `docs/plan/master-mcp-architecture.md` has been updated to explicitly label all post-consolidation figures as **Pre-Implementation Estimates**.
 
-Yeh complete approved blueprint **[`docs/plan/new-architecture-design.md`](file:///d:/Projets/sem-7-project/docs/plan/new-architecture-design.md)** mein save kar diya gaya hai.
+### Actual Measured Baseline (Pre-Implementation):
+- `packages/ai-manager-web/node_modules`: **99.84 MB**
+- Monorepo Root `node_modules`: **404.93 MB**
+- Production Build Output (`packages/ai-manager-web/dist`): **16.07 MB**
 
----
-
-### 🛡️ Phased Execution Plan (Zero Build Breakage Guarantee)
-
-Hum is restructuring ko **4 sequential phases** mein execute karenge, jisme har phase ke baad compilation check (`npx tsc --noEmit`) aur test runs execute honge:
-
-#### Phase 1: Dead Code Pruning & Root Cleanup (First Step)
-- Accidental `packages/.dbci/` delete karna.
-- 11 dead `*Screen.tsx` components delete karna (`src/components/`).
-- Stale server routes delete karna (`server/modules.ts`, `server/contextRoutes.ts`).
-- Dead backup delete karna (`temp/screens_page_backup.tsx`).
-- Duplicate `claude_reply.txt` remove karke single root copy retain karna.
-
-#### Phase 2: Frontend Migration (`src/features/` & `src/shared/`)
-- `src/features/` directory create karke subfolders banana:
-  - `cockpit/` (`ProjectsPage.tsx`, components, hooks)
-  - `graphify/` (canvas, drawer, hooks)
-  - `db-manager/` (`DbManagerPage.tsx`, `ConnectDbModal.tsx`, `useDbManager.ts`)
-  - `diagrams/` (`DiagramsPage.tsx`, `useDiagrams.ts`)
-  - `screens/` (`ScreensPage.tsx`, studio subcomponents, `useScreens.ts`)
-  - `qa/` (`QaPage.tsx`, `useQa.ts`)
-  - `git/` (`GitViewPage.tsx`, git subcomponents, `useGit.ts`)
-  - `auth/` (`LoginPage.tsx`, `RegisterPage.tsx`, `AdminPage.tsx`)
-  - `settings/` (`SettingsPage.tsx`, `useSettings.ts`)
-  - `dashboard/` (`DashboardPage.tsx`, `useDashboard.ts`)
-  - `chat/` (scaffold for new chat)
-- `src/shared/` create karke move karna:
-  - `ui/` (`button`, `card`, `tabs`, `badge`, etc.)
-  - `context/` (`AuthContext`, `ThemeContext`)
-  - `api/` (`client.ts`)
-  - `types/` (`excalidraw.d.ts`)
-  - `components/Layout.tsx`
-- Update all import statements in `App.tsx` and across features.
-- Run `npx tsc --noEmit` to verify 0 errors.
-
-#### Phase 3: Server Migration (`server/modules/` & `server/shared/`)
-- `server/modules/` create karke routes and services migrate karna:
-  - `db/` (`dbRoutes.ts`, `drivers/`)
-  - `diagrams/` (`diagramRoutes.ts`)
-  - `screens/` (`screenRoutes.ts`, `screenAiService.ts`, `screenDiskService.ts`, `screenTypes.ts`)
-  - `qa/` (`qaRoutes.ts`, `qaDiagnosticsService.ts`, `qaAstSafetyService.ts`, `qaTestRunnerService.ts`)
-  - `git/` (`gitRoutes.ts`)
-  - `graphify/` (`graphifyRoutes.ts`, `graphifyService.ts`)
-  - `auth/` (`auth.ts`)
-  - `settings/` (`settingsRoutes.ts`)
-  - `dashboard/` (`dashboardRoutes.ts`)
-  - `projects/` (`projects.ts`)
-  - `admin/` (`adminRoutes.ts`)
-- `server/shared/` create karke move karna:
-  - `middleware/` (`requireAuth`, `requireAdmin`, `localOrAuth`)
-  - `utils/` (`encryption.ts`, `JsonStore.ts`, `IStore.ts`, `RuleEngine.ts`, `logger.ts`)
-- Update `server/index.ts` imports and route mountings.
-- Run test suite to verify 100% passing tests.
-
-#### Phase 4: MCP Wrappers, Context Index & Chat Scaffolding
-- `server/mcp/` implement karna:
-  - `dbTool.ts`, `diagramTool.ts`, `screenTool.ts`, `gitTool.ts`, `qaTool.ts`.
-- `server/context-index/` implement karna:
-  - `indexBuilder.ts` (lightweight listing: path + 1-line summary, zero vector embeddings).
-  - `indexReader.ts` (selective on-demand loader).
-- `server/chat/` implement karna:
-  - `chatRoutes.ts` & `agentService.ts`.
-- `src/features/chat/pages/ChatPage.tsx` mount karna.
+**Commitment**: Immediately following the pruning of `@excalidraw/excalidraw`, `mongoose`, `ioredis`, and `pg`, we will re-run the exact directory size calculation and production bundle build, reporting the verified real numbers.
 
 ---
 
-### Confirmation to Proceed:
-Blueprint approved aur documented hai. Kya hum **Phase 1 (Dead Code & Root Cleanup)** aur **Phase 2 (Frontend Features & Shared Migration)** se start karein?
+## 2. draw.io MCP Implementation Confirmation & Full Raw Response
+- **Remote Host**: `https://mcp.draw.io/mcp`
+- **Implementation**: Official `jgraph/drawio-mcp` (`drawio-mcp-app v1.0.0`), using Streamable HTTP with `mcp-session-id` session management.
+- **Full Raw JSON-RPC Response**: Saved in the workspace at `drawio_tools_raw.json` (62,148 bytes).
+- **Available Tools**:
+  1. `create_diagram`: Accepts either Mermaid (28 supported types) or mxGraphModel XML. Supports `postLayout: "elk"` for layered DAG flows and `routing: "libavoid"` for obstacle-avoiding orthogonal edge routing.
+  2. `search_shapes`: Searches 10,000+ official stencils (AWS, Azure, GCP, Kubernetes, Cisco, BPMN).
 
-```
-STATUS: Fully verified
-COMMAND RUN: none — architecture blueprint documented in docs/plan/new-architecture-design.md
-OUTPUT: Documented target architecture and 4-phase safe execution plan.
-MOCKED/STUBBED PARTS: none
-MISSING FROM ORIGINAL SCOPE: none
-```
-Docs updated: [docs/discussion.md] — Logged Session 66 Approved New Architecture Adoption.
+---
+
+## 3. Cloudflare Named Tunnel & Domain Prerequisites
+- A **Named Tunnel** (`cloudflared tunnel create <NAME>`) requires an owned domain delegated to Cloudflare DNS so that a CNAME record (e.g. `mcp.yourdomain.com`) can be created.
+- **Paths Available**:
+  - **Path 1 (Custom Owned Domain)**: If you or the team already have a domain in Cloudflare, we will configure the tunnel CNAME to point to it. If not, a domain can be purchased via Cloudflare Registrar (~$8–$10/year).
+  - **Path 2 (Zero-Cost Quick Tunnel Fallback)**: For immediate development and zero-cost operation without purchasing a domain, we support Cloudflare **Quick Tunnels** (`cloudflared tunnel --url http://localhost:3000`), generating an instant, free `https://*.trycloudflare.com` URL displayed dynamically in the UI.
+
+---
+
+## 4. Auth Scope Clarification: Data Tables Only vs Full Supabase Auth
+- **Recommendation: DATA TABLES ONLY (Option A)**.
+- **Rationale**: Since the core objective is to package AI Manager as a standalone Electron `.exe` running entirely on the user's PC, binding authentication to Supabase Cloud (`auth.users`) would break **offline capability** (users wouldn't be able to log in without internet access).
+- **Confirmed Structure**:
+  - Keep existing custom bcrypt (10 salt rounds) + JWT Auth & RBAC (`user`/`admin`) with local JSON fallback (`.ai-manager/users.json`).
+  - Migrate **DATA TABLES ONLY** (`projects`, `activity_logs`, `settings`) to Supabase PostgreSQL, linking records to `public.users(id)` instead of `auth.users(id)`.
+  - If you specifically prefer migrating auth credentials to Supabase GoTrue (`auth.users`), we can execute Option B, but Option A is recommended for desktop resilience.
+
+---
+
+## Status
+All 4 points have been integrated into `docs/plan/master-mcp-architecture.md`. Standing by for your final confirmation on the domain choice and Auth scope (Option A vs B) to begin implementation.

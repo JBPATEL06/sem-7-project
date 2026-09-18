@@ -2511,3 +2511,63 @@
 
 
 
+
+## [2026-09-18] Session 67: Execution & Verification of Phase 1 & Phase 2 Migration
+
+**What was discussed:**
+- Full execution of Phase 1 (Dead code, redundant caches, dead mockup screens, dead server routes) and Phase 2 (Frontend feature-based migration into `src/features/` and `src/shared/`).
+- Preservation check for `temp/screens_page_backup.tsx`: verified differences with `backup/figma-custom-canvas`, preserved as `ScreensPage_alt_backup.tsx` and pushed to remote branch before deletion.
+- Integration of barrel exports (`index.ts`) in each feature folder for clean `@/features/...` imports.
+- TypeScript compiler (`tsc --noEmit`) and test suite verification prior to touching Phase 3.
+
+**Decisions made:**
+- Preserved `ScreensPage_alt_backup.tsx` on `backup/figma-custom-canvas` to guarantee 100% code preservation before deleting `temp/screens_page_backup.tsx`.
+- Configured path aliases `@/*` -> `src/*` in `tsconfig.json` and `vite.config.ts`.
+- Migrated all 11 features into `src/features/` (`cockpit`, `graphify`, `db-manager`, `diagrams`, `screens`, `qa`, `git`, `auth`, `settings`, `dashboard`, `chat`), each with an `index.ts` barrel.
+- Migrated UI primitives, context providers, API client, types, and Layout into `src/shared/`.
+- Rewrote `App.tsx` and `main.tsx` to consume feature barrels and shared components.
+- Integrated AI Chat entry point (`/chat`) in `App.tsx` and `Layout.tsx`.
+- Purged legacy folders `src/pages/`, `src/components/`, `src/hooks/`, `src/context/`, `src/api/`, `src/types/`.
+
+**Changes made to code/project:**
+- Deleted `packages/.dbci/` and `temp/screens_page_backup.tsx`.
+- Deleted 11 dead `*Screen.tsx` mockup components and 3 dead server files (`modules.ts`, `contextRoutes.ts`, `testDbGapFixes.ts`).
+- Created `packages/ai-manager-web/src/shared/` and `packages/ai-manager-web/src/features/`.
+- Updated `App.tsx`, `main.tsx`, and all feature components to use clean path aliases.
+- Updated `tests/screensUi.test.ts` to test OpenPencil screens models instead of deleted custom canvas.
+- Updated `docs/progress.md` and `docs/discussion.md`.
+
+**Open questions / follow-ups:**
+- Phase 1 and Phase 2 are complete with 0 TypeScript errors and 29/29 tests passing.
+- Ready to proceed to Phase 3 (Server Modularization into `server/modules/` and `server/shared/`) upon confirmation.
+
+## [2026-09-18] Session 68: Phase 3 Execution & Verification (Server Modularization)
+
+**What was discussed:**
+- Full implementation and verification of Phase 3 (Server Modularization into `server/modules/` and `server/shared/`).
+- Domain-driven isolation of all backend route handlers and services into dedicated feature folders with barrel exports.
+- Extraction of cross-cutting middleware and utilities into `server/shared/` (`middleware/`, `utils/`, `workspace.ts`).
+- Clean rewrite of `server/index.ts` to import purely from `./modules/index.js`.
+- Clean deletion of all legacy flat route files and old subdirectories in `server/`.
+- Full verification gate: running `npx tsc --noEmit` and the complete Vitest test suite (`npm test`).
+
+**Decisions made:**
+- Modularized `server/` into 11 domain modules: `auth/`, `admin/`, `projects/`, `db/` (with `drivers/`), `diagrams/`, `screens/` (with `figExporter`, `screenAiService`, `screenDiskService`, `mcpService`, `screenTypes`), `qa/` (with `qaDiagnosticsService`, `qaAstSafetyService`, `qaTestRunnerService`), `git/`, `graphify/` (with `graphifyService`, `flowAuditRoutes`), `settings/`, `dashboard/`.
+- Each module provides an `index.ts` barrel cleanly exporting its router and public helpers.
+- Extracted shared `getWorkspaceRootDir` into `server/shared/utils/workspace.ts` with robust monorepo root detection, eliminating duplicate definitions across modules.
+- Updated `server/index.ts` to cleanly mount all routers from `./modules/index.js`.
+- Purged 14 legacy route files (`adminRoutes.ts`, `auth.ts`, `dashboardRoutes.ts`, `dbRoutes.ts`, `diagramRoutes.ts`, `figExporter.ts`, `flowAuditRoutes.ts`, `generateContextFig.ts`, `gitRoutes.ts`, `graphifyRoutes.ts`, `projects.ts`, `qaRoutes.ts`, `screenRoutes.ts`, `settingsRoutes.ts`) and 5 legacy directories (`drivers/`, `graphify/`, `qa/`, `screens/`, `utils/`).
+- Updated all test suites in `tests/` to target new modular locations.
+
+**Changes made to code/project:**
+- Created `server/shared/middleware/` and `server/shared/utils/` with `workspace.ts` and barrel exports.
+- Created `server/modules/` with 11 domain modules and top-level `server/modules/index.ts`.
+- Rewrote `server/index.ts` to mount routers from `./modules/index.js`.
+- Deleted redundant flat server files and directories.
+- Updated `tests/auth.test.ts`, `tests/dbServices.test.ts`, `tests/flowAudit.test.ts`, `tests/qaSystem.test.ts`, and `tests/stitchAi.test.ts`.
+- Updated `docs/progress.md` and `docs/discussion.md`.
+- Verified compilation: `npx tsc --noEmit` exited with code 0 (zero errors).
+- Verified test suite: `npm test` exited with code 0 (7/7 test suites passed, 29/29 tests passed).
+
+**Open questions / follow-ups:**
+- Phase 3 is fully verified and complete. Ready to proceed to Phase 4 (MCP tools, context-index, chat backend) upon user confirmation.

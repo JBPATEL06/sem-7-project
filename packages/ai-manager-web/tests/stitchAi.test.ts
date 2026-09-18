@@ -1,7 +1,7 @@
 import { describe, it, expect } from 'vitest';
 import express from 'express';
-import { screenRouter } from '../server/screenRoutes.js';
-import { diagramRouter } from '../server/diagramRoutes.js';
+import { screenRouter } from '../server/modules/screens/screenRoutes.js';
+import { diagramRouter } from '../server/modules/diagrams/diagramRoutes.js';
 import fs from 'fs';
 import path from 'path';
 

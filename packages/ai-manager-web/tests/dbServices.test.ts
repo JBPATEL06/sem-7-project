@@ -1,7 +1,7 @@
 import { describe, it, expect } from 'vitest';
-import { maskUri, safeDecryptUri } from '../server/dbRoutes.js';
-import { parseRedisCommandLine } from '../server/drivers/redisDriver.js';
-import { encrypt } from '../server/utils/encryption.js';
+import { maskUri, safeDecryptUri } from '../server/modules/db/dbRoutes.js';
+import { parseRedisCommandLine } from '../server/modules/db/drivers/redisDriver.js';
+import { encrypt } from '../server/shared/utils/encryption.js';
 
 describe('Database Services & Driver Utility Tests', () => {
   it('1. maskUri correctly hides passwords and usernames', () => {
@@ -36,18 +36,18 @@ describe('Database Services & Driver Utility Tests', () => {
   });
 
   it('4. syncDiskDiagramsToStore auto-discovers .excalidraw files from diagrams/ folder', async () => {
-    const { syncDiskDiagramsToStore } = await import('../server/diagramRoutes.js');
+    const { syncDiskDiagramsToStore } = await import('../server/modules/diagrams/diagramRoutes.js');
     await syncDiskDiagramsToStore('acme-api', 'usr_admin_default');
   });
 
   it('5. syncDiskScreensToStore auto-discovers layout specs from ui/ folder', async () => {
-    const { syncDiskScreensToStore } = await import('../server/screenRoutes.js');
+    const { syncDiskScreensToStore } = await import('../server/modules/screens/screenRoutes.js');
     await syncDiskScreensToStore('acme-api', 'usr_admin_default');
   });
 
   it('6. GET /api/db/export generates valid SQL DDL export', async () => {
     const express = (await import('express')).default;
-    const { dbRouter } = await import('../server/dbRoutes.js');
+    const { dbRouter } = await import('../server/modules/db/dbRoutes.js');
     const app = express();
     app.use(express.json());
     app.use('/api/db', dbRouter);
@@ -69,7 +69,7 @@ describe('Database Services & Driver Utility Tests', () => {
 
   it('7. POST /api/db/import executes SQL DDL schema import', async () => {
     const express = (await import('express')).default;
-    const { dbRouter } = await import('../server/dbRoutes.js');
+    const { dbRouter } = await import('../server/modules/db/dbRoutes.js');
     const app = express();
     app.use(express.json());
     app.use('/api/db', dbRouter);
@@ -97,7 +97,7 @@ describe('Database Services & Driver Utility Tests', () => {
 
   it('8. POST /api/db/query returns structured pagination metadata', async () => {
     const express = (await import('express')).default;
-    const { dbRouter } = await import('../server/dbRoutes.js');
+    const { dbRouter } = await import('../server/modules/db/dbRoutes.js');
     const app = express();
     app.use(express.json());
     app.use('/api/db', dbRouter);
@@ -129,7 +129,7 @@ describe('Database Services & Driver Utility Tests', () => {
   });
 
   it('9. sanitizeProjectId strips path traversal characters and resolves to clean slug', async () => {
-    const { sanitizeProjectId } = await import('../server/dbRoutes.js');
+    const { sanitizeProjectId } = await import('../server/modules/db/dbRoutes.js');
     expect(sanitizeProjectId('../../etc/cron.d/malicious')).toBe('etccrondmalicious');
     expect(sanitizeProjectId('..\\..\\windows\\system32')).toBe('windowssystem32');
     expect(sanitizeProjectId('valid-project_123')).toBe('valid-project_123');
@@ -138,7 +138,7 @@ describe('Database Services & Driver Utility Tests', () => {
   });
 
   it('10. withProjectLock safely handles concurrent writes to SQLite database', async () => {
-    const { withProjectLock, dbRouter } = await import('../server/dbRoutes.js');
+    const { withProjectLock, dbRouter } = await import('../server/modules/db/dbRoutes.js');
     const express = (await import('express')).default;
     const app = express();
     app.use(express.json());

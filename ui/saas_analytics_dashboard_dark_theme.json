@@ -1,19 +1,19 @@
 {
-  "id": "screen_stitch_1789641782527_kejik",
+  "id": "screen_stitch_1789713833056_qnqax",
   "projectId": "global",
   "userId": "local-dev-user",
   "name": "SaaS Analytics Dashboard – Dark Theme",
-  "description": "Dashboard with four KPI cards, a live chart area, and a schema migration table.",
+  "description": "Dashboard with four KPI cards, a live chart, and a schema migration table for a modern SaaS analytics view.",
   "theme": {
     "primaryColor": "#7c3aed",
     "backgroundColor": "#0a0e17",
     "surfaceColor": "#131b2e",
     "textColor": "#f8fafc",
     "accentColor": "#7c3aed",
-    "borderRadius": 12
+    "borderRadius": 8
   },
   "board": {
-    "id": "board_screen_stitch_1789641782527_kejik",
+    "id": "board_screen_stitch_1789713833056_qnqax",
     "name": "SaaS Analytics Dashboard – Dark Theme Canvas",
     "x": 0,
     "y": 0,
@@ -22,216 +22,12 @@
     "background": "#0a0e17",
     "components": [
       {
-        "id": "kpi0",
-        "name": "KPI Card – Total Users",
-        "type": "frame",
-        "x": 40,
-        "y": 120,
-        "width": 300,
-        "height": 180,
-        "fills": [
-          {
-            "fillColor": "#131b2e",
-            "opacity": 1
-          }
-        ],
-        "strokes": [],
-        "borderRadius": 12,
-        "children": [
-          {
-            "id": "kpi0_title",
-            "name": "KPI Title",
-            "type": "text",
-            "x": 16,
-            "y": 16,
-            "width": 268,
-            "height": 20,
-            "fills": [],
-            "strokes": [],
-            "borderRadius": 0,
-            "text": "Total Users",
-            "fontSize": 14,
-            "fontWeight": "normal",
-            "color": "#94a3b8"
-          },
-          {
-            "id": "kpi0_value",
-            "name": "KPI Value",
-            "type": "text",
-            "x": 16,
-            "y": 60,
-            "width": 268,
-            "height": 40,
-            "fills": [],
-            "strokes": [],
-            "borderRadius": 0,
-            "text": "12,345",
-            "fontSize": 32,
-            "fontWeight": "normal",
-            "color": "#f8fafc"
-          }
-        ]
-      },
-      {
         "id": "kpi1",
-        "name": "KPI Card – Active Sessions",
-        "type": "frame",
-        "x": 360,
-        "y": 120,
-        "width": 300,
-        "height": 180,
-        "fills": [
-          {
-            "fillColor": "#131b2e",
-            "opacity": 1
-          }
-        ],
-        "strokes": [],
-        "borderRadius": 12,
-        "children": [
-          {
-            "id": "kpi1_title",
-            "name": "KPI Title",
-            "type": "text",
-            "x": 16,
-            "y": 16,
-            "width": 268,
-            "height": 20,
-            "fills": [],
-            "strokes": [],
-            "borderRadius": 0,
-            "text": "Active Sessions",
-            "fontSize": 14,
-            "fontWeight": "normal",
-            "color": "#94a3b8"
-          },
-          {
-            "id": "kpi1_value",
-            "name": "KPI Value",
-            "type": "text",
-            "x": 16,
-            "y": 60,
-            "width": 268,
-            "height": 40,
-            "fills": [],
-            "strokes": [],
-            "borderRadius": 0,
-            "text": "3,210",
-            "fontSize": 32,
-            "fontWeight": "normal",
-            "color": "#f8fafc"
-          }
-        ]
-      },
-      {
-        "id": "kpi2",
-        "name": "KPI Card – Revenue",
-        "type": "frame",
-        "x": 680,
-        "y": 120,
-        "width": 300,
-        "height": 180,
-        "fills": [
-          {
-            "fillColor": "#131b2e",
-            "opacity": 1
-          }
-        ],
-        "strokes": [],
-        "borderRadius": 12,
-        "children": [
-          {
-            "id": "kpi2_title",
-            "name": "KPI Title",
-            "type": "text",
-            "x": 16,
-            "y": 16,
-            "width": 268,
-            "height": 20,
-            "fills": [],
-            "strokes": [],
-            "borderRadius": 0,
-            "text": "Monthly Revenue",
-            "fontSize": 14,
-            "fontWeight": "normal",
-            "color": "#94a3b8"
-          },
-          {
-            "id": "kpi2_value",
-            "name": "KPI Value",
-            "type": "text",
-            "x": 16,
-            "y": 60,
-            "width": 268,
-            "height": 40,
-            "fills": [],
-            "strokes": [],
-            "borderRadius": 0,
-            "text": "$84,560",
-            "fontSize": 32,
-            "fontWeight": "normal",
-            "color": "#f8fafc"
-          }
-        ]
-      },
-      {
-        "id": "kpi3",
-        "name": "KPI Card – Errors Today",
+        "name": "Revenue KPI",
         "type": "frame",
         "x": 40,
-        "y": 380,
+        "y": 120,
         "width": 300,
-        "height": 180,
-        "fills": [
-          {
-            "fillColor": "#131b2e",
-            "opacity": 1
-          }
-        ],
-        "strokes": [],
-        "borderRadius": 12,
-        "children": [
-          {
-            "id": "kpi3_title",
-            "name": "KPI Title",
-            "type": "text",
-            "x": 16,
-            "y": 16,
-            "width": 268,
-            "height": 20,
-            "fills": [],
-            "strokes": [],
-            "borderRadius": 0,
-            "text": "Errors Today",
-            "fontSize": 14,
-            "fontWeight": "normal",
-            "color": "#94a3b8"
-          },
-          {
-            "id": "kpi3_value",
-            "name": "KPI Value",
-            "type": "text",
-            "x": 16,
-            "y": 60,
-            "width": 268,
-            "height": 40,
-            "fills": [],
-            "strokes": [],
-            "borderRadius": 0,
-            "text": "27",
-            "fontSize": 32,
-            "fontWeight": "normal",
-            "color": "#f8fafc"
-          }
-        ]
-      },
-      {
-        "id": "chart",
-        "name": "Live Analytics Chart",
-        "type": "frame",
-        "x": 40,
-        "y": 580,
-        "width": 1360,
         "height": 200,
         "fills": [
           {
@@ -240,34 +36,67 @@
           }
         ],
         "strokes": [],
-        "borderRadius": 12,
+        "borderRadius": 8,
         "children": [
           {
-            "id": "chart_placeholder",
-            "name": "Chart Placeholder",
-            "type": "text",
-            "x": 20,
-            "y": 80,
-            "width": 1320,
-            "height": 40,
+            "id": "kpi1_title",
+            "name": "Title",
+            "type": "frame",
+            "x": 16,
+            "y": 16,
+            "width": 120,
+            "height": 24,
             "fills": [],
             "strokes": [],
             "borderRadius": 0,
-            "text": "[Live Chart Rendering Here]",
-            "fontSize": 18,
+            "text": "Revenue",
+            "fontSize": 16,
             "fontWeight": "normal",
-            "color": "#94a3b8"
+            "color": "#f8fafc"
+          },
+          {
+            "id": "kpi1_value",
+            "name": "Value",
+            "type": "frame",
+            "x": 16,
+            "y": 56,
+            "width": 200,
+            "height": 36,
+            "fills": [],
+            "strokes": [],
+            "borderRadius": 0,
+            "text": "$1.2M",
+            "fontSize": 32,
+            "fontWeight": "normal",
+            "color": "#f8fafc"
+          },
+          {
+            "id": "kpi1_icon",
+            "name": "Icon",
+            "type": "frame",
+            "x": 240,
+            "y": 16,
+            "width": 48,
+            "height": 48,
+            "fills": [
+              {
+                "fillColor": "#7c3aed",
+                "opacity": 1
+              }
+            ],
+            "strokes": [],
+            "borderRadius": 8
           }
         ]
       },
       {
-        "id": "table",
-        "name": "Schema Migration Table",
+        "id": "kpi2",
+        "name": "Active Users KPI",
         "type": "frame",
-        "x": 40,
-        "y": 800,
-        "width": 1360,
-        "height": 80,
+        "x": 360,
+        "y": 120,
+        "width": 300,
+        "height": 200,
         "fills": [
           {
             "fillColor": "#131b2e",
@@ -275,37 +104,389 @@
           }
         ],
         "strokes": [],
-        "borderRadius": 12,
+        "borderRadius": 8,
         "children": [
           {
-            "id": "table_header",
-            "name": "Table Header",
-            "type": "text",
-            "x": 20,
-            "y": 12,
-            "width": 1320,
+            "id": "kpi2_title",
+            "name": "Title",
+            "type": "frame",
+            "x": 16,
+            "y": 16,
+            "width": 140,
+            "height": 24,
+            "fills": [],
+            "strokes": [],
+            "borderRadius": 0,
+            "text": "Active Users",
+            "fontSize": 16,
+            "fontWeight": "normal",
+            "color": "#f8fafc"
+          },
+          {
+            "id": "kpi2_value",
+            "name": "Value",
+            "type": "frame",
+            "x": 16,
+            "y": 56,
+            "width": 200,
+            "height": 36,
+            "fills": [],
+            "strokes": [],
+            "borderRadius": 0,
+            "text": "8,342",
+            "fontSize": 32,
+            "fontWeight": "normal",
+            "color": "#f8fafc"
+          },
+          {
+            "id": "kpi2_icon",
+            "name": "Icon",
+            "type": "frame",
+            "x": 240,
+            "y": 16,
+            "width": 48,
+            "height": 48,
+            "fills": [
+              {
+                "fillColor": "#7c3aed",
+                "opacity": 1
+              }
+            ],
+            "strokes": [],
+            "borderRadius": 8
+          }
+        ]
+      },
+      {
+        "id": "kpi3",
+        "name": "Sessions KPI",
+        "type": "frame",
+        "x": 680,
+        "y": 120,
+        "width": 300,
+        "height": 200,
+        "fills": [
+          {
+            "fillColor": "#131b2e",
+            "opacity": 1
+          }
+        ],
+        "strokes": [],
+        "borderRadius": 8,
+        "children": [
+          {
+            "id": "kpi3_title",
+            "name": "Title",
+            "type": "frame",
+            "x": 16,
+            "y": 16,
+            "width": 100,
+            "height": 24,
+            "fills": [],
+            "strokes": [],
+            "borderRadius": 0,
+            "text": "Sessions",
+            "fontSize": 16,
+            "fontWeight": "normal",
+            "color": "#f8fafc"
+          },
+          {
+            "id": "kpi3_value",
+            "name": "Value",
+            "type": "frame",
+            "x": 16,
+            "y": 56,
+            "width": 200,
+            "height": 36,
+            "fills": [],
+            "strokes": [],
+            "borderRadius": 0,
+            "text": "23,764",
+            "fontSize": 32,
+            "fontWeight": "normal",
+            "color": "#f8fafc"
+          },
+          {
+            "id": "kpi3_icon",
+            "name": "Icon",
+            "type": "frame",
+            "x": 240,
+            "y": 16,
+            "width": 48,
+            "height": 48,
+            "fills": [
+              {
+                "fillColor": "#7c3aed",
+                "opacity": 1
+              }
+            ],
+            "strokes": [],
+            "borderRadius": 8
+          }
+        ]
+      },
+      {
+        "id": "kpi4",
+        "name": "Conversion Rate KPI",
+        "type": "frame",
+        "x": 40,
+        "y": 380,
+        "width": 300,
+        "height": 200,
+        "fills": [
+          {
+            "fillColor": "#131b2e",
+            "opacity": 1
+          }
+        ],
+        "strokes": [],
+        "borderRadius": 8,
+        "children": [
+          {
+            "id": "kpi4_title",
+            "name": "Title",
+            "type": "frame",
+            "x": 16,
+            "y": 16,
+            "width": 180,
+            "height": 24,
+            "fills": [],
+            "strokes": [],
+            "borderRadius": 0,
+            "text": "Conversion Rate",
+            "fontSize": 16,
+            "fontWeight": "normal",
+            "color": "#f8fafc"
+          },
+          {
+            "id": "kpi4_value",
+            "name": "Value",
+            "type": "frame",
+            "x": 16,
+            "y": 56,
+            "width": 200,
+            "height": 36,
+            "fills": [],
+            "strokes": [],
+            "borderRadius": 0,
+            "text": "4.7%",
+            "fontSize": 32,
+            "fontWeight": "normal",
+            "color": "#f8fafc"
+          },
+          {
+            "id": "kpi4_icon",
+            "name": "Icon",
+            "type": "frame",
+            "x": 240,
+            "y": 16,
+            "width": 48,
+            "height": 48,
+            "fills": [
+              {
+                "fillColor": "#7c3aed",
+                "opacity": 1
+              }
+            ],
+            "strokes": [],
+            "borderRadius": 8
+          }
+        ]
+      },
+      {
+        "id": "liveChart",
+        "name": "Live Traffic Chart",
+        "type": "frame",
+        "x": 360,
+        "y": 380,
+        "width": 560,
+        "height": 260,
+        "fills": [
+          {
+            "fillColor": "#131b2e",
+            "opacity": 1
+          }
+        ],
+        "strokes": [],
+        "borderRadius": 8,
+        "children": [
+          {
+            "id": "liveChart_title",
+            "name": "Title",
+            "type": "frame",
+            "x": 16,
+            "y": 16,
+            "width": 200,
+            "height": 24,
+            "fills": [],
+            "strokes": [],
+            "borderRadius": 0,
+            "text": "Real-time Traffic",
+            "fontSize": 18,
+            "fontWeight": "normal",
+            "color": "#f8fafc"
+          },
+          {
+            "id": "liveChart_area",
+            "name": "Chart Area",
+            "type": "frame",
+            "x": 16,
+            "y": 56,
+            "width": 528,
+            "height": 180,
+            "fills": [
+              {
+                "fillColor": "#0f172a",
+                "opacity": 1
+              }
+            ],
+            "strokes": [],
+            "borderRadius": 4
+          }
+        ]
+      },
+      {
+        "id": "migrationTable",
+        "name": "Schema Migration Table",
+        "type": "frame",
+        "x": 680,
+        "y": 380,
+        "width": 560,
+        "height": 260,
+        "fills": [
+          {
+            "fillColor": "#131b2e",
+            "opacity": 1
+          }
+        ],
+        "strokes": [],
+        "borderRadius": 8,
+        "children": [
+          {
+            "id": "migrationTable_title",
+            "name": "Title",
+            "type": "frame",
+            "x": 16,
+            "y": 16,
+            "width": 240,
+            "height": 24,
+            "fills": [],
+            "strokes": [],
+            "borderRadius": 0,
+            "text": "Schema Migration",
+            "fontSize": 18,
+            "fontWeight": "normal",
+            "color": "#f8fafc"
+          },
+          {
+            "id": "migrationTable_header_id",
+            "name": "Header ID",
+            "type": "frame",
+            "x": 16,
+            "y": 56,
+            "width": 40,
             "height": 20,
             "fills": [],
             "strokes": [],
             "borderRadius": 0,
-            "text": "Migration ID | Status | Started | Completed",
+            "text": "ID",
             "fontSize": 14,
             "fontWeight": "normal",
             "color": "#94a3b8"
           },
           {
-            "id": "table_row1",
-            "name": "Table Row 1",
-            "type": "text",
-            "x": 20,
-            "y": 40,
-            "width": 1320,
+            "id": "migrationTable_header_status",
+            "name": "Header Status",
+            "type": "frame",
+            "x": 96,
+            "y": 56,
+            "width": 80,
             "height": 20,
             "fills": [],
             "strokes": [],
             "borderRadius": 0,
-            "text": "001 | Success | 02:15 | 02:45",
-            "fontSize": 13,
+            "text": "Status",
+            "fontSize": 14,
+            "fontWeight": "normal",
+            "color": "#94a3b8"
+          },
+          {
+            "id": "migrationTable_header_started",
+            "name": "Header Started",
+            "type": "frame",
+            "x": 200,
+            "y": 56,
+            "width": 100,
+            "height": 20,
+            "fills": [],
+            "strokes": [],
+            "borderRadius": 0,
+            "text": "Started",
+            "fontSize": 14,
+            "fontWeight": "normal",
+            "color": "#94a3b8"
+          },
+          {
+            "id": "migrationTable_header_duration",
+            "name": "Header Duration",
+            "type": "frame",
+            "x": 320,
+            "y": 56,
+            "width": 80,
+            "height": 20,
+            "fills": [],
+            "strokes": [],
+            "borderRadius": 0,
+            "text": "Duration",
+            "fontSize": 14,
+            "fontWeight": "normal",
+            "color": "#94a3b8"
+          },
+          {
+            "id": "migrationTable_row1_id",
+            "name": "Row1 ID",
+            "type": "frame",
+            "x": 16,
+            "y": 84,
+            "width": 40,
+            "height": 20,
+            "fills": [],
+            "strokes": [],
+            "borderRadius": 0,
+            "text": "001",
+            "fontSize": 14,
+            "fontWeight": "normal",
+            "color": "#f8fafc"
+          },
+          {
+            "id": "migrationTable_row1_status",
+            "name": "Row1 Status",
+            "type": "frame",
+            "x": 96,
+            "y": 84,
+            "width": 80,
+            "height": 20,
+            "fills": [],
+            "strokes": [],
+            "borderRadius": 0,
+            "text": "Completed",
+            "fontSize": 14,
+            "fontWeight": "normal",
+            "color": "#f8fafc"
+          },
+          {
+            "id": "migrationTable_row1_started",
+            "name": "Row1 Started",
+            "type": "frame",
+            "x": 200,
+            "y": 84,
+            "width": 100,
+            "height": 20,
+            "fills": [],
+            "strokes": [],
+            "borderRadius": 0,
+            "text": "2023-08-01",
+            "fontSize": 14,
             "fontWeight": "normal",
             "color": "#f8fafc"
           }
@@ -315,16 +496,16 @@
   },
   "chatHistory": [
     {
-      "id": "msg_u_1789641782527",
+      "id": "msg_u_1789713833056",
       "role": "user",
       "text": "Modern SaaS Analytics dashboard with 4 KPI cards, live chart, and schema migration table",
-      "timestamp": "2026-09-17T10:43:02.527Z"
+      "timestamp": "2026-09-18T06:43:53.056Z"
     },
     {
-      "id": "msg_a_1789641782527",
+      "id": "msg_a_1789713833056",
       "role": "assistant",
-      "text": "Dashboard with four KPI cards, a live chart area, and a schema migration table.",
-      "timestamp": "2026-09-17T10:43:02.527Z",
+      "text": "Dashboard with four KPI cards, a live chart, and a schema migration table for a modern SaaS analytics view.",
+      "timestamp": "2026-09-18T06:43:53.056Z",
       "stepsCount": 6,
       "changesSummary": "Synthesized 6 components using Design model (Groq 120B) (openai/gpt-oss-120b)",
       "metadata": {
@@ -334,6 +515,6 @@
       }
     }
   ],
-  "createdAt": "2026-09-17T10:43:02.527Z",
-  "updatedAt": "2026-09-17T10:43:02.527Z"
+  "createdAt": "2026-09-18T06:43:53.056Z",
+  "updatedAt": "2026-09-18T06:43:53.056Z"
 }

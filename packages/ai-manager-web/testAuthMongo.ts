@@ -1,4 +1,3 @@
-import fetch from 'node-fetch';
 import mongoose from 'mongoose';
 import * as dotenv from 'dotenv';
 import { resolve } from 'path';

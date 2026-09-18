@@ -1,7 +1,7 @@
 import { describe, it, expect } from 'vitest';
-import { runDiagnostics } from '../server/qa/qaDiagnosticsService.js';
-import { listTestSuites, runTestSuites } from '../server/qa/qaTestRunnerService.js';
-import { runAstSafetyScan } from '../server/qa/qaAstSafetyService.js';
+import { runDiagnostics } from '../server/modules/qa/qaDiagnosticsService.js';
+import { listTestSuites, runTestSuites } from '../server/modules/qa/qaTestRunnerService.js';
+import { runAstSafetyScan } from '../server/modules/qa/qaAstSafetyService.js';
 
 describe('QA & Diagnostics System', () => {
   it('runs schema diagnostics and returns health score & issues', async () => {

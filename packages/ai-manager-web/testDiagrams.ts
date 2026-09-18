@@ -2,13 +2,7 @@ import express from 'express';
 import * as dotenv from 'dotenv';
 import path from 'path';
 import fs from 'fs';
-import fetch from 'node-fetch';
-import { fileURLToPath } from 'url';
-
-const __dirname = path.dirname(fileURLToPath(import.meta.url));
-dotenv.config({ path: path.resolve(__dirname, '.env') });
-
-import { diagramRouter } from './server/diagramRoutes.js';
+import { diagramRouter } from './server/modules/diagrams/index.js';
 
 async function runDiagramVerificationTests() {
   console.log('====================================================');

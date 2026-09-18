@@ -1,8 +1,8 @@
 import { describe, it, expect, beforeAll, afterAll } from 'vitest';
 import express from 'express';
 import http from 'http';
-import { authRouter, verifyToken, generateToken } from '../server/auth.js';
-import { projectsRouter } from '../server/projects.js';
+import { authRouter, verifyToken, generateToken } from '../server/modules/auth/auth.js';
+import { projectsRouter } from '../server/modules/projects/projects.js';
 
 let PORT = 0;
 let server: http.Server;
