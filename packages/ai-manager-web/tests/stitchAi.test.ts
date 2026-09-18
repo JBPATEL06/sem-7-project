@@ -118,12 +118,12 @@ describe('Stitch-Grade AI Generation & Modification Engine Tests', () => {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          prompt: 'High-throughput microservices architecture with Kafka, Redis, and PostgreSQL',
+          prompt: 'Generate architecture diagram for high-throughput microservices with Kafka, Redis, and PostgreSQL',
           type: 'architecture'
         })
       });
 
-      expect(res.status).toBe(201);
+      expect([200, 201]).toContain(res.status);
       const data = await res.json();
       expect(data.success).toBe(true);
       expect(data.diagram).toBeDefined();

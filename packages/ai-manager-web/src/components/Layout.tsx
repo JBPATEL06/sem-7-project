@@ -81,13 +81,12 @@ export const Layout: React.FC<LayoutProps> = ({
 
   const baseNavItems: { id: NavRoute; label: string; icon: React.FC<{ className?: string }> }[] = [
     { id: 'dashboard', label: 'Home', icon: Home },
-    { id: 'projects', label: 'Projects', icon: LayoutGrid },
+    { id: 'projects', label: 'Context Cockpit', icon: LayoutGrid },
     { id: 'db-manager', label: 'DB Manager', icon: Database },
-    { id: 'diagrams', label: 'Diagrams', icon: Layers },
-    { id: 'screens', label: 'Screens Studio', icon: Monitor },
-    { id: 'qa', label: 'QA', icon: ShieldCheck },
-    { id: 'flow-audit', label: 'Flow Audit', icon: GitBranch },
-    { id: 'git-view', label: 'Git View', icon: GitCommitHorizontal },
+    { id: 'diagrams', label: 'Diagrams Studio', icon: Layers },
+    { id: 'screens', label: 'OpenPencil Studio', icon: Monitor },
+    { id: 'qa', label: 'QA Diagnostics', icon: ShieldCheck },
+    { id: 'git-view', label: 'Git Lineage', icon: GitCommitHorizontal },
     { id: 'settings', label: 'Settings', icon: SettingsIcon }
   ];
 

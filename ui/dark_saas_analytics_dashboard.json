@@ -1,0 +1,377 @@
+{
+  "id": "screen_stitch_1789637794677_fg5gi",
+  "projectId": "acme-api",
+  "userId": "local-dev-user",
+  "name": "Dark SaaS Analytics Dashboard",
+  "description": "A modern dark‑mode dashboard with three main panels: Revenue chart, User conversion stats, and Recent activities.",
+  "board": {
+    "id": "board_screen_stitch_1789637794677_fg5gi",
+    "name": "Dark SaaS Analytics Dashboard Canvas",
+    "x": 0,
+    "y": 0,
+    "width": 1440,
+    "height": 900,
+    "background": "#0a0e17",
+    "components": [
+      {
+        "id": "bg",
+        "name": "Background",
+        "type": "frame",
+        "x": 0,
+        "y": 0,
+        "width": 1440,
+        "height": 900,
+        "fills": [
+          {
+            "fillColor": "#0a0e17",
+            "opacity": 1
+          }
+        ],
+        "strokes": [],
+        "borderRadius": 0,
+        "text": "",
+        "fontSize": 0,
+        "fontWeight": "normal",
+        "color": "#0a0e17",
+        "children": []
+      },
+      {
+        "id": "revChart",
+        "name": "Revenue Chart Card",
+        "type": "frame",
+        "x": 40,
+        "y": 40,
+        "width": 440,
+        "height": 360,
+        "fills": [
+          {
+            "fillColor": "#131b2e",
+            "opacity": 1
+          }
+        ],
+        "strokes": [],
+        "borderRadius": 12,
+        "text": "",
+        "fontSize": 0,
+        "fontWeight": "normal",
+        "color": "#f8fafc",
+        "children": [
+          {
+            "id": "revTitle",
+            "name": "Card Title",
+            "type": "frame",
+            "x": 20,
+            "y": 20,
+            "width": 400,
+            "height": 28,
+            "fills": [],
+            "strokes": [],
+            "borderRadius": 0,
+            "text": "Revenue (Last 30 Days)",
+            "fontSize": 20,
+            "fontWeight": "normal",
+            "color": "#f8fafc",
+            "children": []
+          },
+          {
+            "id": "revChartPlaceholder",
+            "name": "Chart Placeholder",
+            "type": "frame",
+            "x": 20,
+            "y": 60,
+            "width": 400,
+            "height": 240,
+            "fills": [
+              {
+                "fillColor": "#0f172a",
+                "opacity": 1
+              }
+            ],
+            "strokes": [
+              {
+                "strokeColor": "#7c3aed",
+                "strokeWidth": 2
+              }
+            ],
+            "borderRadius": 8,
+            "text": "[Chart]",
+            "fontSize": 16,
+            "fontWeight": "normal",
+            "color": "#94a3b8",
+            "children": []
+          },
+          {
+            "id": "revTotal",
+            "name": "Total Revenue",
+            "type": "frame",
+            "x": 20,
+            "y": 310,
+            "width": 400,
+            "height": 28,
+            "fills": [],
+            "strokes": [],
+            "borderRadius": 0,
+            "text": "$124,560 • +12% vs last month",
+            "fontSize": 16,
+            "fontWeight": "normal",
+            "color": "#7c3aed",
+            "children": []
+          }
+        ]
+      },
+      {
+        "id": "convStats",
+        "name": "User Conversion Stats Card",
+        "type": "frame",
+        "x": 520,
+        "y": 40,
+        "width": 440,
+        "height": 360,
+        "fills": [
+          {
+            "fillColor": "#131b2e",
+            "opacity": 1
+          }
+        ],
+        "strokes": [],
+        "borderRadius": 12,
+        "text": "",
+        "fontSize": 0,
+        "fontWeight": "normal",
+        "color": "#f8fafc",
+        "children": [
+          {
+            "id": "convTitle",
+            "name": "Card Title",
+            "type": "frame",
+            "x": 20,
+            "y": 20,
+            "width": 400,
+            "height": 28,
+            "fills": [],
+            "strokes": [],
+            "borderRadius": 0,
+            "text": "User Conversion Funnel",
+            "fontSize": 20,
+            "fontWeight": "normal",
+            "color": "#f8fafc",
+            "children": []
+          },
+          {
+            "id": "convStat1",
+            "name": "Stat Item",
+            "type": "frame",
+            "x": 20,
+            "y": 70,
+            "width": 400,
+            "height": 40,
+            "fills": [],
+            "strokes": [],
+            "borderRadius": 0,
+            "text": "Visitors → Sign‑ups: 8,432 (23%)",
+            "fontSize": 16,
+            "fontWeight": "normal",
+            "color": "#e2e8f0",
+            "children": []
+          },
+          {
+            "id": "convStat2",
+            "name": "Stat Item",
+            "type": "frame",
+            "x": 20,
+            "y": 120,
+            "width": 400,
+            "height": 40,
+            "fills": [],
+            "strokes": [],
+            "borderRadius": 0,
+            "text": "Sign‑ups → Paid: 1,954 (23%)",
+            "fontSize": 16,
+            "fontWeight": "normal",
+            "color": "#e2e8f0",
+            "children": []
+          },
+          {
+            "id": "convStat3",
+            "name": "Stat Item",
+            "type": "frame",
+            "x": 20,
+            "y": 170,
+            "width": 400,
+            "height": 40,
+            "fills": [],
+            "strokes": [],
+            "borderRadius": 0,
+            "text": "Paid → Retained: 1,421 (73%)",
+            "fontSize": 16,
+            "fontWeight": "normal",
+            "color": "#e2e8f0",
+            "children": []
+          },
+          {
+            "id": "convChartPlaceholder",
+            "name": "Funnel Chart Placeholder",
+            "type": "frame",
+            "x": 20,
+            "y": 230,
+            "width": 400,
+            "height": 110,
+            "fills": [
+              {
+                "fillColor": "#0f172a",
+                "opacity": 1
+              }
+            ],
+            "strokes": [
+              {
+                "strokeColor": "#7c3aed",
+                "strokeWidth": 2
+              }
+            ],
+            "borderRadius": 8,
+            "text": "[Funnel Chart]",
+            "fontSize": 14,
+            "fontWeight": "normal",
+            "color": "#94a3b8",
+            "children": []
+          }
+        ]
+      },
+      {
+        "id": "recentAct",
+        "name": "Recent Activities Card",
+        "type": "frame",
+        "x": 1000,
+        "y": 40,
+        "width": 400,
+        "height": 360,
+        "fills": [
+          {
+            "fillColor": "#131b2e",
+            "opacity": 1
+          }
+        ],
+        "strokes": [],
+        "borderRadius": 12,
+        "text": "",
+        "fontSize": 0,
+        "fontWeight": "normal",
+        "color": "#f8fafc",
+        "children": [
+          {
+            "id": "actTitle",
+            "name": "Card Title",
+            "type": "frame",
+            "x": 20,
+            "y": 20,
+            "width": 360,
+            "height": 28,
+            "fills": [],
+            "strokes": [],
+            "borderRadius": 0,
+            "text": "Recent Activities",
+            "fontSize": 20,
+            "fontWeight": "normal",
+            "color": "#f8fafc",
+            "children": []
+          },
+          {
+            "id": "actItem1",
+            "name": "Activity Item",
+            "type": "frame",
+            "x": 20,
+            "y": 70,
+            "width": 360,
+            "height": 36,
+            "fills": [],
+            "strokes": [],
+            "borderRadius": 0,
+            "text": "🛒 John Doe upgraded to Pro plan",
+            "fontSize": 14,
+            "fontWeight": "normal",
+            "color": "#e2e8f0",
+            "children": []
+          },
+          {
+            "id": "actItem2",
+            "name": "Activity Item",
+            "type": "frame",
+            "x": 20,
+            "y": 110,
+            "width": 360,
+            "height": 36,
+            "fills": [],
+            "strokes": [],
+            "borderRadius": 0,
+            "text": "📈 Revenue hit $10k milestone",
+            "fontSize": 14,
+            "fontWeight": "normal",
+            "color": "#e2e8f0",
+            "children": []
+          },
+          {
+            "id": "actItem3",
+            "name": "Activity Item",
+            "type": "frame",
+            "x": 20,
+            "y": 150,
+            "width": 360,
+            "height": 36,
+            "fills": [],
+            "strokes": [],
+            "borderRadius": 0,
+            "text": "👤 New user registration: Alice Smith",
+            "fontSize": 14,
+            "fontWeight": "normal",
+            "color": "#e2e8f0",
+            "children": []
+          },
+          {
+            "id": "actItem4",
+            "name": "Activity Item",
+            "type": "frame",
+            "x": 20,
+            "y": 190,
+            "width": 360,
+            "height": 36,
+            "fills": [],
+            "strokes": [],
+            "borderRadius": 0,
+            "text": "⚙️ Settings updated by admin",
+            "fontSize": 14,
+            "fontWeight": "normal",
+            "color": "#e2e8f0",
+            "children": []
+          },
+          {
+            "id": "actItem5",
+            "name": "Activity Item",
+            "type": "frame",
+            "x": 20,
+            "y": 230,
+            "width": 360,
+            "height": 36,
+            "fills": [],
+            "strokes": [],
+            "borderRadius": 0,
+            "text": "💳 Payment failed for user #452",
+            "fontSize": 14,
+            "fontWeight": "normal",
+            "color": "#e2e8f0",
+            "children": []
+          }
+        ]
+      }
+    ]
+  },
+  "theme": {
+    "primaryColor": "#7c3aed",
+    "backgroundColor": "#090d16",
+    "surfaceColor": "#131b2e",
+    "textColor": "#f8fafc",
+    "accentColor": "#10b981",
+    "borderRadius": 12
+  },
+  "createdAt": "2026-09-17T09:36:34.686Z",
+  "updatedAt": "2026-09-17T09:36:34.686Z"
+}

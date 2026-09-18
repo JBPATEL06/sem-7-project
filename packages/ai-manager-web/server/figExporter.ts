@@ -1,16 +1,7 @@
-import { initCodec, createNodeChangesMessage, encodeMessage, getSchemaBytes } from '@open-pencil/kiwi/fig/codec';
-import { writeFigArchive } from '@open-pencil/fig';
-import { deflateSync } from 'fflate';
+import { SceneGraph, exportFigFile, initCodec } from '@open-pencil/core';
 import { ScreenLayoutSpec, LayoutComponent } from './screenRoutes.js';
 import * as fs from 'fs';
 import * as path from 'path';
-
-// 1x1 PNG blank thumbnail placeholder
-const DEFAULT_THUMBNAIL_PNG = new Uint8Array([
-  137, 80, 78, 71, 13, 10, 26, 10, 0, 0, 0, 13, 73, 72, 68, 82, 0, 0, 0, 1, 0, 0, 0, 1, 8, 6, 0, 0, 0, 31, 21, 196, 137,
-  0, 0, 0, 10, 73, 68, 65, 84, 120, 156, 99, 0, 1, 0, 0, 5, 0, 1, 13, 10, 45, 180, 0, 0, 0, 0, 73, 69, 78, 68, 174, 66,
-  96, 130
-]);
 
 /**
  * Converts Hex / CSS color (#rrggbb or #rrggbbaa) to Figma 0-1 RGBA floats
@@ -42,68 +33,36 @@ export function hexToFigmaColor(hex: string): { r: number; g: number; b: number;
 }
 
 /**
- * Converts a ScreenLayoutSpec AST into a native binary .fig file buffer using OpenPencil
+ * Converts a ScreenLayoutSpec AST into a native binary .fig file buffer using OpenPencil SceneGraph
  */
 export async function exportScreenToFigBuffer(spec: ScreenLayoutSpec): Promise<Uint8Array> {
   await initCodec();
-  const schemaDeflated = deflateSync(getSchemaBytes());
 
-  let localIdCounter = 1;
-
-  const docGuid = { sessionID: 0, localID: 0 };
-  const pageGuid = { sessionID: 0, localID: 1 };
-  const frameGuid = { sessionID: 1, localID: ++localIdCounter };
+  const graph = new SceneGraph();
+  const page = graph.getPages()[0];
 
   const bgHex = spec.board.background || spec.theme?.backgroundColor || '#090d16';
   const bgFigma = hexToFigmaColor(bgHex);
 
-  const nodeChanges: any[] = [
-    // 1. Root Document
-    {
-      guid: docGuid,
-      type: 'DOCUMENT',
-      name: 'Document',
-      phase: 'CREATED',
+  const artboard = graph.createNode('FRAME', page.id, {
+    name: spec.name || 'Screen Artboard',
+    x: spec.board.x || 0,
+    y: spec.board.y || 0,
+    width: spec.board.width || 1440,
+    height: spec.board.height || 900,
+    fills: [{
+      type: 'SOLID',
+      color: bgFigma,
+      opacity: 1,
       visible: true
-    },
-    // 2. Main Page (Canvas)
-    {
-      guid: pageGuid,
-      parentIndex: { guid: docGuid, position: '!' },
-      type: 'CANVAS',
-      name: 'Page 1',
-      phase: 'CREATED',
-      visible: true,
-      backgroundPaints: [{ type: 'SOLID', color: { r: 0.11, g: 0.11, b: 0.11, a: 1 }, opacity: 1, visible: true }]
-    },
-    // 3. Screen Artboard Frame
-    {
-      guid: frameGuid,
-      parentIndex: { guid: pageGuid, position: '!' },
-      type: 'FRAME',
-      name: spec.name || 'Screen Artboard',
-      phase: 'CREATED',
-      visible: true,
-      size: { x: spec.board.width || 1440, y: spec.board.height || 900 },
-      transform: {
-        m00: 1,
-        m01: 0,
-        m02: spec.board.x || 0,
-        m10: 0,
-        m11: 1,
-        m12: spec.board.y || 0
-      },
-      fillPaints: [{ type: 'SOLID', color: bgFigma, opacity: 1, visible: true }],
-      clipsContent: true
-    }
-  ];
+    }],
+    clipsContent: true
+  });
 
-  // Helper to map LayoutComponent to Figma Kiwi NodeChange
-  function convertComponentRecursive(comp: LayoutComponent, parentGuid: { sessionID: number; localID: number }, positionChar: string) {
-    const compGuid = { sessionID: 1, localID: ++localIdCounter };
+  function processComponent(comp: LayoutComponent, parentId: string) {
     const isText = comp.type === 'text';
 
-    // Fills
+    // Convert fills
     let fills: any[] = [];
     if (Array.isArray(comp.fills) && comp.fills.length > 0) {
       fills = comp.fills.map((f: any) => ({
@@ -119,6 +78,13 @@ export async function exportScreenToFigBuffer(spec: ScreenLayoutSpec): Promise<U
         opacity: 1,
         visible: true
       }];
+    } else if (comp.color && !isText) {
+      fills = [{
+        type: 'SOLID',
+        color: hexToFigmaColor(comp.color),
+        opacity: 1,
+        visible: true
+      }];
     } else if (!isText) {
       fills = [{
         type: 'SOLID',
@@ -126,111 +92,102 @@ export async function exportScreenToFigBuffer(spec: ScreenLayoutSpec): Promise<U
         opacity: 1,
         visible: true
       }];
-    } else {
-      fills = [{
-        type: 'SOLID',
-        color: hexToFigmaColor(comp.color || spec.theme?.textColor || '#f8fafc'),
-        opacity: 1,
-        visible: true
-      }];
     }
 
-    // Strokes
-    const strokes: any[] = Array.isArray(comp.strokes) ? comp.strokes.map((s: any) => ({
-      type: 'SOLID',
-      color: hexToFigmaColor(typeof s === 'string' ? s : (s.strokeColor || s.color || '#334155')),
-      opacity: 1,
-      visible: true
-    })) : [];
+    // Convert strokes
+    let strokes: any[] = [];
+    if (Array.isArray(comp.strokes) && comp.strokes.length > 0) {
+      strokes = comp.strokes.map((s: any) => ({
+        type: 'SOLID',
+        color: hexToFigmaColor(typeof s === 'string' ? s : (s.strokeColor || s.color || '#334155')),
+        opacity: 1,
+        visible: true
+      }));
+    }
+
+    const strokeWeight = comp.strokes && comp.strokes[0]?.strokeWidth ? comp.strokes[0].strokeWidth : (strokes.length > 0 ? 1 : 0);
 
     if (isText) {
-      const textContent = comp.text || comp.name || 'Text';
+      const textVal = comp.text || comp.name || 'Text';
+      const textColor = comp.color || spec.theme?.textColor || '#ffffff';
+      const isBold = comp.fontWeight === 'bold' || comp.fontWeight === '700' || (comp.fontWeight as any) === 700;
+      const isSemi = comp.fontWeight === '600' || (comp.fontWeight as any) === 600 || comp.fontWeight === '500';
+      const fWeight = isBold ? 700 : (isSemi ? 600 : 400);
+
       const isAlignRight = (comp as any).textAlign === 'right' || (comp as any).align === 'right';
       const isAlignCenter = (comp as any).textAlign === 'center' || (comp as any).align === 'center';
-      nodeChanges.push({
-        guid: compGuid,
-        parentIndex: { guid: parentGuid, position: positionChar },
-        type: 'TEXT',
-        name: comp.name || textContent,
-        phase: 'CREATED',
-        visible: true,
-        size: { x: comp.width || 200, y: comp.height || 30 },
-        transform: {
-          m00: 1,
-          m01: 0,
-          m02: comp.x || 0,
-          m10: 0,
-          m11: 1,
-          m12: comp.y || 0
-        },
-        fillPaints: fills,
+
+      graph.createNode('TEXT', parentId, {
+        name: comp.name || textVal,
+        text: textVal,
+        x: comp.x || 0,
+        y: comp.y || 0,
+        width: comp.width || 200,
+        height: comp.height || 24,
         fontSize: comp.fontSize || 14,
-        fontName: {
-          family: 'Inter',
-          style: comp.fontWeight === '700' || comp.fontWeight === 'bold' ? 'Bold' : 'Regular',
-          postscript: comp.fontWeight === '700' || comp.fontWeight === 'bold' ? 'Inter-Bold' : 'Inter-Regular'
-        },
-        textAlignHorizontal: isAlignCenter ? 'CENTER' : isAlignRight ? 'RIGHT' : 'LEFT',
-        textData: {
-          characters: textContent
-        }
+        fontFamily: 'Inter',
+        fontWeight: fWeight,
+        fills: [{
+          type: 'SOLID',
+          color: hexToFigmaColor(textColor),
+          opacity: 1,
+          visible: true
+        }],
+        textAlignHorizontal: isAlignCenter ? 'CENTER' : (isAlignRight ? 'RIGHT' : 'LEFT')
       });
-    } else {
-      const figmaType = comp.layout === 'flex' ? 'FRAME' : (comp.type === 'frame' ? 'FRAME' : 'RECTANGLE');
-      nodeChanges.push({
-        guid: compGuid,
-        parentIndex: { guid: parentGuid, position: positionChar },
-        type: figmaType,
-        name: comp.name || comp.type,
-        phase: 'CREATED',
-        visible: true,
-        size: { x: comp.width || 120, y: comp.height || 40 },
-        transform: {
-          m00: 1,
-          m01: 0,
-          m02: comp.x || 0,
-          m10: 0,
-          m11: 1,
-          m12: comp.y || 0
-        },
-        cornerRadius: comp.borderRadius || 0,
-        fillPaints: fills,
-        strokePaints: strokes,
-        strokeWeight: comp.strokes && comp.strokes[0]?.strokeWidth ? comp.strokes[0].strokeWidth : (strokes.length > 0 ? 1 : 0),
-        clipsContent: figmaType === 'FRAME'
+      return;
+    }
+
+    const isFrame = comp.type === 'frame' || comp.layout === 'flex' || (comp.children && comp.children.length > 0);
+    const nodeType = isFrame ? 'FRAME' : 'RECTANGLE';
+
+    const createdNode = graph.createNode(nodeType, parentId, {
+      name: comp.name || comp.type,
+      x: comp.x || 0,
+      y: comp.y || 0,
+      width: comp.width || 120,
+      height: comp.height || 40,
+      cornerRadius: comp.borderRadius || 0,
+      fills,
+      strokes,
+      clipsContent: isFrame
+    });
+
+    // If component is a button or badge with embedded text, also generate child text node
+    if (comp.text && comp.text !== comp.name) {
+      graph.createNode('TEXT', createdNode.id, {
+        name: comp.text,
+        text: comp.text,
+        x: 10,
+        y: Math.max(4, Math.floor(((comp.height || 36) - (comp.fontSize || 13)) / 2) - 2),
+        width: Math.max(40, (comp.width || 100) - 20),
+        height: comp.fontSize || 14,
+        fontSize: comp.fontSize || 13,
+        fontFamily: 'Inter',
+        fontWeight: comp.type === 'button' || comp.type === 'badge' ? 600 : 400,
+        fills: [{
+          type: 'SOLID',
+          color: hexToFigmaColor(comp.color || '#ffffff'),
+          opacity: 1,
+          visible: true
+        }],
+        textAlignHorizontal: comp.type === 'button' || comp.type === 'badge' ? 'CENTER' : 'LEFT'
       });
     }
 
     if (comp.children && Array.isArray(comp.children)) {
-      comp.children.forEach((child, idx) => {
-        convertComponentRecursive(child, compGuid, String.fromCharCode(33 + (idx % 90)));
-      });
+      for (const child of comp.children) {
+        processComponent(child, createdNode.id);
+      }
     }
   }
 
-  // Iterate top-level components
-  const comps = spec.board.components || [];
-  comps.forEach((comp, idx) => {
-    convertComponentRecursive(comp, frameGuid, String.fromCharCode(33 + (idx % 90)));
-  });
+  for (const comp of (spec.board.components || [])) {
+    processComponent(comp, artboard.id);
+  }
 
-  const msg = createNodeChangesMessage(1, 1, nodeChanges);
-  const kiwiData = encodeMessage(msg);
-
-  const metaJSON = JSON.stringify({
-    clientVersion: '124.0.0',
-    fileVersion: 1,
-    name: spec.name || 'Screen Specification'
-  });
-
-  const figArchiveBytes = writeFigArchive({
-    schemaDeflated,
-    kiwiData,
-    thumbnailPNG: DEFAULT_THUMBNAIL_PNG,
-    metaJSON
-  });
-
-  return figArchiveBytes;
+  const exported = await exportFigFile(graph);
+  return exported;
 }
 
 /**

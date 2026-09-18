@@ -623,6 +623,18 @@ export function createSceneGraphFromComponents(
     }
   };
 
-  components.forEach(comp => mapComp(comp, rootFrameId));
+  // Flatten single redundant full-screen wrapper frame (frame-in-frame) if present
+  let normalizedComponents = components;
+  if (
+    components.length === 1 &&
+    (components[0].type === 'frame' || !components[0].type) &&
+    Array.isArray(components[0].children) &&
+    components[0].children.length > 0 &&
+    ((components[0].width || 0) >= calculatedWidth * 0.8 || (components[0].height || 0) >= calculatedHeight * 0.8)
+  ) {
+    normalizedComponents = components[0].children;
+  }
+
+  normalizedComponents.forEach(comp => mapComp(comp, rootFrameId));
   return graph;
 }

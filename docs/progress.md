@@ -1,5 +1,68 @@
 # Progress
+- **3-Panel Vibe Coding Context Cockpit & Native OpenPencil Fig Engine (Completed & Verified)**:
+  - **Living Context Cockpit (`ProjectsPage.tsx`)**: 3-panel layout integrating Forge Pipeline & Prompt History (Left), Living Architecture & Graphify Visualizer & System Logs (Center), and Multi-Tab Inspector with Prisma/Mongoose schemas, 16 active REST endpoints, and git lineage (Right). Zero-fallback live AST indexing.
+  - **1-Click AI Prompt Context Bundle**: Generates token-optimized PRD, tech stack, schema, and tasks prompt context formatted for LLM coding agents (Claude, GPT, Cursor).
+  - **OpenPencil Native `.fig` Binary Engine**: Uses `@open-pencil/core` SceneGraph to synthesize 100% compliant Figma binary `.fig` archives (`ui/dark_mode_3_panel_context_management_system.fig`) with automated URL query loading (`?file=`).
+  - **Unified Navigation**: Replaced standalone `/flow-audit` and embedded live call-graph exploration directly into the living architecture hub.
+  - **Verification**: `npx tsc --noEmit` clean (0 errors), Vitest suite passing 100% (30/30 tests), browser verified at `http://localhost:5173/projects`.
+- **Universal Graphify Context System (Completed & Verified)**:
+  - **Multi-Layer Ingestion Engine**: Scans Code AST (functions, classes, route handlers), Database Schemas (tables, queries, touches), Living Docs (`product.md` PRD specs, `architecture.md` tech decisions, `plans.md` milestones, `progress.md` status, `issues.md` bugs), and AI/User author edit lineage (`ai_trace` nodes with model IDs).
+  - **SQLite Graph Persistence (`.dbci/graphify_<projectId>.sqlite`)**: Fast local SQLite storage with indexed nodes, edges, context bundles, and health metrics.
+  - **Graph Traversal & Context API (`/api/graphify`)**: Express endpoints for overview, 360° file context reports, sub-graph extraction, blast radius impact analysis, and token-efficient AI prompt context packaging.
+  - **Interactive Visual Explorer Studio (`/flow-audit`)**: Dual-view interface with interactive force-directed / DAG canvas, color-coded node layers, directional animated bezier links, and 4-tab 360° Context Bundle Drawer.
+  - **Verification**: `npx tsc --noEmit` passed with 0 errors, Vitest test suite (`graphifyContext.test.ts`) passed 4/4 tests, and all 5 monorepo test suites passed 24/24 tests with 100% success.
+- **Diagram Studio Official Excalidraw Engine (Completed & Verified)**:
 
+  - Audited `packages/ai-manager-web` for genuine `@excalidraw/excalidraw` usage.
+  - Confirmed `package.json` installs `@excalidraw/excalidraw: "^0.17.6"`.
+  - Confirmed `DiagramsPage.tsx` directly mounts official `<Excalidraw />` component with scene updates, auto-zooming, element extraction, and PNG/SVG/JSON exports with zero custom canvas hacks.
+  - Confirmed `diagramRoutes.ts` persists native `.excalidraw` v2 schemas to disk (`diagrams/<name>.excalidraw`) and MongoDB Atlas.
+- **Native Groq AI Provider in OpenPencil (Completed & Verified)**:
+  - Added `groq` to `AIProviderID` and `AI_PROVIDERS` with full Groq model catalog (`llama-3.3-70b-versatile`, `llama-3.1-8b-instant`, `deepseek-r1-distill-llama-70b`, `llama-3.2-90b-vision-preview`, `llama-3.2-11b-vision-preview`, `mixtral-8x7b-32768`, `gemma2-9b-it`).
+  - Added Groq provider adapter in `packages/open-pencil/src/app/ai/providers/registry.ts` connecting directly to `https://api.groq.com/openai/v1`.
+  - Added Groq catalog mapping in `catalog/index.ts`, reasoning options in `reasoning.ts`, and reasoning effort support in `selection.ts`.
+  - Cleaned UI so users only need to supply their Groq `gsk_...` API key.
+- **100% Authentic Upstream OpenPencil Web App Mount (Completed & Verified)**:
+  - **Full Monorepo & Engine Assembly**: Cloned official upstream repository `open-pencil/open-pencil` into `packages/open-pencil`, resolved all 2,325 dependencies, and configured Vite aliases mapping `@open-pencil/core`, `@open-pencil/scene-graph`, `@open-pencil/fig`, `@open-pencil/kiwi`, `@open-pencil/pen`, and `@open-pencil/vue` directly to source code.
+  - **Vite & Skia WebGL Server**: Configured `packages/open-pencil/vite.config.ts` for standalone web server execution on `http://localhost:1420` with `target: 'esnext'` and `top-level-await` support for yoga-layout and canvaskit wasm.
+  - **Studio Mounting**: Rewrote `packages/ai-manager-web/src/pages/ScreensPage.tsx` to host the authentic OpenPencil Web App in the Studio viewport, providing live status, Stitch AI modal generator, project `ui/` files browser, and standalone window launch.
+  - **Zero Custom Canvas Code**: Purged `packages/ai-manager-web/src/components/OpenPencilCanvas.tsx` completely from the codebase per strict architectural rules.
+  - **Verification**: `npx tsc --noEmit` clean (0 errors), `npx vitest run tests/screensUi.test.ts` (3/3 passing), and browser visual verification confirming live OpenPencil interface with Skia Canvas, Pages/Layers, vector tools, and inspector.
+
+
+- **AI Manager QA & Diagnostics Studio System (Completed & Verified)**:
+  - **Multi-Dialect Schema & Integrity Audits (`qaDiagnosticsService.ts`)**: Deep introspection for SQLite, PostgreSQL, MongoDB, and Redis detecting missing primary keys (`NO_PRIMARY_KEY`), unindexed foreign keys (`UNINDEXED_FOREIGN_KEY`), missing column type affinities, empty tables, orphan relations, and unbounded Redis TTLs with weighted Health Score calculation (0–100%).
+  - **1-Click Remediation Engine (`POST /api/qa/apply-remediation`)**: Generates copyable and executable DDL fix statements (`CREATE INDEX`, `ALTER TABLE`) to resolve schema integrity violations in-place.
+  - **Live Vitest Test Suite Runner (`qaTestRunnerService.ts`)**: Programmatic runner discovering test suites across monorepo packages, executing tests with timeout safety, and streaming structured assertion results, durations, and stack traces.
+  - **Static AST Query Safety & Code Health Analyzer (`qaAstSafetyService.ts`)**: Codebase scanner detecting N+1 query patterns in loops, unindexed query filters, and raw SQL string interpolation vulnerabilities.
+  - **Unified 4-Tab QA Studio (`/qa` - `QaPage.tsx`)**:
+    - **Tab 1: Schema & Integrity Audits**: Health Score, severity filters (`All`, `Critical`, `Warning`, `Minor`), issue inspector with remediation snippets, and schema inventory.
+    - **Tab 2: Vitest Test Runner**: Suite pass rates, execution duration, test case hierarchy, and individual suite re-run triggers.
+    - **Tab 3: AST Query Safety**: Code Safety score %, scanned files/queries stats, and file/line-level remediation tips.
+    - **Tab 4: Telemetry & Server Logs**: Real-time log console with level filtering (`All`, `Error`, `Warn`, `Info`) and search.
+  - **Comprehensive Audit Report Exporter (`GET /api/qa/export-report`)**: Generates downloadable Markdown reports with system health, schema issues, AST findings, and test results.
+  - **Verification**: `npx tsc --noEmit` clean (0 errors), `npm run build` passing, and Vitest test suite (`qaSystem.test.ts`) passing 100%.
+- **100% Pure OpenPencil Canvas Architecture & Figma Subsystem Modularization (Completed & Verified)**:
+  - **OpenPencil Canvas Inline Text Editing**: Replaced custom `window.prompt` popup with authentic in-place `<textarea>` overlay on text double-click/Enter in `OpenPencilCanvas.tsx` matching exact font family, size, weight, line-height, letter-spacing, alignment, and real-time SceneGraph text sync without alert modals.
+  - **Backend Subsystem Decomposition (`server/screenRoutes.ts` 3,548 lines -> Modularized Architecture)**:
+    - `server/screens/screenTypes.ts` (279 lines): Strong TypeScript data interfaces (`ScreenLayoutSpec`, `LayoutComponent`, `DesignSystemTokens`, `AstPropertyDiff`, `ChatMessage`, `JsonStore`).
+    - `server/screens/screenDiskService.ts` (140 lines): Disk workspace synchronization (`ui/*.fig`, `ui/*.json`, backup snapshots).
+    - `server/screens/screenAiService.ts` (530 lines): Multi-provider LLM dispatcher (Groq, xAI Grok, OpenAI, Custom), intent classification, Stitch AST layout synthesis.
+    - `server/screenRoutes.ts`: Modular Express Router coordinating the subsystem with clean delegation and zero monolithic clutter.
+  - **Frontend Page Decomposition (`src/pages/ScreensPage.tsx` 1,206 lines -> Modular Sub-Components)**:
+    - `src/components/studio/TopTabsBar.tsx` (75 lines): Tab strip managing independent SceneGraph instances.
+    - `src/components/studio/StudioMenuBar.tsx` (230 lines): Interactive dropdown menu bar (`File`, `View`, `Object`, `Text`, `Arrange`).
+    - `src/components/studio/AiCommandBar.tsx` (55 lines): Quick 'E' AI prompt floating overlay.
+    - `src/components/studio/ProjectFilesModal.tsx` (95 lines): Disk `ui/` directory browser & file opener.
+    - `src/components/studio/DocumentSettingsModal.tsx` (80 lines): Document naming & canvas surface background configuration.
+    - `src/pages/ScreensPage.tsx` (385 lines): Clean orchestrator component.
+  - **Verification**: `npx tsc --noEmit` exited with 0 errors and all vitest test suites passed with 100% pass rate.
+  - **OpenPencil AI & Agents Settings**: Replicated exact OpenPencil dark settings dialog with Model Registry (Groq 120B, Groq 20B, xAI Grok-2, OpenAI GPT-4o, Custom endpoints), Add Model drawer, Role Assignments (`Design agent`, `Review`, `Fast tasks`, `Vision`), and AES-256-GCM encrypted persistence via `GET /api/settings/ai-config` and `POST /api/settings/ai-config`.
+  - **Multi-Provider Dispatcher**: Dynamic routing in `server/screenRoutes.ts` supporting Groq (`api.groq.com/openai/v1`), xAI Grok (`api.x.ai/v1`), OpenAI (`api.openai.com/v1`), or custom OpenAI-compatible endpoints based on assigned roles.
+  - **Additive Prompt Preservation**: Fixed screen wipeout on prompts like *"add 5 container in screen"* by adding intent detection regex and preserving `baseComponents` in modify mode, appending new elements without wiping existing canvas nodes.
+  - **Dragging Stability & Recursive Mutations**: Fixed canvas element dragging snapback by decoupling scene graph sync from micro timestamp updates and implementing recursive child node traversal (`updateComponentRecursive`, `deleteComponentRecursive`).
+  - **Frame-in-Frame Unwrapping**: Prevented redundant wrapper frames by flattening single full-size frame containers directly into the page artboard (`frame_root`).
+  - **Verification**: `npx tsc --noEmit` clean (0 errors) and all 22 vitest tests passing across 5 test suites (100% pass rate).
 - **100% Real OpenPencil Canvas & Figma UI 3 Manual + AI Studio (Completed & Verified)**:
   - Integrated official `@open-pencil/scene-graph` types (`SceneGraph`, `SceneNode`, `NodeType`, `Fill`, `Stroke`, `Color`) across frontend canvas and backend Kiwi `.fig` binary export.
   - Rebuilt Right Design Inspector to exact OpenPencil specifications (Position, Dimensions with `❖ ▾`, Appearance blend/opacity/radius/corner smoothing, Fill swatch preview, Stroke swatch, Effects, and Export).
