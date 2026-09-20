@@ -6,8 +6,6 @@ import { DbConnectionModel } from './models/index.js';
 import { JsonStore } from './utils/JsonStore.js';
 import initSqlJs from 'sql.js';
 import { PgDriver } from './drivers/pgDriver.js';
-import { MongoDriver } from './drivers/mongoDriver.js';
-import { RedisDriver } from './drivers/redisDriver.js';
 import { getWorkspaceRootDir } from './screenRoutes.js';
 import { encrypt, decrypt } from './utils/encryption.js';
 
@@ -290,12 +288,10 @@ dbRouter.post('/connect', localOrAuth, async (req: AuthRequest, res: Response): 
     let testResult: { success: boolean; latencyMs: number; error?: string } = { success: false, latencyMs: 0 };
     if (normalizedType === 'postgresql') {
       testResult = await PgDriver.testConnection(uri);
-    } else if (normalizedType === 'mongodb') {
-      testResult = await MongoDriver.testConnection(uri);
-    } else if (normalizedType === 'redis') {
-      testResult = await RedisDriver.testConnection(uri);
     } else if (normalizedType === 'sqlite') {
       testResult = { success: true, latencyMs: 1 };
+    } else {
+      testResult = { success: false, latencyMs: 0, error: `Driver for '${type}' has been removed. Use Supabase/PostgreSQL or SQLite.` };
     }
 
     if (!testResult.success) {
@@ -393,10 +389,6 @@ dbRouter.delete('/connections/:id', localOrAuth, async (req: AuthRequest, res: R
       const connType = targetConn.type === 'supabase' ? 'postgresql' : targetConn.type;
       if (connType === 'postgresql') {
         await PgDriver.closePool(plainUri);
-      } else if (connType === 'mongodb') {
-        await MongoDriver.closeConnection(plainUri);
-      } else if (connType === 'redis') {
-        await RedisDriver.closeClient(plainUri);
       }
     }
 
@@ -445,32 +437,8 @@ dbRouter.get('/schema', localOrAuth, async (req: AuthRequest, res: Response): Pr
         });
         return;
       }
-
-      if (connType === 'mongodb') {
-        const collections = await MongoDriver.getSchema(plainUri);
-        res.status(200).json({
-          indexed: collections.length > 0,
-          projectId,
-          dbType: 'mongodb',
-          connectionName: conn.name,
-          collections,
-          totalCollections: collections.length
-        });
-        return;
-      }
-
-      if (connType === 'redis') {
-        const keys = await RedisDriver.getSchema(plainUri);
-        res.status(200).json({
-          indexed: keys.length > 0,
-          projectId,
-          dbType: 'redis',
-          connectionName: conn.name,
-          keys,
-          totalKeys: keys.length
-        });
-        return;
-      }
+      res.status(400).json({ error: `Database type '${conn.type}' is not supported. Use Supabase/PostgreSQL or SQLite.` });
+      return;
     }
 
     // B. Default Local SQLite Inspection
@@ -601,52 +569,8 @@ dbRouter.post('/query', localOrAuth, async (req: AuthRequest, res: Response): Pr
         return;
       }
 
-      if (queryConnType === 'mongodb') {
-        const result = await MongoDriver.executeQuery(queryPlainUri, operation || 'find', collectionName, query, pageSize * page);
-        const allRows = result.rows || [];
-        const total = result.rowCount || allRows.length;
-        const totalPages = Math.max(1, Math.ceil(total / pageSize));
-        const paginatedRows = allRows.slice((page - 1) * pageSize, page * pageSize);
-
-        res.status(200).json({
-          success: true,
-          dbType: 'mongodb',
-          operation: operation || 'find',
-          collectionName,
-          columns: paginatedRows.length > 0 ? Object.keys(paginatedRows[0]) : (allRows.length > 0 ? Object.keys(allRows[0]) : []),
-          rows: paginatedRows,
-          total,
-          page,
-          pageSize,
-          totalPages,
-          rowCount: paginatedRows.length,
-          executionTimeMs: result.executionTimeMs
-        });
-        return;
-      }
-
-      if (queryConnType === 'redis') {
-        const result = await RedisDriver.executeCommand(queryPlainUri, query);
-        const allRows = result.rows || [];
-        const total = result.rowCount || allRows.length;
-        const totalPages = Math.max(1, Math.ceil(total / pageSize));
-        const paginatedRows = allRows.slice((page - 1) * pageSize, page * pageSize);
-
-        res.status(200).json({
-          success: true,
-          dbType: 'redis',
-          command: query,
-          columns: allRows.length > 0 ? Object.keys(allRows[0]) : ['result'],
-          rows: paginatedRows,
-          total,
-          page,
-          pageSize,
-          totalPages,
-          rowCount: paginatedRows.length,
-          executionTimeMs: result.executionTimeMs
-        });
-        return;
-      }
+      res.status(400).json({ success: false, error: `Database type '${conn.type}' is not supported. Use Supabase/PostgreSQL or SQLite.` });
+      return;
     }
 
     // B. Default SQLite Local Query Execution with Mutex write locking
@@ -953,34 +877,7 @@ dbRouter.post('/create-collection', localOrAuth, async (req: AuthRequest, res: R
       }
     }
 
-    let initialDocObj: any = null;
-    if (initialDocument) {
-      try {
-        initialDocObj = typeof initialDocument === 'string' ? JSON.parse(initialDocument) : initialDocument;
-      } catch {
-        initialDocObj = { name: 'Sample Item', createdAt: new Date() };
-      }
-    } else {
-      initialDocObj = { name: 'Sample Item', createdAt: new Date() };
-    }
-
-    const result = await MongoDriver.createCollection(uri, collectionName.trim(), initialDocObj);
-
-    try {
-      const { logActivity } = await import('./dashboardRoutes.js');
-      logActivity({
-        projectId,
-        projectName: projectId,
-        action: 'Collection created',
-        detail: `Created MongoDB collection '${collectionName}'`,
-        status: 'success'
-      });
-    } catch {}
-
-    res.status(201).json({
-      success: true,
-      message: result.message
-    });
+    res.status(400).json({ error: "MongoDB operations are not supported. Use Supabase/PostgreSQL or SQLite." });
   } catch (err: any) {
     res.status(500).json({ error: `Failed to create collection: ${err.message}` });
   }
@@ -1011,18 +908,6 @@ dbRouter.get('/export', localOrAuth, async (req: AuthRequest, res: Response): Pr
 
         if (connType === 'postgresql') {
           tables = await PgDriver.getSchema(plainUri);
-        } else if (connType === 'mongodb') {
-          const collections = await MongoDriver.getSchema(plainUri);
-          tables = collections.map((col: any) => ({
-            name: col.name,
-            rowCount: col.count ?? col.documentCount ?? 0,
-            columns: (col.fields || []).map((f: any) => ({
-              name: f.name,
-              type: f.type || 'MIXED',
-              notNull: false,
-              pk: f.name === '_id'
-            }))
-          }));
         }
       }
     }

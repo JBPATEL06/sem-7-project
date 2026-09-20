@@ -22,9 +22,6 @@ import { diagramRouter } from './diagramRoutes.js';
 import { screenRouter } from './screenRoutes.js';
 import { flowAuditRouter } from './flowAuditRoutes.js';
 import contextRouter from './contextRoutes.js';
-import { PgDriver } from './drivers/pgDriver.js';
-import { RedisDriver } from './drivers/redisDriver.js';
-import { MongoDriver } from './drivers/mongoDriver.js';
 
 dotenv.config();
 
@@ -119,15 +116,10 @@ if (process.env.NODE_ENV !== 'test') {
   startServer();
 }
 
-// G6/G7: Graceful shutdown — close all driver connections/pools cleanly
+// G6/G7: Graceful shutdown
 async function gracefulShutdown(signal: string) {
   console.log(`\n[ai-manager-web] Received ${signal}, shutting down gracefully...`);
-  await Promise.allSettled([
-    PgDriver.closeAll(),
-    RedisDriver.closeAll(),
-    MongoDriver.closeAll()
-  ]);
-  console.log('[ai-manager-web] All DB connections closed. Exiting.');
+  console.log('[ai-manager-web] Server shutdown complete. Exiting.');
   process.exit(0);
 }
 

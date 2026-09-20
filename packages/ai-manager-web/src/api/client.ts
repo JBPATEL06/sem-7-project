@@ -57,7 +57,6 @@ export class ApiClient {
   static async getDiscussions(..._args: any[]): Promise<any> { return this.get('/api/discussions'); }
   static async getDecisions(..._args: any[]): Promise<any> { return this.get('/api/decisions'); }
   static async getFunctionDetail(...args: any[]): Promise<any> { return this.get(`/api/functions/${encodeURIComponent(args[0] || '')}`); }
-  static async sendGroqChat(...args: any[]): Promise<any> { return this.post('/api/chat', args[0] || {}); }
   static async approveProposal(...args: any[]): Promise<any> { return this.post(`/api/proposals/${args[0]}/approve`, {}); }
   static async rejectProposal(...args: any[]): Promise<any> { return this.post(`/api/proposals/${args[0]}/reject`, {}); }
 }
