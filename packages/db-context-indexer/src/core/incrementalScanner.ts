@@ -12,6 +12,7 @@ export interface IncrementalDiff {
 }
 
 export function computeFileHash(filePath: string): string {
+  if (!fs.existsSync(filePath)) return '';
   const content = fs.readFileSync(filePath);
   return crypto.createHash('sha256').update(content).digest('hex');
 }

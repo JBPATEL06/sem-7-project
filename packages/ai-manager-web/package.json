@@ -14,7 +14,9 @@
   },
   "dependencies": {
     "@ai-manager/core": "*",
+    "db-context-indexer": "*",
     "@excalidraw/excalidraw": "^0.17.6",
+
     "@open-pencil/core": "^0.14.0",
     "@open-pencil/fig": "^0.14.0",
     "@open-pencil/kiwi": "^0.14.0",

@@ -1,20 +1,16 @@
 import React, { useState, useEffect } from 'react';
-import { Layout, NavRoute } from './components/Layout';
-import { AuthProvider, useAuth } from './context/AuthContext';
-import { LoginPage } from './pages/LoginPage';
-import { RegisterPage } from './pages/RegisterPage';
-import { OnboardingPage } from './pages/OnboardingPage';
-import { DashboardPage } from './pages/DashboardPage';
-import { ProjectsPage } from './pages/ProjectsPage';
-import { ProjectDetailPage } from './pages/ProjectDetailPage';
-import { DbManagerPage } from './pages/DbManagerPage';
-import { QaPage } from './pages/QaPage';
-import { FlowAuditPage } from './pages/FlowAuditPage';
-import { GitViewPage } from './pages/GitViewPage';
-import { DiagramsPage } from './pages/DiagramsPage';
-import { ScreensPage } from './pages/ScreensPage';
-import { SettingsPage } from './pages/SettingsPage';
-import { AdminPage } from './pages/AdminPage';
+import { Layout, NavRoute } from '@/shared/components';
+import { AuthProvider, useAuth } from '@/shared/context';
+import { LoginPage, RegisterPage, AdminPage } from '@/features/auth';
+import { DashboardPage } from '@/features/dashboard';
+import { ProjectsPage, ProjectDetailPage } from '@/features/cockpit';
+import { DbManagerPage } from '@/features/db-manager';
+import { QaPage } from '@/features/qa';
+import { GitViewPage } from '@/features/git';
+import { DiagramsPage } from '@/features/diagrams';
+import { ScreensPage } from '@/features/screens';
+import { SettingsPage } from '@/features/settings';
+import { ChatPage } from '@/features/chat';
 
 const AppContent: React.FC = () => {
   const { isAuthenticated, isLoading, isAdmin } = useAuth();
@@ -26,12 +22,11 @@ const AppContent: React.FC = () => {
     if (rawPath === 'git') return 'git-view';
     if (
       [
-        'onboarding',
         'dashboard',
+        'chat',
         'projects',
         'db-manager',
         'qa',
-        'flow-audit',
         'git-view',
         'diagrams',
         'screens',
@@ -109,17 +104,12 @@ const AppContent: React.FC = () => {
     );
   }
 
-  // Screen 1: Onboarding route does not render the sidebar/topbar layout
-  if (currentRoute === 'onboarding') {
-    return (
-      <OnboardingPage onContinue={() => handleNavigate('dashboard')} />
-    );
-  }
-
   const renderContent = () => {
     switch (currentRoute) {
       case 'dashboard':
         return <DashboardPage onNavigate={handleNavigate} />;
+      case 'chat':
+        return <ChatPage projectId={selectedProject} />;
       case 'projects':
         if (viewingProjectDetailId) {
           return (
@@ -147,8 +137,6 @@ const AppContent: React.FC = () => {
         return <DbManagerPage projectId={selectedProject} />;
       case 'qa':
         return <QaPage projectId={selectedProject} />;
-      case 'flow-audit':
-        return <FlowAuditPage />;
       case 'git-view':
         return <GitViewPage projectId={selectedProject} />;
       case 'diagrams':

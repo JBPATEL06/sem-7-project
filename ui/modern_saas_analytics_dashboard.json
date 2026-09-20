@@ -1,19 +1,19 @@
 {
-  "id": "screen_stitch_1789556381319_6vfty",
+  "id": "screen_stitch_1789644276940_xbe5m",
   "projectId": "global",
   "userId": "local-dev-user",
   "name": "Modern SaaS Analytics Dashboard",
-  "description": "A dark-themed analytics dashboard featuring 4 KPI cards, a live line chart, and a schema migration table.",
+  "description": "Dark themed dashboard with four KPI cards, a live chart area, and a schema migration table.",
   "theme": {
     "primaryColor": "#7c3aed",
     "backgroundColor": "#0a0e17",
     "surfaceColor": "#131b2e",
     "textColor": "#f8fafc",
-    "accentColor": "#10b981",
+    "accentColor": "#7c3aed",
     "borderRadius": 12
   },
   "board": {
-    "id": "board_screen_stitch_1789556381319_6vfty",
+    "id": "board_screen_stitch_1789644276940_xbe5m",
     "name": "Modern SaaS Analytics Dashboard Canvas",
     "x": 0,
     "y": 0,
@@ -22,247 +22,324 @@
     "background": "#0a0e17",
     "components": [
       {
-        "id": "dashboard-container",
-        "name": "Dashboard Container",
+        "id": "kpi1",
+        "name": "KPI Card 1",
         "type": "frame",
-        "x": 0,
-        "y": 0,
-        "width": 1440,
-        "height": 900,
+        "x": 40,
+        "y": 120,
+        "width": 300,
+        "height": 120,
         "fills": [
           {
-            "fillColor": "#0a0e17",
+            "fillColor": "#131b2e",
             "opacity": 1
           }
         ],
         "strokes": [],
-        "borderRadius": 0,
+        "borderRadius": 12,
         "children": [
           {
-            "id": "header",
-            "name": "Header",
-            "type": "frame",
-            "x": 24,
-            "y": 24,
-            "width": 1392,
-            "height": 64,
-            "fills": [
-              {
-                "fillColor": "#131b2e",
-                "opacity": 1
-              }
-            ],
-            "strokes": [],
-            "borderRadius": 12,
-            "children": [
-              {
-                "id": "header-title",
-                "name": "Header Title",
-                "type": "text",
-                "x": 24,
-                "y": 20,
-                "width": 200,
-                "height": 24,
-                "text": "SaaS Analytics",
-                "fontSize": 20,
-                "fontWeight": "bold",
-                "color": "#f8fafc"
-              },
-              {
-                "id": "header-status",
-                "name": "Live Status",
-                "type": "frame",
-                "x": 1200,
-                "y": 20,
-                "width": 168,
-                "height": 24,
-                "fills": [
-                  {
-                    "fillColor": "#10b981",
-                    "opacity": 0.1
-                  }
-                ],
-                "strokes": [
-                  {
-                    "strokeColor": "#10b981",
-                    "strokeWidth": 1
-                  }
-                ],
-                "borderRadius": 12,
-                "children": [
-                  {
-                    "id": "status-dot",
-                    "name": "Status Dot",
-                    "type": "frame",
-                    "x": 12,
-                    "y": 8,
-                    "width": 8,
-                    "height": 8,
-                    "fills": [
-                      {
-                        "fillColor": "#10b981",
-                        "opacity": 1
-                      }
-                    ],
-                    "strokes": [],
-                    "borderRadius": 4
-                  },
-                  {
-                    "id": "status-text",
-                    "name": "Status Text",
-                    "type": "text",
-                    "x": 28,
-                    "y": 4,
-                    "width": 120,
-                    "height": 16,
-                    "text": "Live Data",
-                    "fontSize": 12,
-                    "fontWeight": "normal",
-                    "color": "#10b981"
-                  }
-                ]
-              }
-            ]
-          },
-          {
-            "id": "kpi-cards-container",
-            "name": "KPI Cards Container",
-            "type": "frame",
-            "x": 24,
-            "y": 104,
-            "width": 1392,
-            "height": 160,
+            "id": "kpi1_title",
+            "name": "KPI Title",
+            "type": "text",
+            "x": 16,
+            "y": 16,
+            "width": 200,
+            "height": 24,
             "fills": [],
             "strokes": [],
             "borderRadius": 0,
-            "children": [
-              {
-                "id": "kpi-card-1",
-                "name": "KPI Card 1",
-                "type": "frame",
-                "x": 0,
-                "y": 0,
-                "width": 330,
-                "height": 160,
-                "fills": [
-                  {
-                    "fillColor": "#131b2e",
-                    "opacity": 1
-                  }
-                ],
-                "strokes": [
-                  {
-                    "strokeColor": "#1e293b",
-                    "strokeWidth": 1
-                  }
-                ],
-                "borderRadius": 12,
-                "children": [
-                  {
-                    "id": "kpi-1-label",
-                    "name": "KPI 1 Label",
-                    "type": "text",
-                    "x": 24,
-                    "y": 24,
-                    "width": 280,
-                    "height": 20,
-                    "text": "Monthly Recurring Revenue",
-                    "fontSize": 14,
-                    "fontWeight": "normal",
-                    "color": "#94a3b8"
-                  },
-                  {
-                    "id": "kpi-1-value",
-                    "name": "KPI 1 Value",
-                    "type": "text",
-                    "x": 24,
-                    "y": 52,
-                    "width": 280,
-                    "height": 32,
-                    "text": "$45,230",
-                    "fontSize": 28,
-                    "fontWeight": "bold",
-                    "color": "#f8fafc"
-                  },
-                  {
-                    "id": "kpi-1-trend",
-                    "name": "KPI 1 Trend",
-                    "type": "text",
-                    "x": 24,
-                    "y": 92,
-                    "width": 280,
-                    "height": 20,
-                    "text": "↑ 12.5% from last month",
-                    "fontSize": 14,
-                    "fontWeight": "normal",
-                    "color": "#10b981"
-                  }
-                ]
-              },
-              {
-                "id": "kpi-card-2",
-                "name": "KPI Card 2",
-                "type": "frame",
-                "x": 346,
-                "y": 0,
-                "width": 330,
-                "height": 160,
-                "fills": [
-                  {
-                    "fillColor": "#131b2e",
-                    "opacity": 1
-                  }
-                ],
-                "strokes": [
-                  {
-                    "strokeColor": "#1e293b",
-                    "strokeWidth": 1
-                  }
-                ],
-                "borderRadius": 12,
-                "children": [
-                  {
-                    "id": "kpi-2-label",
-                    "name": "KPI 2 Label",
-                    "type": "text",
-                    "x": 24,
-                    "y": 24,
-                    "width": 280,
-                    "height": 20,
-                    "text": "Active Users",
-                    "fontSize": 14,
-                    "fontWeight": "normal",
-                    "color": "#94a3b8"
-                  },
-                  {
-                    "id": "kpi-2-value",
-                    "name": "KPI 2 Value",
-                    "type": "text",
-                    "x": 24,
-                    "y": 52,
-                    "width": 280,
-                    "height": 32,
-                    "text": "12,845",
-                    "fontSize": 28,
-                    "fontWeight": "bold",
-                    "color": "#f8fafc"
-                  },
-                  {
-                    "id": "kpi-2-trend",
-                    "name": "KPI 2 Trend",
-                    "type": "text",
-                    "x": 24,
-                    "y": 92,
-                    "width": 280,
-                    "height": 20,
-                    "text": "↑ 8.2% from last month",
-                    "fontSize": 14,
-                    "fontWeight": "normal",
-                    "color": "#10b981"
-                  }
-                ]
-              }
-            ]
+            "text": "Total Users",
+            "fontSize": 16,
+            "fontWeight": "normal",
+            "color": "#f8fafc"
+          },
+          {
+            "id": "kpi1_value",
+            "name": "KPI Value",
+            "type": "text",
+            "x": 16,
+            "y": 56,
+            "width": 200,
+            "height": 32,
+            "fills": [],
+            "strokes": [],
+            "borderRadius": 0,
+            "text": "12,345",
+            "fontSize": 24,
+            "fontWeight": "normal",
+            "color": "#7c3aed"
+          }
+        ]
+      },
+      {
+        "id": "kpi2",
+        "name": "KPI Card 2",
+        "type": "frame",
+        "x": 360,
+        "y": 120,
+        "width": 300,
+        "height": 120,
+        "fills": [
+          {
+            "fillColor": "#131b2e",
+            "opacity": 1
+          }
+        ],
+        "strokes": [],
+        "borderRadius": 12,
+        "children": [
+          {
+            "id": "kpi2_title",
+            "name": "KPI Title",
+            "type": "text",
+            "x": 16,
+            "y": 16,
+            "width": 200,
+            "height": 24,
+            "fills": [],
+            "strokes": [],
+            "borderRadius": 0,
+            "text": "Active Sessions",
+            "fontSize": 16,
+            "fontWeight": "normal",
+            "color": "#f8fafc"
+          },
+          {
+            "id": "kpi2_value",
+            "name": "KPI Value",
+            "type": "text",
+            "x": 16,
+            "y": 56,
+            "width": 200,
+            "height": 32,
+            "fills": [],
+            "strokes": [],
+            "borderRadius": 0,
+            "text": "3,210",
+            "fontSize": 24,
+            "fontWeight": "normal",
+            "color": "#7c3aed"
+          }
+        ]
+      },
+      {
+        "id": "kpi3",
+        "name": "KPI Card 3",
+        "type": "frame",
+        "x": 40,
+        "y": 380,
+        "width": 300,
+        "height": 120,
+        "fills": [
+          {
+            "fillColor": "#131b2e",
+            "opacity": 1
+          }
+        ],
+        "strokes": [],
+        "borderRadius": 12,
+        "children": [
+          {
+            "id": "kpi3_title",
+            "name": "KPI Title",
+            "type": "text",
+            "x": 16,
+            "y": 16,
+            "width": 200,
+            "height": 24,
+            "fills": [],
+            "strokes": [],
+            "borderRadius": 0,
+            "text": "Revenue",
+            "fontSize": 16,
+            "fontWeight": "normal",
+            "color": "#f8fafc"
+          },
+          {
+            "id": "kpi3_value",
+            "name": "KPI Value",
+            "type": "text",
+            "x": 16,
+            "y": 56,
+            "width": 200,
+            "height": 32,
+            "fills": [],
+            "strokes": [],
+            "borderRadius": 0,
+            "text": "$45,800",
+            "fontSize": 24,
+            "fontWeight": "normal",
+            "color": "#7c3aed"
+          }
+        ]
+      },
+      {
+        "id": "kpi4",
+        "name": "KPI Card 4",
+        "type": "frame",
+        "x": 360,
+        "y": 380,
+        "width": 300,
+        "height": 120,
+        "fills": [
+          {
+            "fillColor": "#131b2e",
+            "opacity": 1
+          }
+        ],
+        "strokes": [],
+        "borderRadius": 12,
+        "children": [
+          {
+            "id": "kpi4_title",
+            "name": "KPI Title",
+            "type": "text",
+            "x": 16,
+            "y": 16,
+            "width": 200,
+            "height": 24,
+            "fills": [],
+            "strokes": [],
+            "borderRadius": 0,
+            "text": "Errors",
+            "fontSize": 16,
+            "fontWeight": "normal",
+            "color": "#f8fafc"
+          },
+          {
+            "id": "kpi4_value",
+            "name": "KPI Value",
+            "type": "text",
+            "x": 16,
+            "y": 56,
+            "width": 200,
+            "height": 32,
+            "fills": [],
+            "strokes": [],
+            "borderRadius": 0,
+            "text": "27",
+            "fontSize": 24,
+            "fontWeight": "normal",
+            "color": "#7c3aed"
+          }
+        ]
+      },
+      {
+        "id": "liveChart",
+        "name": "Live Chart",
+        "type": "frame",
+        "x": 40,
+        "y": 620,
+        "width": 800,
+        "height": 260,
+        "fills": [
+          {
+            "fillColor": "#131b2e",
+            "opacity": 1
+          }
+        ],
+        "strokes": [],
+        "borderRadius": 12,
+        "children": [
+          {
+            "id": "liveChart_placeholder",
+            "name": "Chart Placeholder",
+            "type": "text",
+            "x": 16,
+            "y": 16,
+            "width": 400,
+            "height": 24,
+            "fills": [],
+            "strokes": [],
+            "borderRadius": 0,
+            "text": "[Live Analytics Chart]",
+            "fontSize": 18,
+            "fontWeight": "normal",
+            "color": "#94a3b8"
+          }
+        ]
+      },
+      {
+        "id": "migrationTable",
+        "name": "Schema Migration Table",
+        "type": "frame",
+        "x": 860,
+        "y": 620,
+        "width": 560,
+        "height": 260,
+        "fills": [
+          {
+            "fillColor": "#131b2e",
+            "opacity": 1
+          }
+        ],
+        "strokes": [],
+        "borderRadius": 12,
+        "children": [
+          {
+            "id": "table_header",
+            "name": "Table Header",
+            "type": "text",
+            "x": 16,
+            "y": 16,
+            "width": 500,
+            "height": 24,
+            "fills": [],
+            "strokes": [],
+            "borderRadius": 0,
+            "text": "Schema Migration History",
+            "fontSize": 18,
+            "fontWeight": "normal",
+            "color": "#f8fafc"
+          },
+          {
+            "id": "table_row1",
+            "name": "Row 1",
+            "type": "text",
+            "x": 16,
+            "y": 56,
+            "width": 500,
+            "height": 20,
+            "fills": [],
+            "strokes": [],
+            "borderRadius": 0,
+            "text": "2024-09-01 | users_v1 → users_v2 | Completed",
+            "fontSize": 14,
+            "fontWeight": "normal",
+            "color": "#94a3b8"
+          },
+          {
+            "id": "table_row2",
+            "name": "Row 2",
+            "type": "text",
+            "x": 16,
+            "y": 84,
+            "width": 500,
+            "height": 20,
+            "fills": [],
+            "strokes": [],
+            "borderRadius": 0,
+            "text": "2024-09-05 | orders_v1 → orders_v2 | In Progress",
+            "fontSize": 14,
+            "fontWeight": "normal",
+            "color": "#94a3b8"
+          },
+          {
+            "id": "table_row3",
+            "name": "Row 3",
+            "type": "text",
+            "x": 16,
+            "y": 112,
+            "width": 500,
+            "height": 20,
+            "fills": [],
+            "strokes": [],
+            "borderRadius": 0,
+            "text": "2024-09-10 | payments_v1 → payments_v2 | Pending",
+            "fontSize": 14,
+            "fontWeight": "normal",
+            "color": "#94a3b8"
           }
         ]
       }
@@ -270,29 +347,25 @@
   },
   "chatHistory": [
     {
-      "id": "msg_u_1789556381320",
+      "id": "msg_u_1789644276940",
       "role": "user",
       "text": "Modern SaaS Analytics dashboard with 4 KPI cards, live chart, and schema migration table",
-      "timestamp": "2026-09-16T10:59:41.320Z"
+      "timestamp": "2026-09-17T11:24:36.940Z"
     },
     {
-      "id": "msg_a_1789556381320",
+      "id": "msg_a_1789644276940",
       "role": "assistant",
-      "text": "I synthesized **Modern SaaS Analytics Dashboard** with 1 components matching your prompt \"Modern SaaS Analytics dashboard with 4 KPI cards, live chart, and schema migration table\" using Groq LLM (qwen/qwen3.8-27b).",
-      "timestamp": "2026-09-16T10:59:41.320Z",
-      "stepsCount": 1,
-      "changesSummary": "Synthesized 1 custom AI components for Modern SaaS Analytics Dashboard (via Groq qwen/qwen3.8-27b)",
+      "text": "Dark themed dashboard with four KPI cards, a live chart area, and a schema migration table.",
+      "timestamp": "2026-09-17T11:24:36.940Z",
+      "stepsCount": 6,
+      "changesSummary": "Synthesized 6 components using Design model (Groq 120B) (openai/gpt-oss-120b)",
       "metadata": {
         "mode": "create",
         "intent": "GENERATE",
-        "theme": "dark",
-        "dimensions": {
-          "width": 1440,
-          "height": 900
-        }
+        "theme": "dark"
       }
     }
   ],
-  "createdAt": "2026-09-16T10:59:41.320Z",
-  "updatedAt": "2026-09-16T10:59:41.320Z"
+  "createdAt": "2026-09-17T11:24:36.940Z",
+  "updatedAt": "2026-09-17T11:24:36.940Z"
 }

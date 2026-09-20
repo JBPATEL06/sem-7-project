@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import express from 'express';
-import { flowAuditRouter } from '../server/flowAuditRoutes.js';
+import { flowAuditRouter } from '../server/modules/graphify/flowAuditRoutes.js';
 
 describe('Flow Audit & AST Visualizer Endpoint Tests', () => {
   const app = express();

@@ -1,5 +1,4 @@
-import { JsonStore } from './server/utils/JsonStore';
-import { RuleEngine } from './server/utils/RuleEngine';
+import { JsonStore, RuleEngine } from './server/shared/index.js';
 
 // Mock localStorage and fetch for ApiClient test
 (global as any).localStorage = {
@@ -12,7 +11,7 @@ import { RuleEngine } from './server/utils/RuleEngine';
   };
 };
 
-import { ApiClient } from './src/api/client';
+import { ApiClient } from './src/shared/api/index.js';
 
 async function runTests() {
   console.log('--- Testing JsonStore ---');

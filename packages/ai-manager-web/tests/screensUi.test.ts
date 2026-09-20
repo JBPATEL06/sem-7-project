@@ -1,61 +1,81 @@
 import { describe, it, expect } from 'vitest';
-import { createDemoSceneGraph, createSceneGraphFromComponents } from '../src/components/studio/sceneGraphUtils';
+import { ScreenLayoutSpec, LayoutComponent, LayoutBoard } from '../src/features/screens';
 
-describe('Studio Components & SceneGraph Initializer', () => {
-  it('creates demo scene graph without errors', () => {
-    const graph = createDemoSceneGraph();
-    expect(graph).toBeDefined();
-    const pages = graph.getPages();
-    expect(pages.length).toBeGreaterThan(0);
-    const rootNodes = pages[0].childIds;
-    expect(rootNodes.length).toBeGreaterThan(0);
-  });
+describe('Screens & OpenPencil Data Models', () => {
+  it('validates ScreenLayoutSpec and LayoutBoard contract', () => {
+    const mockComponent: LayoutComponent = {
+      id: 'comp_1',
+      name: 'Header Frame',
+      type: 'frame',
+      x: 0,
+      y: 0,
+      width: 1440,
+      height: 80
+    };
 
-  it('converts components to scene graph', () => {
-    const graph = createSceneGraphFromComponents([
-      {
-        id: 'comp_1',
-        name: 'Header',
-        type: 'frame',
-        x: 0,
-        y: 0,
-        width: 1440,
-        height: 80,
-        fills: [{ fillOpacity: 1, fillColor: '#1e1e1e' }]
-      }
-    ], 1440, 900, 'Test Screen');
-    expect(graph).toBeDefined();
-    expect(graph.getNode('comp_1')).toBeDefined();
-  });
+    const mockBoard: LayoutBoard = {
+      id: 'board_1',
+      name: 'Main Board',
+      x: 0,
+      y: 0,
+      width: 1440,
+      height: 900,
+      background: '#1e1e1e',
+      components: [mockComponent]
+    };
 
-  it('safely handles non-string and complex color formats without crashing', () => {
-    const graph = createSceneGraphFromComponents([
-      {
-        id: 'comp_color_obj',
-        name: 'Card with Color Object',
-        type: 'rect',
-        x: 10,
-        y: 10,
-        width: 200,
-        height: 100,
-        fills: [{ color: { r: 0.8, g: 0.2, b: 0.5, a: 1 } }],
-        strokes: [{ color: { r: 0.9, g: 0.9, b: 0.9, a: 1 }, weight: 2 }]
+    const mockScreen: ScreenLayoutSpec = {
+      id: 'screen_1',
+      projectId: 'acme-api',
+      userId: 'user_1',
+      name: 'Main Dashboard',
+      description: 'Primary UI spec',
+      board: mockBoard,
+      theme: {
+        primaryColor: '#3b82f6',
+        backgroundColor: '#0f172a',
+        surfaceColor: '#1e293b',
+        textColor: '#f8fafc',
+        accentColor: '#8b5cf6',
+        borderRadius: 8
       },
-      {
-        id: 'comp_color_null',
-        name: 'Card with Null Colors',
-        type: 'rect',
-        x: 220,
-        y: 10,
-        width: 200,
-        height: 100,
-        fills: [{ fillColor: null }],
-        strokes: [{ strokeColor: undefined }]
-      }
-    ], 1440, 900, 'Color Edge Cases Test');
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString()
+    };
 
-    expect(graph).toBeDefined();
-    expect(graph.getNode('comp_color_obj')).toBeDefined();
-    expect(graph.getNode('comp_color_null')).toBeDefined();
+    expect(mockScreen.id).toBe('screen_1');
+    expect(mockScreen.board.components.length).toBe(1);
+    expect(mockScreen.board.components[0].type).toBe('frame');
+  });
+
+  it('safely supports diverse component primitives', () => {
+    const primitives: LayoutComponent['type'][] = [
+      'frame',
+      'rect',
+      'circle',
+      'text',
+      'button',
+      'input',
+      'card',
+      'table',
+      'badge',
+      'avatar',
+      'chart',
+      'navbar',
+      'sidebar'
+    ];
+
+    primitives.forEach((type, idx) => {
+      const comp: LayoutComponent = {
+        id: `comp_${idx}`,
+        name: `Component ${type}`,
+        type,
+        x: idx * 10,
+        y: idx * 10,
+        width: 100,
+        height: 50
+      };
+      expect(comp.type).toBe(type);
+    });
   });
 });

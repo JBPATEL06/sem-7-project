@@ -1,14 +1,8 @@
 import express from 'express';
 import * as dotenv from 'dotenv';
 import path from 'path';
-import fetch from 'node-fetch';
-import { fileURLToPath } from 'url';
-
-const __dirname = path.dirname(fileURLToPath(import.meta.url));
-dotenv.config({ path: path.resolve(__dirname, '.env') });
-
-import { gitRouter } from './server/gitRoutes.js';
-import { projectsRouter } from './server/projects.js';
+import { gitRouter } from './server/modules/git/index.js';
+import { projectsRouter } from './server/modules/projects/index.js';
 
 async function runGitVerificationTests() {
   console.log('====================================================');

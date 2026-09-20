@@ -9,19 +9,22 @@ import cors from 'cors';
 import dotenv from 'dotenv';
 import path from 'path';
 import { fileURLToPath } from 'url';
-import { authRouter, initMongoAndMigrate, initDefaultAdmin } from './auth.js';
-import { projectsRouter } from './projects.js';
-import { modulesRouter } from './modules.js';
-import { dbRouter } from './dbRoutes.js';
-import { dashboardRouter } from './dashboardRoutes.js';
-import { settingsRouter } from './settingsRoutes.js';
-import { qaRouter } from './qaRoutes.js';
-import { adminRouter } from './adminRoutes.js';
-import { gitRouter } from './gitRoutes.js';
-import { diagramRouter } from './diagramRoutes.js';
-import { screenRouter } from './screenRoutes.js';
-import { flowAuditRouter } from './flowAuditRoutes.js';
-import contextRouter from './contextRoutes.js';
+import {
+  authRouter,
+  initMongoAndMigrate,
+  initDefaultAdmin,
+  projectsRouter,
+  dbRouter,
+  dashboardRouter,
+  settingsRouter,
+  qaRouter,
+  adminRouter,
+  gitRouter,
+  diagramRouter,
+  screenRouter,
+  flowAuditRouter,
+  graphifyRouter
+} from './modules/index.js';
 
 dotenv.config();
 
@@ -57,7 +60,6 @@ app.use(express.json({ limit: '10mb' }));
 app.use('/api/auth', authRouter);
 app.use('/api/admin', adminRouter);
 app.use('/api/projects', projectsRouter);
-app.use('/api/modules', modulesRouter);
 app.use('/api/db', dbRouter);
 app.use('/api/dashboard', dashboardRouter);
 app.use('/api/settings', settingsRouter);
@@ -66,7 +68,8 @@ app.use('/api/git', gitRouter);
 app.use('/api/diagrams', diagramRouter);
 app.use('/api/screens', screenRouter);
 app.use('/api/flow-audit', flowAuditRouter);
-app.use('/api', contextRouter);
+app.use('/api/graphify', graphifyRouter);
+
 
 
 

@@ -17,7 +17,8 @@ export function loadProject(options: WalkOptions): { project: Project; sourceFil
     '**/build/**',
     '**/.next/**',
     '**/coverage/**',
-    '**/.git/**'
+    '**/.git/**',
+    '**/packages/open-pencil/**'
   ];
 
   let gitignoreExcludes: string[] = [];

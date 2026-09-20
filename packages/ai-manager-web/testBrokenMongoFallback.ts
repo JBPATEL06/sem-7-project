@@ -10,10 +10,8 @@ dotenv.config({ path: path.resolve(__dirname, '../.env') });
 
 // Break MONGODB_URI
 process.env.MONGODB_URI = 'mongodb://127.0.0.1:27099/non_existent_db_fail_fast?connectTimeoutMS=500&serverSelectionTimeoutMS=500';
-
-import { authRouter as authR, initMongoAndMigrate as initMongo } from './server/auth';
-import { adminRouter as adminR } from './server/adminRoutes';
-import fetch from 'node-fetch';
+import { authRouter as authR, initMongoAndMigrate as initMongo } from './server/modules/auth/index.js';
+import { adminRouter as adminR } from './server/modules/admin/index.js';
 
 async function testBrokenMongoFallback() {
   console.log('=== TEST: PROVING MONGODB_URI FALLBACK TO LOCAL JSON ===');

@@ -14,6 +14,7 @@ export default defineConfig({
   },
   resolve: {
     alias: {
+      '@': path.resolve(__dirname, 'src'),
       '@excalidraw/excalidraw': path.resolve(
         __dirname,
         'node_modules/@excalidraw/excalidraw/dist/excalidraw.development.js'
@@ -37,7 +38,7 @@ export default defineConfig({
     },
     proxy: {
       '/api': {
-        target: 'http://localhost:3000',
+        target: 'http://127.0.0.1:3000',
         changeOrigin: true,
         configure: (proxy, _options) => {
           proxy.on('error', (_err, _req, res) => {
