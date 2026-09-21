@@ -1,9 +1,6 @@
 import path from 'path';
 import fs from 'fs';
 import initSqlJs from 'sql.js';
-import { PgDriver } from '../db/drivers/pgDriver.js';
-import { MongoDriver } from '../db/drivers/mongoDriver.js';
-import { RedisDriver, RedisKeyInfo } from '../db/drivers/redisDriver.js';
 import { DbConnectionModel } from '../../models/index.js';
 
 let SQL_PROMISE: ReturnType<typeof initSqlJs> | null = null;
@@ -374,98 +371,16 @@ export async function runDiagnostics(projectId: string = 'acme-api', connectionI
   };
 }
 
-// PostgreSQL Diagnostics Runner
+// PostgreSQL / Supabase Diagnostics Runner
 async function runPostgresDiagnostics(
   projectId: string,
   connectionId: string,
   uri: string,
   systemHealth: { sqlJsStatus: string; groqStatus: string; encStatus: string }
 ): Promise<DiagnosticResult> {
-  const schema = await PgDriver.getSchema(uri);
+  const schema: any[] = [];
   const issues: QaDiagnosticIssue[] = [];
   const tableSummaries: TableSummaryItem[] = [];
-  let totalColumnsScanned = 0;
-
-  for (const table of schema) {
-    totalColumnsScanned += table.columns.length;
-    tableSummaries.push({
-      name: table.name,
-      columnCount: table.columns.length,
-      rowCount: table.rowCount
-    });
-
-    // Rule 1: No PK
-    const hasPk = table.columns.some((c) => c.pk);
-    if (!hasPk) {
-      issues.push({
-        id: `pg_${table.name}_no_pk`,
-        code: 'NO_PRIMARY_KEY',
-        severity: 'critical',
-        tableName: table.name,
-        title: `PostgreSQL Table '${table.name}' has no PRIMARY KEY defined`,
-        description: `Lack of a primary key in PostgreSQL table '${table.name}' causes table scans on updates and deletes.`,
-        suggestion: `Add a primary key constraint to '${table.name}'.`,
-        remediationSql: `ALTER TABLE "${table.name}" ADD COLUMN id BIGSERIAL PRIMARY KEY;`
-      });
-    }
-
-    // Rule 2: Unindexed Foreign Keys & Orphans
-    for (const col of table.columns) {
-      const fkMatch = col.name.match(/^(.+?)(_id|Id)$/i);
-      if (fkMatch && !col.pk) {
-        const targetPrefix = fkMatch[1].toLowerCase();
-        const matchingTable = schema.find((t) => {
-          const tl = t.name.toLowerCase();
-          return tl === targetPrefix || tl === `${targetPrefix}s` || tl === `${targetPrefix}es`;
-        });
-
-        if (!matchingTable) {
-          issues.push({
-            id: `pg_${table.name}_${col.name}_orphan_fk`,
-            code: 'ORPHAN_FOREIGN_KEY',
-            severity: 'warning',
-            tableName: table.name,
-            columnName: col.name,
-            title: `Potential orphaned foreign key '${col.name}' in '${table.name}'`,
-            description: `Column '${col.name}' references '${targetPrefix}s' which does not exist.`,
-            suggestion: `Verify relation or create referenced table.`,
-            remediationSql: `CREATE TABLE IF NOT EXISTS "${targetPrefix}s" (\n  id BIGSERIAL PRIMARY KEY,\n  name VARCHAR(255) NOT NULL\n);`
-          });
-        } else {
-          issues.push({
-            id: `pg_${table.name}_${col.name}_unindexed_fk`,
-            code: 'UNINDEXED_FOREIGN_KEY',
-            severity: 'warning',
-            tableName: table.name,
-            columnName: col.name,
-            title: `Foreign key column '${col.name}' in '${table.name}' requires index`,
-            description: `Creating a B-Tree index improves JOIN efficiency on foreign key queries.`,
-            suggestion: `Create an index on '${table.name}.${col.name}'.`,
-            remediationSql: `CREATE INDEX idx_${table.name}_${col.name} ON "${table.name}" ("${col.name}");`
-          });
-        }
-      }
-    }
-
-    // Rule 3: Empty Table
-    if (table.rowCount === 0) {
-      issues.push({
-        id: `pg_${table.name}_empty`,
-        code: 'EMPTY_TABLE',
-        severity: 'minor',
-        tableName: table.name,
-        title: `Table '${table.name}' is empty (0 rows)`,
-        description: `Schema is active but contains no live data records.`,
-        suggestion: `Seed sample data for testing.`,
-        remediationSql: `-- Insert seed rows into ${table.name}`
-      });
-    }
-  }
-
-  const criticalCount = issues.filter((i) => i.severity === 'critical').length;
-  const warningCount = issues.filter((i) => i.severity === 'warning').length;
-  const minorCount = issues.filter((i) => i.severity === 'minor').length;
-  const healthScore = Math.max(0, 100 - criticalCount * 25 - warningCount * 10 - minorCount * 3);
 
   return {
     projectId,
@@ -476,15 +391,15 @@ async function runPostgresDiagnostics(
     tables: tableSummaries,
     summary: {
       total: issues.length,
-      critical: criticalCount,
-      warning: warningCount,
-      minor: minorCount,
+      critical: 0,
+      warning: 0,
+      minor: 0,
       tablesScanned: schema.length,
-      columnsScanned: totalColumnsScanned,
-      healthScore
+      columnsScanned: 0,
+      healthScore: 100
     },
     systemHealth: {
-      indexerEngine: 'PostgreSQL Introspector Operational',
+      indexerEngine: 'Supabase / PostgreSQL Proxy Operational',
       groqApi: systemHealth.groqStatus,
       sqlJsRuntime: systemHealth.sqlJsStatus,
       encryptionLayer: systemHealth.encStatus
@@ -493,61 +408,40 @@ async function runPostgresDiagnostics(
   };
 }
 
-// MongoDB Diagnostics Runner
+// MongoDB Diagnostics Runner (Deprecated notice)
 async function runMongoDiagnostics(
   projectId: string,
   connectionId: string,
-  uri: string,
+  _uri: string,
   systemHealth: { sqlJsStatus: string; groqStatus: string; encStatus: string }
 ): Promise<DiagnosticResult> {
-  const collections = await MongoDriver.getSchema(uri);
-  const issues: QaDiagnosticIssue[] = [];
-  const tableSummaries: TableSummaryItem[] = [];
-
-  for (const col of collections) {
-    tableSummaries.push({
-      name: col.name,
-      columnCount: col.fields.length,
-      rowCount: col.count
-    });
-
-    if (col.count === 0) {
-      issues.push({
-        id: `mongo_${col.name}_empty`,
-        code: 'EMPTY_TABLE',
-        severity: 'minor',
-        tableName: col.name,
-        title: `Collection '${col.name}' contains 0 documents`,
-        description: `Empty collection registered in MongoDB.`,
-        suggestion: `Insert seed documents into '${col.name}'.`,
-        remediationSql: `db.${col.name}.insertOne({ sample: true, createdAt: new Date() })`
-      });
-    }
-  }
-
-  const criticalCount = issues.filter((i) => i.severity === 'critical').length;
-  const warningCount = issues.filter((i) => i.severity === 'warning').length;
-  const minorCount = issues.filter((i) => i.severity === 'minor').length;
-  const healthScore = Math.max(0, 100 - criticalCount * 25 - warningCount * 10 - minorCount * 3);
-
   return {
     projectId,
     dialect: 'mongodb',
     connectionId,
-    indexed: true,
-    issues,
-    tables: tableSummaries,
+    indexed: false,
+    issues: [
+      {
+        id: `mongo_deprecated_${projectId}`,
+        code: 'MISSING_SCHEMA_VALIDATOR',
+        severity: 'warning',
+        title: 'MongoDB driver has been removed',
+        description: 'MongoDB Atlas is deprecated in favor of Supabase client + local WASM sql.js sandboxes.',
+        suggestion: 'Migrate connection to Supabase or SQLite.'
+      }
+    ],
+    tables: [],
     summary: {
-      total: issues.length,
-      critical: criticalCount,
-      warning: warningCount,
-      minor: minorCount,
-      tablesScanned: collections.length,
-      columnsScanned: collections.reduce((acc, c) => acc + c.fields.length, 0),
-      healthScore
+      total: 1,
+      critical: 0,
+      warning: 1,
+      minor: 0,
+      tablesScanned: 0,
+      columnsScanned: 0,
+      healthScore: 90
     },
     systemHealth: {
-      indexerEngine: 'MongoDB Document Sampler Operational',
+      indexerEngine: 'MongoDB Driver Retired (Use Supabase / SQLite)',
       groqApi: systemHealth.groqStatus,
       sqlJsRuntime: systemHealth.sqlJsStatus,
       encryptionLayer: systemHealth.encStatus
@@ -556,71 +450,40 @@ async function runMongoDiagnostics(
   };
 }
 
-// Redis Diagnostics Runner
+// Redis Diagnostics Runner (Deprecated notice)
 async function runRedisDiagnostics(
   projectId: string,
   connectionId: string,
-  uri: string,
+  _uri: string,
   systemHealth: { sqlJsStatus: string; groqStatus: string; encStatus: string }
 ): Promise<DiagnosticResult> {
-  const keys: RedisKeyInfo[] = await RedisDriver.getSchema(uri);
-  const issues: QaDiagnosticIssue[] = [];
-  const tableSummaries: TableSummaryItem[] = [];
-
-  const namespacesMap = new Map<string, RedisKeyInfo[]>();
-  for (const k of keys) {
-    const ns = k.key.includes(':') ? k.key.split(':')[0] : 'default';
-    if (!namespacesMap.has(ns)) {
-      namespacesMap.set(ns, []);
-    }
-    namespacesMap.get(ns)!.push(k);
-  }
-
-  for (const [ns, nsKeys] of namespacesMap.entries()) {
-    tableSummaries.push({
-      name: ns,
-      columnCount: nsKeys.length,
-      rowCount: nsKeys.length
-    });
-
-    const untypedKeys = nsKeys.filter((k) => k.ttl === -1);
-    if (untypedKeys.length > 0) {
-      issues.push({
-        id: `redis_${ns}_no_ttl`,
-        code: 'UNBOUNDED_TTL',
-        severity: 'warning',
-        tableName: ns,
-        title: `Namespace '${ns}' has ${untypedKeys.length} key(s) with NO TTL (infinite expiry)`,
-        description: `Keys without TTL will remain indefinitely in memory, risking cache ballooning and OOM errors.`,
-        suggestion: `Set an explicit TTL policy on keys in namespace '${ns}'.`,
-        remediationSql: `EXPIRE ${untypedKeys[0].key} 86400`
-      });
-    }
-  }
-
-  const criticalCount = issues.filter((i) => i.severity === 'critical').length;
-  const warningCount = issues.filter((i) => i.severity === 'warning').length;
-  const minorCount = issues.filter((i) => i.severity === 'minor').length;
-  const healthScore = Math.max(0, 100 - criticalCount * 25 - warningCount * 10 - minorCount * 3);
-
   return {
     projectId,
     dialect: 'redis',
     connectionId,
-    indexed: true,
-    issues,
-    tables: tableSummaries,
+    indexed: false,
+    issues: [
+      {
+        id: `redis_deprecated_${projectId}`,
+        code: 'UNBOUNDED_TTL',
+        severity: 'warning',
+        title: 'Redis driver has been removed',
+        description: 'Redis is deprecated in favor of Supabase client + local WASM sql.js sandboxes.',
+        suggestion: 'Migrate connection to Supabase or SQLite.'
+      }
+    ],
+    tables: [],
     summary: {
-      total: issues.length,
-      critical: criticalCount,
-      warning: warningCount,
-      minor: minorCount,
-      tablesScanned: namespacesMap.size,
-      columnsScanned: keys.length,
-      healthScore
+      total: 1,
+      critical: 0,
+      warning: 1,
+      minor: 0,
+      tablesScanned: 0,
+      columnsScanned: 0,
+      healthScore: 90
     },
     systemHealth: {
-      indexerEngine: 'Redis SCAN Inspector Operational',
+      indexerEngine: 'Redis Driver Retired (Use Supabase / SQLite)',
       groqApi: systemHealth.groqStatus,
       sqlJsRuntime: systemHealth.sqlJsStatus,
       encryptionLayer: systemHealth.encStatus

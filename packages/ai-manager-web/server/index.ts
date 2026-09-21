@@ -23,7 +23,8 @@ import {
   diagramRouter,
   screenRouter,
   flowAuditRouter,
-  graphifyRouter
+  graphifyRouter,
+  mcpRouter
 } from './modules/index.js';
 
 dotenv.config();
@@ -69,6 +70,8 @@ app.use('/api/diagrams', diagramRouter);
 app.use('/api/screens', screenRouter);
 app.use('/api/flow-audit', flowAuditRouter);
 app.use('/api/graphify', graphifyRouter);
+app.use('/api/mcp', mcpRouter);
+
 
 
 

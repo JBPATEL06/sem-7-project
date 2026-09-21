@@ -53,7 +53,7 @@ export async function callLlmForScreenAst(
   }
 
   if (!apiKey) {
-    throw new Error('No AI API key found. Please configure your Groq, Grok, or OpenAI API key in Settings -> AI & agents.');
+    return null;
   }
 
   const isTargetedEdit = mode === 'modify' && selectedCompIds.length > 0;

@@ -14,3 +14,7 @@ dist-server/
 .env.local
 .DS_Store
 temp/
+pglite_data/
+screenshot_proof/
+.backups/
+.tmp/

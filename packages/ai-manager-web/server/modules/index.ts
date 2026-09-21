@@ -9,3 +9,5 @@ export * from './git/index.js';
 export * from './graphify/index.js';
 export * from './settings/index.js';
 export * from './dashboard/index.js';
+export * from './mcp/mcpRoutes.js';
+

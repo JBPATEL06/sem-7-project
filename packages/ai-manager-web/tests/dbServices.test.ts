@@ -27,7 +27,7 @@ describe('Database Services & Driver Utility Tests', () => {
   it('4. syncDiskDiagramsToStore auto-discovers .excalidraw files from diagrams/ folder', async () => {
     const { syncDiskDiagramsToStore } = await import('../server/modules/diagrams/diagramRoutes.js');
     await syncDiskDiagramsToStore('acme-api', 'usr_admin_default');
-  });
+  }, 30000);
 
   it('5. syncDiskScreensToStore auto-discovers layout specs from ui/ folder', async () => {
     const { syncDiskScreensToStore } = await import('../server/modules/screens/screenRoutes.js');

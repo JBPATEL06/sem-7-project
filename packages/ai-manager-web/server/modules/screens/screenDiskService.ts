@@ -6,6 +6,8 @@ import { ScreenModel } from '../../models/index.js';
 import { getIsMongoConnected } from '../auth/auth.js';
 import { getWorkspaceRootDir } from '../../shared/index.js';
 
+import { atomicWriteFileSync } from '../../shared/utils/atomicPersistence.js';
+
 /**
  * Clean slug generator for workspace filenames
  */
@@ -14,7 +16,7 @@ export function getScreenSlug(name: string): string {
 }
 
 /**
- * Synchronizes screen specification directly to project root ui/ directory
+ * Synchronizes screen specification directly to project root ui/ directory with atomic writes & backups
  */
 export function syncScreenToDisk(spec: ScreenLayoutSpec): string {
   try {
@@ -25,12 +27,12 @@ export function syncScreenToDisk(spec: ScreenLayoutSpec): string {
     }
     const slug = getScreenSlug(spec.name);
     const filePath = path.join(targetDir, `${slug}.json`);
-    fs.writeFileSync(filePath, JSON.stringify(spec, null, 2), 'utf-8');
+    atomicWriteFileSync(filePath, JSON.stringify(spec, null, 2));
 
     // Also synchronously write native .fig file to ui/<slug>.fig via OpenPencil engine
     exportScreenToFigBuffer(spec).then(figBytes => {
       const figPath = path.join(targetDir, `${slug}.fig`);
-      fs.writeFileSync(figPath, Buffer.from(figBytes));
+      atomicWriteFileSync(figPath, Buffer.from(figBytes));
     }).catch(err => console.error('[Screens] Error syncing .fig file:', err));
 
     return `ui/${slug}.fig`;

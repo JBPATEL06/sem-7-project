@@ -1,5 +1,4 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
-import { Excalidraw, exportToBlob, exportToSvg } from '@excalidraw/excalidraw';
 import { Card, Button, Badge, Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from '@/shared/ui';
 import {
   FileCode2,
@@ -9,25 +8,27 @@ import {
   Download,
   Upload,
   Layers,
-  Image,
   RefreshCw,
-  LayoutGrid,
-  Database,
-  GitBranch,
   FileCheck,
-  Maximize2,
+  ExternalLink,
   Sparkles,
-  Zap
+  Zap,
+  CheckCircle2,
+  Maximize2
 } from 'lucide-react';
 import { useDiagrams, Diagram } from '../hooks/useDiagrams';
 import { useTheme } from '@/shared/context';
 
 interface DiagramsPageProps {
   projectId?: string;
+  onNavigateDashboard?: () => void;
 }
 
-export const DiagramsPage: React.FC<DiagramsPageProps> = ({ projectId = 'acme-api' }) => {
-  const { theme } = useTheme();
+export const DiagramsPage: React.FC<DiagramsPageProps> = ({ projectId = 'acme-api', onNavigateDashboard }) => {
+  const DRAWIO_URL = 'http://localhost:8085/index.html?dev=1&embed=1&proto=json&configure=1';
+  const iframeRef = useRef<HTMLIFrameElement>(null);
+  const autoSaveTimerRef = useRef<NodeJS.Timeout | null>(null);
+
   const {
     diagrams,
     activeDiagram,
@@ -36,336 +37,151 @@ export const DiagramsPage: React.FC<DiagramsPageProps> = ({ projectId = 'acme-ap
     isSaving,
     error,
     createDiagram,
-    generateAiDiagram,
     saveDiagram,
     deleteDiagram,
-    importDiagramJson,
     refetch
   } = useDiagrams(projectId);
 
-  const [excalidrawAPI, setExcalidrawAPI] = useState<any>(null);
-  const [newDiagramName, setNewDiagramName] = useState('');
-  const [newDiagramType, setNewDiagramType] = useState<Diagram['type']>('architecture');
-  const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
-  const [isAiModalOpen, setIsAiModalOpen] = useState(false);
-  const [aiPrompt, setAiPrompt] = useState('');
-  const [aiDiagramType, setAiDiagramType] = useState<Diagram['type']>('architecture');
-  const [isAiGenerating, setIsAiGenerating] = useState(false);
+  const [iframeKey, setIframeKey] = useState(0);
+  const [isIframeLoaded, setIsIframeLoaded] = useState(false);
+  const [statusMessage, setStatusMessage] = useState<string | null>(null);
   const [saveSuccess, setSaveSuccess] = useState(false);
   const [copiedFilePath, setCopiedFilePath] = useState(false);
-  const fileInputRef = useRef<HTMLInputElement>(null);
+  const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
+  const [newDiagramName, setNewDiagramName] = useState('');
+  const [newDiagramType, setNewDiagramType] = useState<Diagram['type']>('architecture');
 
-  // Sync active diagram data to canvas when switching diagrams
-  useEffect(() => {
-    if (excalidrawAPI && activeDiagram) {
-      excalidrawAPI.updateScene({
-        elements: activeDiagram.elements || [],
-        appState: {
-          ...(activeDiagram.appState || {}),
-          viewBackgroundColor: theme === 'dark' ? '#090d16' : '#ffffff',
-          theme: theme === 'dark' ? 'dark' : 'light'
-        }
-      });
-      if (activeDiagram.elements && activeDiagram.elements.length > 0) {
-        setTimeout(() => {
-          excalidrawAPI.scrollToContent(activeDiagram.elements, { fitToViewport: true, viewportZoomFactor: 0.85 });
-        }, 60);
-      }
-    }
-  }, [activeDiagram?.id, activeDiagram?.updatedAt, excalidrawAPI, theme]);
+  const slug = activeDiagram
+    ? activeDiagram.name.toLowerCase().replace(/[^a-z0-9]+/g, '_').replace(/^_+|_+$/g, '')
+    : 'architecture_flow';
+  const currentFilePath = `diagrams/${slug}.drawio`;
 
-  // Handle Save
-  const handleSave = async () => {
-    if (!excalidrawAPI || !activeDiagram) return;
-    const elements = excalidrawAPI.getSceneElements();
-    const appState = excalidrawAPI.getAppState();
-    const files = excalidrawAPI.getFiles();
-
-    await saveDiagram(activeDiagram.id, elements, {
-      viewBackgroundColor: appState.viewBackgroundColor,
-      theme: appState.theme
-    }, files);
-
-    setSaveSuccess(true);
-    setTimeout(() => setSaveSuccess(false), 2500);
+  // Reload iframe editor
+  const handleRefreshStudio = () => {
+    setIsIframeLoaded(false);
+    setIframeKey((k) => k + 1);
+    setStatusMessage('Reloading draw.io Studio Engine...');
+    setTimeout(() => setStatusMessage(null), 2500);
   };
 
-  // Handle Create New
+  // Perform atomic save
+  const executeSave = useCallback(async (xmlData?: string) => {
+    if (!activeDiagram) return;
+    try {
+      const xmlToSave = xmlData || (activeDiagram as any).xml || `<mxGraphModel><root><mxCell id="0"/><mxCell id="1" parent="0"/></root></mxGraphModel>`;
+      await saveDiagram(activeDiagram.id, [], activeDiagram.appState || {}, { xml: xmlToSave });
+      setSaveSuccess(true);
+      setTimeout(() => setSaveSuccess(false), 2500);
+    } catch (err: any) {
+      console.error('[draw.io AutoSave Error]:', err);
+    }
+  }, [activeDiagram, saveDiagram]);
+
+  // Handle draw.io Embed Protocol postMessages
+  useEffect(() => {
+    const handleMessage = (event: MessageEvent) => {
+      if (!event.data || typeof event.data !== 'string') {
+        if (event.data && typeof event.data === 'object' && event.data.event) {
+          const evt = event.data;
+          if (evt.event === 'init') {
+            setIsIframeLoaded(true);
+            const initialXml = (activeDiagram as any)?.xml || `<mxGraphModel><root><mxCell id="0"/><mxCell id="1" parent="0"/></root></mxGraphModel>`;
+            iframeRef.current?.contentWindow?.postMessage(
+              JSON.stringify({ action: 'load', xml: initialXml, autosave: 1 }),
+              '*'
+            );
+          } else if (evt.event === 'autosave' || evt.event === 'change') {
+            if (evt.xml) {
+              if (autoSaveTimerRef.current) clearTimeout(autoSaveTimerRef.current);
+              autoSaveTimerRef.current = setTimeout(() => {
+                executeSave(evt.xml);
+              }, 1750);
+            }
+          }
+        }
+        return;
+      }
+
+      try {
+        const msg = JSON.parse(event.data);
+        if (msg.event === 'init') {
+          setIsIframeLoaded(true);
+          const initialXml = (activeDiagram as any)?.xml || `<mxGraphModel><root><mxCell id="0"/><mxCell id="1" parent="0"/></root></mxGraphModel>`;
+          iframeRef.current?.contentWindow?.postMessage(
+            JSON.stringify({ action: 'load', xml: initialXml, autosave: 1 }),
+            '*'
+          );
+        } else if (msg.event === 'autosave' || msg.event === 'change' || msg.event === 'save') {
+          if (msg.xml) {
+            if (autoSaveTimerRef.current) clearTimeout(autoSaveTimerRef.current);
+            autoSaveTimerRef.current = setTimeout(() => {
+              executeSave(msg.xml);
+            }, 1750);
+          }
+        }
+      } catch (err) {}
+    };
+
+    window.addEventListener('message', handleMessage);
+    return () => window.removeEventListener('message', handleMessage);
+  }, [activeDiagram, executeSave]);
+
+  // Handle Create New Diagram
   const handleCreate = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!newDiagramName.trim()) return;
-
-    // Provide initial starter elements based on type
-    let initialElements: any[] = [];
-    if (newDiagramType === 'architecture') {
-      initialElements = [
-        {
-          type: 'rectangle',
-          x: 100,
-          y: 100,
-          width: 220,
-          height: 90,
-          backgroundColor: '#3b82f620',
-          strokeColor: '#3b82f6',
-          strokeWidth: 2,
-          roughness: 1
-        },
-        {
-          type: 'text',
-          x: 120,
-          y: 130,
-          text: 'Client Web (React 18)',
-          fontSize: 16,
-          fontFamily: 1
-        },
-        {
-          type: 'rectangle',
-          x: 420,
-          y: 100,
-          width: 220,
-          height: 90,
-          backgroundColor: '#10b98120',
-          strokeColor: '#10b981',
-          strokeWidth: 2,
-          roughness: 1
-        },
-        {
-          type: 'text',
-          x: 440,
-          y: 130,
-          text: 'API Server (Express)',
-          fontSize: 16,
-          fontFamily: 1
-        },
-        {
-          type: 'arrow',
-          x: 320,
-          y: 145,
-          width: 100,
-          height: 0,
-          points: [[0, 0], [100, 0]],
-          strokeColor: '#8b5cf6',
-          strokeWidth: 2
-        }
-      ];
-    } else if (newDiagramType === 'er_diagram') {
-      initialElements = [
-        {
-          type: 'rectangle',
-          x: 100,
-          y: 100,
-          width: 200,
-          height: 140,
-          backgroundColor: '#f59e0b20',
-          strokeColor: '#f59e0b',
-          strokeWidth: 2
-        },
-        {
-          type: 'text',
-          x: 115,
-          y: 115,
-          text: 'TABLE: users\n- id: INTEGER PK\n- email: TEXT\n- role: TEXT',
-          fontSize: 14,
-          fontFamily: 3
-        }
-      ];
-    }
-
-    await createDiagram(newDiagramName.trim(), newDiagramType, initialElements);
+    await createDiagram(newDiagramName.trim(), newDiagramType, []);
     setNewDiagramName('');
     setIsCreateModalOpen(false);
   };
 
-  // Handle AI Generate Diagram
-  const handleAiGenerateDiagram = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!aiPrompt.trim()) return;
-    try {
-      setIsAiGenerating(true);
-      const newDiagram = await generateAiDiagram(aiPrompt.trim(), aiDiagramType);
-      setAiPrompt('');
-      setIsAiModalOpen(false);
-
-      if (newDiagram && excalidrawAPI) {
-        excalidrawAPI.updateScene({
-          elements: newDiagram.elements || [],
-          appState: {
-            viewBackgroundColor: '#090d16',
-            theme: theme === 'dark' ? 'dark' : 'light'
-          }
-        });
-        setTimeout(() => {
-          if (excalidrawAPI && newDiagram.elements && newDiagram.elements.length > 0) {
-            excalidrawAPI.scrollToContent(newDiagram.elements, { fitToViewport: true, viewportZoomFactor: 0.85 });
-          }
-        }, 80);
-      }
-    } catch (err: any) {
-      console.error('AI Diagram Generation failed:', err);
-    } finally {
-      setIsAiGenerating(false);
-    }
-  };
-
-  // Export JSON (.excalidraw)
-  const handleExportJson = () => {
-    if (!excalidrawAPI || !activeDiagram) return;
-    const elements = excalidrawAPI.getSceneElements();
-    const appState = excalidrawAPI.getAppState();
-    const files = excalidrawAPI.getFiles();
-
-    const data = {
-      type: 'excalidraw',
-      version: 2,
-      source: 'https://ai-manager.local',
-      name: activeDiagram.name,
-      elements,
-      appState,
-      files
-    };
-
-    const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = `${activeDiagram.name.toLowerCase().replace(/[^a-z0-9_-]/g, '_')}_${activeDiagram.id}.excalidraw`;
-    a.click();
-    URL.revokeObjectURL(url);
-  };
-
-  // Export PNG
-  const handleExportPng = async () => {
-    if (!excalidrawAPI || !activeDiagram) return;
-    try {
-      const elements = excalidrawAPI.getSceneElements();
-      const appState = excalidrawAPI.getAppState();
-      const files = excalidrawAPI.getFiles();
-
-      const blob = await exportToBlob({
-        elements,
-        appState: {
-          ...appState,
-          exportBackground: true,
-          viewBackgroundColor: appState.viewBackgroundColor || (theme === 'dark' ? '#1e1e24' : '#ffffff')
-        },
-        files,
-        mimeType: 'image/png'
-      });
-
-      const url = URL.createObjectURL(blob);
-      const a = document.createElement('a');
-      a.href = url;
-      a.download = `${activeDiagram.name.toLowerCase().replace(/[^a-z0-9_-]/g, '_')}.png`;
-      a.click();
-      URL.revokeObjectURL(url);
-    } catch (err: any) {
-      console.error('PNG export failed:', err);
-    }
-  };
-
-  // Export SVG
-  const handleExportSvg = async () => {
-    if (!excalidrawAPI || !activeDiagram) return;
-    try {
-      const elements = excalidrawAPI.getSceneElements();
-      const appState = excalidrawAPI.getAppState();
-      const files = excalidrawAPI.getFiles();
-
-      const svg = await exportToSvg({
-        elements,
-        appState: {
-          ...appState,
-          exportBackground: true,
-          viewBackgroundColor: appState.viewBackgroundColor || (theme === 'dark' ? '#1e1e24' : '#ffffff')
-        },
-        files
-      });
-
-      const svgString = new XMLSerializer().serializeToString(svg);
-      const blob = new Blob([svgString], { type: 'image/svg+xml' });
-      const url = URL.createObjectURL(blob);
-      const a = document.createElement('a');
-      a.href = url;
-      a.download = `${activeDiagram.name.toLowerCase().replace(/[^a-z0-9_-]/g, '_')}.svg`;
-      a.click();
-      URL.revokeObjectURL(url);
-    } catch (err: any) {
-      console.error('SVG export failed:', err);
-    }
-  };
-
-  // Handle Import File
-  const handleImportFile = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
-
-    const reader = new FileReader();
-    reader.onload = async (event) => {
-      try {
-        const json = JSON.parse(event.target?.result as string);
-        const name = file.name.replace(/\.(json|excalidraw)$/i, '');
-        await importDiagramJson(json, name);
-      } catch (err: any) {
-        alert(`Failed to parse Excalidraw JSON: ${err.message}`);
-      }
-    };
-    reader.readAsText(file);
-    e.target.value = '';
-  };
-
-  // Zoom to Fit / Reset Canvas View
-  const handleZoomToFit = () => {
-    if (!excalidrawAPI) return;
-    const elements = excalidrawAPI.getSceneElements();
-    if (elements && elements.length > 0) {
-      excalidrawAPI.scrollToContent(elements, { fitToViewport: true, viewportZoomFactor: 0.85 });
-    }
-  };
-
   return (
-    <main className="flex-1 flex flex-col h-[calc(100vh-64px)] w-full overflow-hidden bg-background">
-      {/* Top Header & Toolbar */}
-      <div className="flex justify-between items-center px-4 py-2.5 bg-card/95 backdrop-blur-md border-b border-border z-10 shrink-0 gap-3 flex-wrap shadow-xs">
-        <div className="flex items-center gap-3">
-          <div className="p-1.5 rounded-lg bg-primary/10 text-primary border border-primary/20">
-            <Layers className="size-4" />
-          </div>
-          <div>
-            <div className="flex items-center gap-2">
-              <h1 className="font-bold text-foreground text-sm tracking-tight">
-                Diagram Studio & Canvas
-              </h1>
-              <Badge variant="outline" className="text-[10px] font-mono">
-                {projectId}
-              </Badge>
+    <main className="w-screen h-screen flex flex-col bg-[#121214] text-slate-100 select-none overflow-hidden font-sans">
+      {/* Top Header & Control Bar */}
+      <header className="h-12 bg-[#18181b] border-b border-zinc-800 px-4 flex items-center justify-between z-30 shrink-0 select-none">
+        {/* Left: Branding & Status */}
+        <div className="flex items-center space-x-3">
+          <div className="flex items-center space-x-2">
+            <div className="w-6 h-6 rounded bg-gradient-to-tr from-amber-500 to-orange-500 flex items-center justify-center font-bold text-white text-xs shadow-xs">
+              D
             </div>
-            <p className="text-muted-foreground text-[11px]">
-              Infinite Excalidraw architecture, ER diagrams, and system flows
-            </p>
+            <span className="font-semibold text-sm tracking-tight text-white">draw.io Diagram Studio</span>
+            <span className="text-[11px] px-2.5 py-0.5 rounded-full bg-amber-500/10 text-amber-400 border border-amber-500/20 font-mono flex items-center gap-1.5">
+              <CheckCircle2 className="w-3 h-3 text-amber-400" />
+              v24.7.17 Upstream mxGraph Engine
+            </span>
           </div>
 
-          {/* Repo File Path Badge with 1-Click Copy */}
+          {/* Repo File Path Badge */}
           <div
             onClick={() => {
-              const slug = activeDiagram ? activeDiagram.name.toLowerCase().replace(/[^a-z0-9]+/g, '_').replace(/^_+|_+$/g, '') : 'system_architecture';
-              navigator.clipboard.writeText(`diagrams/${slug}.excalidraw`);
+              navigator.clipboard.writeText(currentFilePath);
               setCopiedFilePath(true);
               setTimeout(() => setCopiedFilePath(false), 2000);
             }}
             title="Click to copy repository file path"
-            className={`flex items-center space-x-1.5 text-[11px] font-mono px-2.5 py-1 rounded-lg border cursor-pointer transition-all ${
+            className={`flex items-center space-x-1.5 text-[11px] font-mono px-2.5 py-1 rounded-md border cursor-pointer transition-all ${
               copiedFilePath
-                ? 'bg-emerald-500/10 border-emerald-500/30 text-emerald-500 font-semibold'
-                : 'bg-muted/60 hover:bg-muted border-border text-foreground'
+                ? 'bg-emerald-500/10 border-emerald-500/30 text-emerald-400 font-semibold'
+                : 'bg-zinc-800/80 hover:bg-zinc-700 border-zinc-700 text-zinc-300'
             }`}
           >
-            <span>📁 diagrams/{activeDiagram ? activeDiagram.name.toLowerCase().replace(/[^a-z0-9]+/g, '_').replace(/^_+|_+$/g, '') : 'system_architecture'}.excalidraw</span>
-            {copiedFilePath ? <FileCheck className="size-3 text-emerald-500" /> : <Download className="size-3 opacity-60 hover:opacity-100" />}
+            <span>📁 {currentFilePath}</span>
+            {copiedFilePath ? <FileCheck className="w-3 h-3 text-emerald-400" /> : <Download className="w-3 h-3 opacity-60" />}
           </div>
         </div>
 
-        <div className="flex items-center gap-2 flex-wrap">
-          {/* Diagram Picker */}
+        {/* Center: Toast Status */}
+        {statusMessage && (
+          <div className="px-3 py-1 bg-amber-500/20 text-amber-300 border border-amber-500/30 rounded-full text-xs animate-fade-in flex items-center space-x-1.5">
+            <Zap className="w-3 h-3 text-amber-400 animate-pulse" />
+            <span>{statusMessage}</span>
+          </div>
+        )}
+
+        {/* Right: Actions */}
+        <div className="flex items-center space-x-2">
+          {/* Diagram Selector */}
           <Select
             value={activeDiagram?.id || ''}
             onValueChange={(val) => {
@@ -373,7 +189,7 @@ export const DiagramsPage: React.FC<DiagramsPageProps> = ({ projectId = 'acme-ap
               if (found) setActiveDiagram(found);
             }}
           >
-            <SelectTrigger className="w-[210px] text-xs h-8">
+            <SelectTrigger className="w-[200px] text-xs h-8 bg-zinc-800 border-zinc-700 text-zinc-200">
               <SelectValue placeholder="Select Diagram">
                 {activeDiagram ? `${activeDiagram.name} (${activeDiagram.type})` : 'Select Diagram'}
               </SelectValue>
@@ -387,355 +203,125 @@ export const DiagramsPage: React.FC<DiagramsPageProps> = ({ projectId = 'acme-ap
             </SelectContent>
           </Select>
 
-          {/* AI Generate Diagram Button */}
-          <Button
-            size="sm"
-            onClick={() => setIsAiModalOpen(true)}
-            className="gap-1.5 text-xs h-8 bg-gradient-to-r from-violet-600 to-indigo-600 hover:from-violet-500 hover:to-indigo-500 text-white cursor-pointer shadow-xs font-semibold"
-          >
-            <Sparkles className="size-3.5" />
-            AI Generate
-          </Button>
-
           {/* New Diagram Button */}
           <Button
             size="sm"
-            variant="outline"
             onClick={() => setIsCreateModalOpen(true)}
-            className="gap-1.5 text-xs h-8 cursor-pointer"
+            className="gap-1.5 text-xs h-8 bg-amber-600 hover:bg-amber-500 text-white cursor-pointer font-medium"
           >
-            <Plus className="size-3.5" />
+            <Plus className="w-3.5 h-3.5" />
             New
           </Button>
 
-          {/* Save Changes Button */}
+          {/* Save Button */}
           {activeDiagram && (
             <Button
               size="sm"
-              onClick={handleSave}
+              onClick={() => executeSave()}
               disabled={isSaving}
-              className="gap-1.5 text-xs h-8 bg-primary hover:bg-primary/90 text-primary-foreground cursor-pointer"
+              className="gap-1.5 text-xs h-8 bg-zinc-800 hover:bg-zinc-700 text-zinc-200 border border-zinc-700 cursor-pointer"
             >
               {saveSuccess ? (
                 <>
-                  <FileCheck className="size-3.5 text-emerald-300" />
+                  <FileCheck className="w-3.5 h-3.5 text-emerald-400" />
                   Saved!
                 </>
               ) : (
                 <>
-                  <Save className="size-3.5" />
-                  {isSaving ? 'Saving...' : 'Save Canvas'}
+                  <Save className="w-3.5 h-3.5" />
+                  {isSaving ? 'Saving...' : 'Save File'}
                 </>
               )}
             </Button>
           )}
 
-          {/* Fit to Content */}
-          {activeDiagram && (
-            <Button
-              size="sm"
-              variant="outline"
-              onClick={handleZoomToFit}
-              title="Fit to Content"
-              className="gap-1.5 text-xs h-8 cursor-pointer text-muted-foreground hover:text-foreground"
-            >
-              <Maximize2 className="size-3.5" />
-              Fit View
-            </Button>
-          )}
-
-          {/* Export Dropdown / Buttons */}
-          {activeDiagram && (
-            <div className="flex items-center gap-1 border-l border-border pl-2">
-              <Button
-                size="sm"
-                variant="ghost"
-                onClick={handleExportJson}
-                title="Export .excalidraw JSON"
-                className="text-xs h-8 gap-1 px-2 cursor-pointer text-muted-foreground hover:text-foreground"
-              >
-                <Download className="size-3.5" />
-                JSON
-              </Button>
-              <Button
-                size="sm"
-                variant="ghost"
-                onClick={handleExportPng}
-                title="Export PNG Image"
-                className="text-xs h-8 gap-1 px-2 cursor-pointer text-muted-foreground hover:text-foreground"
-              >
-                <Image className="size-3.5" />
-                PNG
-              </Button>
-              <Button
-                size="sm"
-                variant="ghost"
-                onClick={handleExportSvg}
-                title="Export SVG Vector"
-                className="text-xs h-8 gap-1 px-2 cursor-pointer text-muted-foreground hover:text-foreground"
-              >
-                SVG
-              </Button>
-            </div>
-          )}
-
-          {/* Import Button */}
-          <input
-            type="file"
-            ref={fileInputRef}
-            onChange={handleImportFile}
-            accept=".json,.excalidraw"
-            className="hidden"
-          />
-          <Button
-            size="sm"
-            variant="outline"
-            onClick={() => fileInputRef.current?.click()}
-            className="gap-1.5 text-xs h-8 cursor-pointer text-muted-foreground hover:text-foreground"
+          {/* Refresh Editor */}
+          <button
+            onClick={handleRefreshStudio}
+            className="p-1.5 text-zinc-400 hover:text-white bg-zinc-800 hover:bg-zinc-700 border border-zinc-700 rounded-md transition cursor-pointer"
+            title="Reload draw.io Engine"
           >
-            <Upload className="size-3.5" />
-            Import
-          </Button>
+            <RefreshCw className="w-3.5 h-3.5" />
+          </button>
 
-          {/* Delete Active Diagram */}
-          {activeDiagram && (
-            <Button
-              size="sm"
-              variant="ghost"
-              onClick={() => {
-                if (confirm(`Delete diagram '${activeDiagram.name}'?`)) {
-                  deleteDiagram(activeDiagram.id);
-                }
-              }}
-              className="text-xs h-8 text-destructive hover:bg-destructive/10 px-2 cursor-pointer"
-              title="Delete Diagram"
-            >
-              <Trash2 className="size-3.5" />
-            </Button>
-          )}
+          {/* Open Standalone */}
+          <a
+            href={DRAWIO_URL}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="flex items-center space-x-1.5 px-3 py-1.5 text-xs font-medium text-amber-400 bg-amber-500/10 hover:bg-amber-500/20 border border-amber-500/30 rounded-md transition cursor-pointer"
+            title="Open Upstream draw.io Web App in standalone tab"
+          >
+            <span>Open Standalone</span>
+            <ExternalLink className="w-3.5 h-3.5" />
+          </a>
         </div>
-      </div>
+      </header>
 
-      {/* Edge-to-Edge Infinite Canvas Area or Empty State */}
-      <div className="flex-1 w-full h-full overflow-hidden relative bg-card">
-        {isLoading ? (
-          <div className="flex flex-col items-center justify-center h-full gap-3">
-            <div className="size-7 border-2 border-primary border-t-transparent rounded-full animate-spin" />
-            <span className="text-xs font-mono text-muted-foreground">Loading diagrams...</span>
-          </div>
-        ) : diagrams.length === 0 ? (
-          <div className="flex flex-col items-center justify-center h-full gap-4 text-center p-8">
-            <div className="size-16 rounded-2xl bg-primary/10 text-primary flex items-center justify-center border border-primary/20">
-              <Layers className="size-8" />
+      {/* Main Studio Viewport: Authentic Upstream draw.io mxGraph Editor */}
+      <main className="relative flex-1 w-full h-full bg-[#18181b] overflow-hidden">
+        <iframe
+          key={iframeKey}
+          ref={iframeRef}
+          src={DRAWIO_URL}
+          title="draw.io Official Editor App"
+          className="w-full h-full border-0"
+          onLoad={() => setIsIframeLoaded(true)}
+          allow="clipboard-read; clipboard-write"
+        />
+
+        {/* Loading Overlay */}
+        {!isIframeLoaded && (
+          <div className="absolute inset-0 bg-[#121214] flex flex-col items-center justify-center space-y-4 z-20">
+            <div className="w-10 h-10 border-2 border-amber-500/30 border-t-amber-500 rounded-full animate-spin" />
+            <div className="text-sm font-medium text-zinc-300 flex items-center space-x-2">
+              <Layers className="w-4 h-4 text-amber-400" />
+              <span>Connecting to Upstream draw.io mxGraph Engine at port 8085...</span>
             </div>
-            <div className="max-w-md">
-              <h2 className="text-base font-bold text-foreground">No diagrams created yet</h2>
-              <p className="text-xs text-muted-foreground mt-1">
-                Create system architectures, entity-relationship diagrams, or activity workflows for{' '}
-                <strong className="text-foreground">{projectId}</strong>.
-              </p>
-            </div>
-            <Button
-              onClick={() => setIsCreateModalOpen(true)}
-              className="bg-primary text-primary-foreground text-xs gap-1.5 cursor-pointer"
-            >
-              <Plus className="size-3.5" />
-              Create First Diagram
-            </Button>
-          </div>
-        ) : (
-          <div className="w-full h-full">
-            <Excalidraw
-              key={activeDiagram?.id || 'empty-diagram'}
-              initialData={{
-                elements: activeDiagram?.elements || [],
-                appState: {
-                  ...(activeDiagram?.appState || {}),
-                  theme: theme === 'dark' ? 'dark' : 'light',
-                  viewBackgroundColor: theme === 'dark' ? '#090d16' : '#ffffff'
-                },
-                files: activeDiagram?.files || {}
-              }}
-              excalidrawAPI={(api: any) => {
-                setExcalidrawAPI(api);
-                if (activeDiagram?.elements && activeDiagram.elements.length > 0) {
-                  setTimeout(() => {
-                    api?.scrollToContent?.(activeDiagram.elements, { fitToViewport: true, viewportZoomFactor: 0.85 });
-                  }, 80);
-                }
-              }}
-              theme={theme === 'dark' ? 'dark' : 'light'}
-              UIOptions={{
-                canvasActions: {
-                  loadScene: false,
-                  saveToActiveFile: false,
-                  toggleTheme: true
-                }
-              }}
-            />
+            <p className="text-xs text-zinc-500 max-w-sm text-center">
+              Loading stencil libraries, XML serializer, and vector shapes from <code className="text-amber-400">packages/drawio-repo</code>.
+            </p>
           </div>
         )}
-      </div>
+      </main>
 
       {/* New Diagram Modal */}
       {isCreateModalOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-xs p-4">
-          <Card className="w-full max-w-md p-6 bg-card border-border shadow-xl">
-            <h2 className="text-base font-bold text-foreground mb-1">Create New Diagram</h2>
-            <p className="text-xs text-muted-foreground mb-4">
-              Initialize a canvas layout with preset templates
-            </p>
-
-            <form onSubmit={handleCreate} className="flex flex-col gap-4">
+          <Card className="w-full max-w-md p-6 bg-zinc-900 border-zinc-800 text-zinc-100 shadow-xl space-y-4">
+            <h2 className="text-base font-bold text-white">Create New draw.io Diagram</h2>
+            <form onSubmit={handleCreate} className="space-y-4">
               <div>
-                <label className="text-xs font-semibold text-foreground block mb-1">
-                  Diagram Title
-                </label>
+                <label className="text-xs font-medium text-zinc-400 block mb-1">Diagram Name</label>
                 <input
                   type="text"
                   required
-                  placeholder="e.g. Microservices Architecture"
+                  placeholder="e.g. system_architecture"
                   value={newDiagramName}
                   onChange={(e) => setNewDiagramName(e.target.value)}
-                  className="w-full px-3 py-2 text-xs rounded-lg border border-border bg-background text-foreground focus:outline-hidden focus:ring-1 focus:ring-primary"
+                  className="w-full px-3 py-2 text-xs rounded bg-zinc-800 border border-zinc-700 text-white focus:outline-hidden focus:border-amber-500"
                 />
               </div>
-
               <div>
-                <label className="text-xs font-semibold text-foreground block mb-1">
-                  Diagram Type / Template
-                </label>
-                <Select
-                  value={newDiagramType}
-                  onValueChange={(val: any) => setNewDiagramType(val)}
-                >
-                  <SelectTrigger className="w-full text-xs">
+                <label className="text-xs font-medium text-zinc-400 block mb-1">Diagram Type</label>
+                <Select value={newDiagramType} onValueChange={(val: any) => setNewDiagramType(val)}>
+                  <SelectTrigger className="w-full text-xs bg-zinc-800 border-zinc-700 text-white">
                     <SelectValue placeholder="Select type" />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="architecture">System Architecture (Services & Nodes)</SelectItem>
-                    <SelectItem value="er_diagram">ER Diagram (Database Tables & Keys)</SelectItem>
-                    <SelectItem value="activity_flow">Activity Flow (Process & Gateway)</SelectItem>
+                    <SelectItem value="architecture">System Architecture Flow</SelectItem>
+                    <SelectItem value="er_diagram">Entity Relationship Diagram</SelectItem>
+                    <SelectItem value="activity_flow">Process Activity Flow</SelectItem>
                     <SelectItem value="scratchpad">Blank Canvas</SelectItem>
                   </SelectContent>
                 </Select>
               </div>
-
-              <div className="flex justify-end gap-2 mt-4">
-                <Button
-                  type="button"
-                  variant="outline"
-                  size="sm"
-                  onClick={() => setIsCreateModalOpen(false)}
-                  className="text-xs cursor-pointer"
-                >
+              <div className="flex justify-end space-x-2 pt-2">
+                <Button type="button" variant="outline" size="sm" onClick={() => setIsCreateModalOpen(false)} className="text-xs">
                   Cancel
                 </Button>
-                <Button
-                  type="submit"
-                  size="sm"
-                  className="bg-primary text-primary-foreground text-xs cursor-pointer"
-                >
+                <Button type="submit" size="sm" className="bg-amber-600 hover:bg-amber-500 text-white text-xs">
                   Create Diagram
-                </Button>
-              </div>
-            </form>
-          </Card>
-        </div>
-      )}
-
-      {/* AI Diagram Generator Modal */}
-      {isAiModalOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur-xs p-4">
-          <Card className="w-full max-w-lg p-6 bg-card border-border shadow-2xl space-y-4">
-            <div className="flex items-center justify-between border-b border-border pb-3">
-              <div className="flex items-center gap-2">
-                <Sparkles className="size-5 text-violet-500" />
-                <h2 className="text-base font-bold text-foreground">AI Diagram Synthesis Engine</h2>
-              </div>
-              <button
-                type="button"
-                onClick={() => setIsAiModalOpen(false)}
-                className="text-muted-foreground hover:text-foreground text-xs"
-              >
-                ✕
-              </button>
-            </div>
-
-            <form onSubmit={handleAiGenerateDiagram} className="flex flex-col gap-4">
-              <div>
-                <label className="text-xs font-semibold text-foreground block mb-1">
-                  Diagram Architecture Type
-                </label>
-                <Select
-                  value={aiDiagramType}
-                  onValueChange={(val: any) => setAiDiagramType(val)}
-                >
-                  <SelectTrigger className="w-full text-xs">
-                    <SelectValue placeholder="Select type" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="architecture">Microservices Architecture Flow</SelectItem>
-                    <SelectItem value="er_diagram">Relational Database ER Schema</SelectItem>
-                    <SelectItem value="activity_flow">Event-Driven Telemetry Pipeline</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-
-              <div>
-                <label className="text-xs font-semibold text-foreground block mb-1">
-                  Describe the system architecture or schema:
-                </label>
-                <textarea
-                  rows={4}
-                  required
-                  value={aiPrompt}
-                  onChange={(e) => setAiPrompt(e.target.value)}
-                  placeholder="e.g. Distributed high-throughput microservices architecture with API Gateway, JWT Auth Service, Kafka Event Bus, and MongoDB Cluster with bidirectional sync arrows..."
-                  className="w-full px-3 py-2 text-xs rounded-lg border border-border bg-background text-foreground focus:outline-hidden focus:ring-1 focus:ring-primary font-sans"
-                />
-              </div>
-
-              <div>
-                <span className="text-[10px] text-muted-foreground font-semibold uppercase tracking-wider block mb-2">
-                  Preset Architectures:
-                </span>
-                <div className="flex flex-wrap gap-1.5">
-                  {[
-                    'Full-Stack Cloud Architecture with Gateway, Auth & Cache',
-                    'E-Commerce Relational ER Diagram with Users & Orders',
-                    'Real-Time WebSocket Analytics Pipeline with Redis Stream'
-                  ].map((preset, idx) => (
-                    <button
-                      key={idx}
-                      type="button"
-                      onClick={() => setAiPrompt(preset)}
-                      className="text-[11px] px-2.5 py-1 bg-muted/60 hover:bg-muted border border-border rounded-lg text-foreground transition-colors text-left"
-                    >
-                      {preset}
-                    </button>
-                  ))}
-                </div>
-              </div>
-
-              <div className="flex justify-end gap-2 mt-2 pt-2 border-t border-border">
-                <Button
-                  type="button"
-                  variant="outline"
-                  size="sm"
-                  onClick={() => setIsAiModalOpen(false)}
-                  className="text-xs cursor-pointer"
-                >
-                  Cancel
-                </Button>
-                <Button
-                  type="submit"
-                  size="sm"
-                  disabled={isAiGenerating || !aiPrompt.trim()}
-                  className="bg-gradient-to-r from-violet-600 to-indigo-600 hover:from-violet-500 hover:to-indigo-500 text-white text-xs gap-1.5 cursor-pointer disabled:opacity-50"
-                >
-                  <Sparkles className="size-3.5" />
-                  {isAiGenerating ? 'Synthesizing Architecture...' : 'Generate Diagram'}
                 </Button>
               </div>
             </form>

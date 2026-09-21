@@ -4,9 +4,9 @@
   "private": true,
   "type": "module",
   "scripts": {
-    "dev": "concurrently -n \"CLIENT,SERVER\" -c \"cyan,magenta\" \"vite\" \"tsx watch server/index.ts\"",
+    "dev": "node scripts/dev.js",
     "dev:client": "vite",
-    "dev:server": "tsx watch server/index.ts",
+    "dev:server": "npx tsx watch server/index.ts",
     "build:server": "tsup",
     "build": "tsc && vite build && tsup",
     "server": "tsx server/index.ts",
@@ -14,9 +14,8 @@
   },
   "dependencies": {
     "@ai-manager/core": "*",
-    "db-context-indexer": "*",
+    "@electric-sql/pglite": "^0.2.17",
     "@excalidraw/excalidraw": "^0.17.6",
-
     "@open-pencil/core": "^0.14.0",
     "@open-pencil/fig": "^0.14.0",
     "@open-pencil/kiwi": "^0.14.0",
@@ -25,6 +24,7 @@
     "bcryptjs": "^2.4.3",
     "clsx": "^2.1.1",
     "cors": "^2.8.5",
+    "db-context-indexer": "*",
     "dotenv": "^16.4.7",
     "express": "^4.21.2",
     "google-auth-library": "^9.15.1",

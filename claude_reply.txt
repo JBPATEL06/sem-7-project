@@ -1,61 +1,21 @@
-# Merge Conflict Analysis Report (Step 6)
+# Implementation Plan: Service Orchestration, Settings MCP Exposure, Semgrep QA, & GitHub-Style Git UI
 
-## Branch Merge Context
-- **Base Branch**: `main` (Checkpoint commit: `efa9fc1 wip: pre-merge checkpoint before reconciling with feature branch`)
-- **Backup Branch Created**: `backup/main-before-modularization-merge`
-- **Target Branch Merged**: `origin/feature/vibe-coding-context-management-system`
-- **Merge Status**: Conflict encountered across 7 paths.
+I have created the implementation plan for the 4 requirements:
 
----
+1. **Unified Dev Service Orchestration (`npm run dev`)**:
+   - Update `packages/ai-manager-web/scripts/dev.js` to start Express (3000), Vite (5173), OpenPencil (1420), draw.io (8085), postgres-meta (1337), Supabase Studio (8082), and Git UI (3030) concurrently in order.
+   - Verify all listening ports via `netstat`.
 
-## Detailed Conflict List & Reconciliation Strategy
+2. **Settings Page Master MCP Exposure ("Connect Your AI")**:
+   - Add card in `SettingsPage.tsx` with live ngrok tunnel URL (1-click copy), Master MCP Bearer token (mask/reveal + copy), and ready-to-paste `mcpServers` JSON configuration for Claude Desktop / Antigravity clients.
 
-### 1. `claude_reply.txt`
-- **Conflict**: Text report file modified on both branches.
-- **Analysis**: Operational log file.
-- **Recommended Action**: Retain current session transcript reply.
+3. **Real Semgrep Integration in QA Diagnostics**:
+   - Add local Semgrep CLI / MCP integration in `semgrepService.ts` and `qaRoutes.ts`.
+   - Add "Security & Code Quality Scan" tab in `QaPage.tsx` displaying real findings (rule ID, severity, file, line, fix suggestion). Keep existing AST checks in a separate tab.
 
----
+4. **GitHub-Style Git UI (Gitea / Forgejo Integration)**:
+   - Clone `go-gitea/gitea` to `packages/gitea-repo` (`git remote -v` + `git log` proof).
+   - Configure local Git server serving workspace `.git` commit history.
+   - Embed in `GitLineagePage.tsx` via `<iframe>` pointing to `http://localhost:3030`.
 
-### 2. `packages/ai-manager-web/server/index.ts`
-- **Conflict**:
-  - `HEAD`: Imports routes flat (`import { dbRouter } from './dbRoutes.js'`).
-  - `feature branch`: Imports modularized routes (`import { dbRouter, graphifyRouter, ... } from './modules/index.js'`) and imports `MongoDriver`/`RedisDriver`.
-- **Analysis**: Feature branch has the correct modularized structure (`./modules/index.js`), but `HEAD` has removed extraneous `MongoDriver` and `RedisDriver`.
-- **Recommended Action**: Use modularized import structure from `./modules/index.js`, omitting `MongoDriver` and `RedisDriver`.
-
----
-
-### 3. `packages/ai-manager-web/server/modules/db/dbRoutes.ts`
-- **Conflict 1 (Imports)**: `HEAD` imports flat utilities; `feature branch` imports `../../shared/index.js` + `MongoDriver`/`RedisDriver`.
-- **Conflict 2 (MongoDB Routes)**: `HEAD` returns honest error (`"MongoDB operations are not supported. Use Supabase/PostgreSQL or SQLite."`); `feature branch` calls `MongoDriver.createCollection(...)`.
-- **Analysis**: Feature branch contains updated relative imports (`../../shared/index.js`), but `HEAD` contains the ground-truth DB architecture decision (Supabase + SQLite, no Mongo/Redis drivers).
-- **Recommended Action**: Keep modular imports (`../../shared/index.js`), keep `PgDriver` for Supabase/Postgres support, and keep `HEAD`'s honest 400 error response for Mongo/Redis routes.
-
----
-
-### 4. `packages/ai-manager-web/server/modules/db/drivers/mongoDriver.ts`
-- **Conflict**: Deleted in `HEAD` (driver cleanup); renamed from `server/drivers/mongoDriver.ts` to `server/modules/db/drivers/mongoDriver.ts` in `feature branch`.
-- **Analysis**: `HEAD` deleted this driver per the Supabase + SQLite decision.
-- **Recommended Action**: Delete `mongoDriver.ts` (accept deletion).
-
----
-
-### 5. `packages/ai-manager-web/server/modules/db/drivers/redisDriver.ts`
-- **Conflict**: Deleted in `HEAD` (driver cleanup); renamed from `server/drivers/redisDriver.ts` to `server/modules/db/drivers/redisDriver.ts` in `feature branch`.
-- **Analysis**: `HEAD` deleted this driver per the Supabase + SQLite decision.
-- **Recommended Action**: Delete `redisDriver.ts` (accept deletion).
-
----
-
-### 6. `packages/ai-manager-web/src/components/DashboardScreen.tsx`
-- **Conflict**: Modified in `HEAD` (chat panel removed); deleted in `feature branch` (legacy file replaced by `src/features/`).
-- **Analysis**: `feature branch` has modularized the entire frontend into `src/features/`. Legacy `src/components/DashboardScreen.tsx` is dead code.
-- **Recommended Action**: Delete `DashboardScreen.tsx` (accept deletion from feature branch).
-
----
-
-### 7. `packages/ai-manager-web/tests/dbServices.test.ts`
-- **Conflict**: `HEAD` removed `redisDriver.js` test import and test #3; `feature branch` retains `redisDriver.js` test import.
-- **Analysis**: `redisDriver.js` is removed.
-- **Recommended Action**: Use `HEAD` version (without `redisDriver.js` import).
+The plan is available at [implementation_plan.md](file:///C:/Users/jeel/.gemini/antigravity-ide/brain/bd35dc8c-1f78-4f82-a1ce-eafa45768abc/implementation_plan.md). Please review and approve to proceed with execution.

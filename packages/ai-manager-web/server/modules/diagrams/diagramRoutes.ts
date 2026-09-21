@@ -30,6 +30,8 @@ export interface Diagram {
 export const diagramRouter = Router();
 const diagramStore = new JsonStore<Diagram>('diagrams.json');
 
+import { atomicWriteFileSync } from '../../shared/utils/atomicPersistence.js';
+
 /**
  * Clean slug generator for diagram filenames
  */
@@ -38,7 +40,7 @@ export function getDiagramSlug(name: string): string {
 }
 
 /**
- * Synchronizes diagram directly to project root diagrams/ directory
+ * Synchronizes diagram directly to project root diagrams/ directory with atomic persistence & backups
  */
 export function syncDiagramToDisk(diagram: Diagram): string {
   try {
@@ -58,7 +60,7 @@ export function syncDiagramToDisk(diagram: Diagram): string {
       appState: diagram.appState || {},
       files: diagram.files || {}
     };
-    fs.writeFileSync(filePath, JSON.stringify(data, null, 2), 'utf-8');
+    atomicWriteFileSync(filePath, JSON.stringify(data, null, 2));
     return `diagrams/${slug}.excalidraw`;
   } catch (e) {
     console.error('[Diagrams] Disk sync error:', e);
