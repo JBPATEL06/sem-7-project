@@ -1,8 +1,7 @@
 import { Router, Response } from 'express';
 import path from 'path';
 import fs from 'fs';
-import { localOrAuth, AuthRequest, getIsMongoConnected } from '../auth/auth.js';
-import { DbConnectionModel } from '../../models/index.js';
+import { localOrAuth, AuthRequest } from '../auth/auth.js';
 import initSqlJs from 'sql.js';
 import { JsonStore, getWorkspaceRootDir, encrypt, decrypt } from '../../shared/index.js';
 
@@ -108,38 +107,13 @@ async function resolveConnection(
     return null;
   }
 
-  const cleanProjId = sanitizeProjectId(projectId);
-
-  if (connectionId === `conn_mongo_atlas_${cleanProjId}` || connectionId.startsWith('conn_mongo_atlas_')) {
-    const uri = process.env.MONGODB_URI || 'mongodb://127.0.0.1:27017/ai_manager';
-    return {
-      id: connectionId,
-      projectId: cleanProjId,
-      name: 'MongoDB Atlas (Cloud)',
-      type: 'mongodb',
-      uri
-    };
-  }
-
-  let conn: any = null;
-  if (getIsMongoConnected()) {
-    try {
-      const query: any = { id: connectionId };
-      if (!isAdmin && userId) {
-        query.userId = userId;
-      }
-      conn = await DbConnectionModel.findOne(query).lean();
-    } catch {}
-  }
-  if (!conn) {
-    const localConn = await localConnectionStore.getById(connectionId);
-    if (localConn) {
-      if (isAdmin || !userId || !localConn.userId || localConn.userId === userId) {
-        conn = localConn;
-      }
+  const localConn = await localConnectionStore.getById(connectionId);
+  if (localConn) {
+    if (isAdmin || !userId || !localConn.userId || localConn.userId === userId) {
+      return localConn;
     }
   }
-  return conn;
+  return null;
 }
 
 function getProjectDbPath(rawProjectId: string): { dbPath: string; exists: boolean } {
@@ -213,42 +187,11 @@ dbRouter.get('/connections', localOrAuth, async (req: AuthRequest, res: Response
       lastTested: new Date().toISOString()
     };
 
-    // 2. Add System MongoDB Atlas Connection if active in .env
-    const envMongoUri = process.env.MONGODB_URI;
-    const isMongoConn = getIsMongoConnected();
-    const systemConns: any[] = [];
-
-    if (isMongoConn || envMongoUri) {
-      systemConns.push({
-        id: `conn_mongo_atlas_${projectId}`,
-        projectId,
-        name: `MongoDB Atlas (Cloud)`,
-        type: 'mongodb',
-        uri: maskUri(envMongoUri || ''),
-        isDefault: false,
-        isConnected: isMongoConn,
-        lastTested: new Date().toISOString()
-      });
-    }
-
-    // 3. Fetch custom connections from MongoDB / Local Store
-    let customConns: any[] = [];
-    if (getIsMongoConnected()) {
-      try {
-        const query: any = { projectId };
-        if (!isAdmin && userId) query.userId = userId;
-        customConns = await DbConnectionModel.find(query).lean();
-      } catch (e) {
-        console.error('[DB Connections] Atlas read error:', e);
-      }
-    }
-
-    if (customConns.length === 0) {
-      const all = await localConnectionStore.getAll();
-      customConns = all.filter((c: any) => c.projectId === projectId);
-      if (!isAdmin && userId) {
-        customConns = customConns.filter((c: any) => !c.userId || c.userId === userId);
-      }
+    // 2. Fetch custom connections from Local Store
+    const all = await localConnectionStore.getAll();
+    let customConns = all.filter((c: any) => c.projectId === projectId);
+    if (!isAdmin && userId) {
+      customConns = customConns.filter((c: any) => !c.userId || c.userId === userId);
     }
 
     // G1: Never expose raw stored URI — mask it before sending to client
@@ -260,7 +203,7 @@ dbRouter.get('/connections', localOrAuth, async (req: AuthRequest, res: Response
 
     res.status(200).json({
       success: true,
-      connections: [defaultSqliteConn, ...systemConns, ...safeCustomConns]
+      connections: [defaultSqliteConn, ...safeCustomConns]
     });
   } catch (err: any) {
     res.status(500).json({ error: `Failed to list connections: ${err.message}` });
@@ -277,7 +220,7 @@ dbRouter.post('/connect', localOrAuth, async (req: AuthRequest, res: Response): 
     const userId = req.user?.sub || 'anonymous';
 
     if (!name || !type || !uri) {
-      res.status(400).json({ error: 'Name, database type (postgresql|supabase|mongodb|redis|sqlite), and URI are required.' });
+      res.status(400).json({ error: 'Name, database type (postgresql|supabase|sqlite), and URI are required.' });
       return;
     }
 
@@ -319,11 +262,6 @@ dbRouter.post('/connect', localOrAuth, async (req: AuthRequest, res: Response): 
       createdAt: new Date().toISOString()
     };
 
-    if (getIsMongoConnected()) {
-      try {
-        await DbConnectionModel.create(newConn);
-      } catch (err) {}
-    }
     await localConnectionStore.create(newConn);
 
     try {
@@ -362,16 +300,8 @@ dbRouter.delete('/connections/:id', localOrAuth, async (req: AuthRequest, res: R
       return;
     }
 
-    // Resolve connection details to close active pool/client in driver map
-    let targetConn: any = null;
-    if (getIsMongoConnected()) {
-      try {
-        targetConn = await DbConnectionModel.findOne({ id }).lean();
-      } catch {}
-    }
-    if (!targetConn) {
-      targetConn = await localConnectionStore.getById(id);
-    }
+    // Resolve connection details
+    const targetConn = await localConnectionStore.getById(id);
 
     if (!targetConn) {
       res.status(404).json({ error: 'Connection not found.' });
@@ -384,17 +314,6 @@ dbRouter.delete('/connections/:id', localOrAuth, async (req: AuthRequest, res: R
       return;
     }
 
-    if (targetConn && targetConn.uri) {
-      const plainUri = safeDecryptUri(targetConn.uri);
-      const connType = targetConn.type === 'supabase' ? 'postgresql' : targetConn.type;
-      if (connType === 'postgresql') {
-        // Supabase / serverless PostgreSQL connections do not require pool closure
-      }
-    }
-
-    if (getIsMongoConnected()) {
-      await DbConnectionModel.deleteOne({ id });
-    }
     await localConnectionStore.delete(id);
 
     res.status(200).json({ success: true, message: 'Connection removed successfully.' });
@@ -412,7 +331,7 @@ dbRouter.get('/schema', localOrAuth, async (req: AuthRequest, res: Response): Pr
     const projectId = sanitizeProjectId(Array.isArray(rawId) ? String(rawId[0]) : String(rawId));
     const connectionId = req.query.connectionId as string | undefined;
 
-    // A. Check if querying a custom connection (Postgres, Mongo, Redis)
+    // A. Check if querying a custom connection (Postgres, Supabase)
     if (connectionId && !connectionId.startsWith('conn_sqlite_')) {
       const conn = await resolveConnection(connectionId, projectId, req.user?.sub, req.user?.role === 'admin');
       if (!conn) {
@@ -849,30 +768,6 @@ dbRouter.post('/create-table', localOrAuth, async (req: AuthRequest, res: Respon
     });
   } catch (err: any) {
     res.status(500).json({ error: sanitizeErrorMessage(`Failed to create table: ${err.message}`) });
-  }
-});
-
-// POST /api/db/create-collection — Create a new MongoDB collection
-dbRouter.post('/create-collection', localOrAuth, async (req: AuthRequest, res: Response): Promise<void> => {
-  try {
-    const { projectId: rawProjectId = 'acme-api', connectionId, collectionName, initialDocument } = req.body;
-    const projectId = sanitizeProjectId(rawProjectId);
-    if (!collectionName) {
-      res.status(400).json({ error: 'Collection name is required.' });
-      return;
-    }
-
-    let uri = 'mongodb://127.0.0.1:27017/ai_manager';
-    if (connectionId) {
-      const conn = await resolveConnection(connectionId, projectId, req.user?.sub, req.user?.role === 'admin');
-      if (conn?.uri) {
-        uri = safeDecryptUri(conn.uri);
-      }
-    }
-
-    res.status(400).json({ error: "MongoDB operations are not supported. Use Supabase client or SQLite." });
-  } catch (err: any) {
-    res.status(500).json({ error: `Failed to create collection: ${err.message}` });
   }
 });
 

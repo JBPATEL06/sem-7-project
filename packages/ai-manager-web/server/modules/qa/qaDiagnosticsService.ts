@@ -1,7 +1,7 @@
 import path from 'path';
 import fs from 'fs';
 import initSqlJs from 'sql.js';
-import { DbConnectionModel } from '../../models/index.js';
+import { JsonStore } from '../../shared/index.js';
 
 let SQL_PROMISE: ReturnType<typeof initSqlJs> | null = null;
 async function getSqlInstance() {
@@ -39,7 +39,7 @@ export interface TableSummaryItem {
 
 export interface DiagnosticResult {
   projectId: string;
-  dialect: 'sqlite' | 'postgres' | 'mongodb' | 'redis';
+  dialect: 'sqlite' | 'postgres' | 'redis';
   indexed: boolean;
   dbPath?: string;
   connectionId?: string;
@@ -109,24 +109,18 @@ export async function runDiagnostics(projectId: string = 'acme-api', connectionI
   // 2. Multi-Dialect Connection Check
   if (connectionId) {
     try {
-      const conn: any = await DbConnectionModel.findById(connectionId).lean();
+      const connStore = new JsonStore<any>('connections.json');
+      const conn: any = await connStore.getById(connectionId);
       if (conn && !Array.isArray(conn)) {
-        if (conn.dialect === 'postgres') {
-          return await runPostgresDiagnostics(projectId, conn._id.toString(), conn.uri, {
+        if (conn.dialect === 'postgres' || conn.type === 'postgresql' || conn.type === 'supabase') {
+          return await runPostgresDiagnostics(projectId, conn.id || connectionId, conn.uri, {
             sqlJsStatus,
             groqStatus,
             encStatus
           });
         }
-        if (conn.dialect === 'mongodb') {
-          return await runMongoDiagnostics(projectId, conn._id.toString(), conn.uri, {
-            sqlJsStatus,
-            groqStatus,
-            encStatus
-          });
-        }
-        if (conn.dialect === 'redis') {
-          return await runRedisDiagnostics(projectId, conn._id.toString(), conn.uri, {
+        if (conn.dialect === 'redis' || conn.type === 'redis') {
+          return await runRedisDiagnostics(projectId, conn.id || connectionId, conn.uri, {
             sqlJsStatus,
             groqStatus,
             encStatus
@@ -400,48 +394,6 @@ async function runPostgresDiagnostics(
     },
     systemHealth: {
       indexerEngine: 'Supabase / PostgreSQL Proxy Operational',
-      groqApi: systemHealth.groqStatus,
-      sqlJsRuntime: systemHealth.sqlJsStatus,
-      encryptionLayer: systemHealth.encStatus
-    },
-    scannedAt: new Date().toISOString()
-  };
-}
-
-// MongoDB Diagnostics Runner (Deprecated notice)
-async function runMongoDiagnostics(
-  projectId: string,
-  connectionId: string,
-  _uri: string,
-  systemHealth: { sqlJsStatus: string; groqStatus: string; encStatus: string }
-): Promise<DiagnosticResult> {
-  return {
-    projectId,
-    dialect: 'mongodb',
-    connectionId,
-    indexed: false,
-    issues: [
-      {
-        id: `mongo_deprecated_${projectId}`,
-        code: 'MISSING_SCHEMA_VALIDATOR',
-        severity: 'warning',
-        title: 'MongoDB driver has been removed',
-        description: 'MongoDB Atlas is deprecated in favor of Supabase client + local WASM sql.js sandboxes.',
-        suggestion: 'Migrate connection to Supabase or SQLite.'
-      }
-    ],
-    tables: [],
-    summary: {
-      total: 1,
-      critical: 0,
-      warning: 1,
-      minor: 0,
-      tablesScanned: 0,
-      columnsScanned: 0,
-      healthScore: 90
-    },
-    systemHealth: {
-      indexerEngine: 'MongoDB Driver Retired (Use Supabase / SQLite)',
       groqApi: systemHealth.groqStatus,
       sqlJsRuntime: systemHealth.sqlJsStatus,
       encryptionLayer: systemHealth.encStatus

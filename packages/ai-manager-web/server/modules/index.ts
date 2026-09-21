@@ -1,5 +1,4 @@
 export * from './auth/index.js';
-export * from './admin/index.js';
 export * from './projects/index.js';
 export * from './db/index.js';
 export * from './diagrams/index.js';

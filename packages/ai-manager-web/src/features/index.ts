@@ -5,7 +5,6 @@ export * from './diagrams';
 export * from './screens';
 export * from './qa';
 export * from './git';
-export * from './auth';
 export * from './settings';
 export * from './dashboard';
 export * from './chat';

@@ -4,23 +4,18 @@ import {
   LayoutGrid,
   Database,
   ShieldCheck,
-  GitBranch,
   GitCommitHorizontal,
   Settings as SettingsIcon,
-  ShieldAlert,
   Layers,
   Monitor,
   Bell,
   Moon,
   Sun,
-  ChevronDown,
-  LogOut,
-  User as UserIcon,
   PanelLeftClose,
   PanelLeftOpen,
   Bot
 } from 'lucide-react';
-import { useTheme, useAuth } from '@/shared/context';
+import { useTheme } from '@/shared/context';
 
 export type NavRoute =
   | 'onboarding'
@@ -33,8 +28,7 @@ export type NavRoute =
   | 'qa'
   | 'flow-audit'
   | 'git-view'
-  | 'settings'
-  | 'admin';
+  | 'settings';
 
 interface LayoutProps {
   currentRoute: NavRoute;
@@ -54,8 +48,6 @@ export const Layout: React.FC<LayoutProps> = ({
   children
 }) => {
   const { theme, toggleTheme } = useTheme();
-  const { user, logout, isAdmin } = useAuth();
-  const [isProfileOpen, setIsProfileOpen] = useState(false);
   const [isSidebarCollapsed, setIsSidebarCollapsed] = useState<boolean>(() => {
     return localStorage.getItem('ai_manager_sidebar_collapsed') === 'true';
   });
@@ -91,12 +83,6 @@ export const Layout: React.FC<LayoutProps> = ({
     { id: 'git-view', label: 'Git Lineage', icon: GitCommitHorizontal },
     { id: 'settings', label: 'Settings', icon: SettingsIcon }
   ];
-
-  if (isAdmin) {
-    baseNavItems.push({ id: 'admin', label: 'Admin Panel', icon: ShieldAlert });
-  }
-
-  const initials = user?.email ? user.email.slice(0, 2).toUpperCase() : 'US';
 
   return (
     <div className="bg-background text-foreground w-screen h-screen overflow-hidden flex">
@@ -159,26 +145,14 @@ export const Layout: React.FC<LayoutProps> = ({
           </ul>
         </nav>
 
-        {/* User profile footer card */}
+        {/* Workspace status footer */}
         <div className="p-3 border-t border-border/50">
-          <div className="flex items-center justify-between p-2 rounded-lg bg-card border border-border">
-            <div className="flex items-center gap-2 min-w-0">
-              <div className="size-7 rounded-full bg-primary/20 text-primary font-semibold text-xs flex items-center justify-center shrink-0">
-                {initials}
-              </div>
-              <div className="flex flex-col min-w-0">
-                <span className="text-xs font-medium text-foreground truncate">{user?.email || 'User'}</span>
-                <span className="text-[10px] font-mono text-muted-foreground uppercase">{user?.role || 'user'}</span>
-              </div>
+          <div className="flex items-center gap-2 p-2 rounded-lg bg-card border border-border">
+            <span className="size-2 rounded-full bg-emerald-500 animate-pulse" />
+            <div className="flex flex-col min-w-0">
+              <span className="text-xs font-medium text-foreground truncate">Workspace Mode</span>
+              <span className="text-[10px] font-mono text-muted-foreground uppercase">Local / Direct Access</span>
             </div>
-            <button
-              type="button"
-              onClick={logout}
-              title="Sign Out"
-              className="p-1 text-muted-foreground hover:text-destructive transition-colors cursor-pointer"
-            >
-              <LogOut className="size-3.5" />
-            </button>
           </div>
         </div>
       </aside>
@@ -233,50 +207,14 @@ export const Layout: React.FC<LayoutProps> = ({
             >
               {theme === 'dark' ? <Moon className="size-5" /> : <Sun className="size-5" />}
             </button>
-
-            <div className="relative">
-              <button
-                type="button"
-                onClick={() => setIsProfileOpen(!isProfileOpen)}
-                className="transition-colors rounded-md hover:bg-muted/50 flex py-1 px-2 items-center gap-1.5 cursor-pointer"
-              >
-                <span className="font-semibold rounded-full bg-primary text-primary-foreground text-xs border border-border flex justify-center items-center size-8 shadow-sm">
-                  {initials}
-                </span>
-                <ChevronDown className="text-muted-foreground size-4" />
-              </button>
-
-              {isProfileOpen && (
-                <div className="absolute right-0 mt-2 w-56 bg-card border border-border rounded-xl shadow-2xl py-2 z-50 text-xs">
-                  <div className="px-3 py-2 border-b border-border">
-                    <p className="font-semibold text-foreground truncate">{user?.email}</p>
-                    <p className="text-[10px] text-muted-foreground capitalize mt-0.5">Role: <span className="font-mono text-primary">{user?.role}</span></p>
-                  </div>
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setIsProfileOpen(false);
-                      onNavigate('settings');
-                    }}
-                    className="w-full px-3 py-2 flex items-center gap-2 hover:bg-muted text-foreground transition-colors cursor-pointer text-left"
-                  >
-                    <SettingsIcon className="size-3.5 text-muted-foreground" />
-                    <span>Settings</span>
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setIsProfileOpen(false);
-                      logout();
-                    }}
-                    className="w-full px-3 py-2 flex items-center gap-2 hover:bg-destructive/10 text-destructive transition-colors cursor-pointer text-left"
-                  >
-                    <LogOut className="size-3.5" />
-                    <span>Sign Out</span>
-                  </button>
-                </div>
-              )}
-            </div>
+            <button
+              type="button"
+              onClick={() => onNavigate('settings')}
+              className="transition-colors rounded-md text-muted-foreground hover:text-foreground hover:bg-muted/50 inline-flex justify-center items-center size-9 cursor-pointer"
+              title="Settings"
+            >
+              <SettingsIcon className="size-5" />
+            </button>
           </div>
         </header>
 

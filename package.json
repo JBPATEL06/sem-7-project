@@ -4,7 +4,9 @@
   "private": true,
   "description": "AI Manager Platform — Monorepo of code context, schema management, design validation, QA testing, API testing, and Git tools",
   "workspaces": [
-    "packages/*"
+    "packages/ai-manager-web",
+    "packages/core",
+    "packages/db-context-indexer"
   ],
   "scripts": {
     "build": "npm run build --workspaces --if-present",

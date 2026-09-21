@@ -1,10 +1,9 @@
 import { Router, Response } from 'express';
 import path from 'path';
 import fs from 'fs';
-import { localOrAuth, AuthRequest, getIsMongoConnected } from '../auth/auth.js';
+import { localOrAuth, AuthRequest } from '../auth/auth.js';
 import { decrypt } from '../../shared/utils/encryption.js';
 import { fetchProjectFromDrive, loadIndexFromSqlite } from '@ai-manager/core';
-import { ProjectModel } from '../../models/index.js';
 
 export const projectsRouter = Router();
 
@@ -30,67 +29,12 @@ export interface LocalProject {
 }
 
 export async function getProjects(userId?: string, isAdmin: boolean = false): Promise<LocalProject[]> {
-  if (getIsMongoConnected()) {
-    try {
-      const filter = isAdmin ? {} : (userId ? { userId } : {});
-      const docs = await ProjectModel.find(filter).sort({ createdAt: -1 }).lean();
-      return docs.map((d: any) => ({
-        projectId: d.projectId,
-        userId: d.userId,
-        name: d.name,
-        projectName: d.projectName || d.name,
-        description: d.description || '',
-        rootDir: d.rootDir || '',
-        githubRepo: d.githubRepo || null,
-        githubBranch: d.githubBranch || 'main',
-        status: d.status || 'Not indexed',
-        statusVariant: d.statusVariant || 'secondary',
-        filesCount: d.filesCount ?? null,
-        files: d.files || '—',
-        dbSize: d.dbSize || '—',
-        lastModified: d.lastModified || new Date().toISOString(),
-        lastSynced: d.lastSynced || 'Never synced',
-        metrics: d.metrics || 'Not indexed'
-      }));
-    } catch (e) {
-      console.error('[Projects] Error reading from Atlas, using fallback:', e);
-    }
-  }
-
   const local = getLocalProjects();
   if (isAdmin || !userId) return local;
   return local.filter((p) => !p.userId || p.userId === userId);
 }
 
 export async function getProjectById(projectId: string): Promise<LocalProject | null> {
-  if (getIsMongoConnected()) {
-    try {
-      const doc = await ProjectModel.findOne({ projectId }).lean();
-      if (doc) {
-        return {
-          projectId: (doc as any).projectId,
-          userId: (doc as any).userId,
-          name: (doc as any).name,
-          projectName: (doc as any).projectName || (doc as any).name,
-          description: (doc as any).description || '',
-          rootDir: (doc as any).rootDir || '',
-          githubRepo: (doc as any).githubRepo || null,
-          githubBranch: (doc as any).githubBranch || 'main',
-          status: (doc as any).status || 'Not indexed',
-          statusVariant: (doc as any).statusVariant || 'secondary',
-          filesCount: (doc as any).filesCount ?? null,
-          files: (doc as any).files || '—',
-          dbSize: (doc as any).dbSize || '—',
-          lastModified: (doc as any).lastModified || new Date().toISOString(),
-          lastSynced: (doc as any).lastSynced || 'Never synced',
-          metrics: (doc as any).metrics || 'Not indexed'
-        };
-      }
-    } catch (e) {
-      console.error('[Projects] Atlas getProjectById error:', e);
-    }
-  }
-
   const local = getLocalProjects();
   return local.find((p) => p.projectId === projectId) || null;
 }
@@ -147,7 +91,7 @@ projectsRouter.get('/', localOrAuth, async (req: AuthRequest, res: Response): Pr
   }
 });
 
-// POST /api/projects — Create / Register a new project in MongoDB Atlas (userId bound from session)
+// POST /api/projects — Create / Register a new project in local storage (.ai-manager/projects.json)
 projectsRouter.post('/', localOrAuth, async (req: AuthRequest, res: Response): Promise<void> => {
   try {
     const { projectId, projectName, description, githubRepo, rootDir } = req.body;
@@ -184,18 +128,6 @@ projectsRouter.post('/', localOrAuth, async (req: AuthRequest, res: Response): P
       metrics: 'Not indexed'
     };
 
-    // Save to Atlas if connected
-    if (getIsMongoConnected()) {
-      try {
-        await ProjectModel.create({
-          ...newProject,
-          createdAt: new Date().toISOString()
-        });
-      } catch (e) {
-        console.error('[Projects] Atlas create error:', e);
-      }
-    }
-
     const localProjects = getLocalProjects();
     localProjects.unshift(newProject);
     saveLocalProjects(localProjects);
@@ -214,7 +146,7 @@ projectsRouter.post('/', localOrAuth, async (req: AuthRequest, res: Response): P
     } catch {}
 
     res.status(201).json({
-      message: 'Project created successfully in database.',
+      message: 'Project created successfully.',
       project: newProject
     });
   } catch (err: any) {
@@ -265,14 +197,6 @@ projectsRouter.delete('/:id', localOrAuth, async (req: AuthRequest, res: Respons
     if (!isAdmin && !isOwner) {
       res.status(403).json({ error: 'Forbidden. You do not have permission to delete this project.' });
       return;
-    }
-
-    if (getIsMongoConnected()) {
-      try {
-        await ProjectModel.deleteOne({ projectId });
-      } catch (e) {
-        console.error('[Projects] Atlas delete error:', e);
-      }
     }
 
     let localProjects = getLocalProjects();

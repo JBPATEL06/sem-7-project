@@ -1,5 +1,5 @@
 {
-  "id": "screen_stitch_1789909740052_qy58x",
+  "id": "screen_stitch_1789985996185_e171h",
   "projectId": "global",
   "userId": "local-dev-user",
   "name": "Add 2 New KPI",
@@ -13,7 +13,7 @@
     "borderRadius": 12
   },
   "board": {
-    "id": "board_screen_stitch_1789909740052_qy58x",
+    "id": "board_screen_stitch_1789985996185_e171h",
     "name": "Add 2 New KPI Canvas",
     "x": 0,
     "y": 0,
@@ -22,7 +22,7 @@
     "background": "#090d16",
     "components": [
       {
-        "id": "comp_card_1789909740280",
+        "id": "comp_card_1789985996471",
         "type": "card",
         "name": "Add 2 New KPI Card",
         "x": 80,
@@ -32,7 +32,7 @@
         "borderRadius": 16,
         "children": [
           {
-            "id": "comp_title_1789909740280",
+            "id": "comp_title_1789985996471",
             "type": "text",
             "name": "Add 2 New KPI",
             "text": "Add 2 New KPI",
@@ -45,7 +45,7 @@
             "color": "#f8fafc"
           },
           {
-            "id": "comp_desc_1789909740280",
+            "id": "comp_desc_1789985996471",
             "type": "text",
             "name": "Description",
             "text": "Add 2 new KPI metric cards for monthly churn and latency",
@@ -58,7 +58,7 @@
             "color": "#94a3b8"
           },
           {
-            "id": "comp_btn_1789909740280",
+            "id": "comp_btn_1789985996471",
             "type": "button",
             "name": "Action Button",
             "text": "Get Started",
@@ -77,16 +77,16 @@
   },
   "chatHistory": [
     {
-      "id": "msg_u_1789909740280",
+      "id": "msg_u_1789985996471",
       "role": "user",
       "text": "Add 2 new KPI metric cards for monthly churn and latency",
-      "timestamp": "2026-09-20T13:09:00.280Z"
+      "timestamp": "2026-09-21T10:19:56.471Z"
     },
     {
-      "id": "msg_a_1789909740280",
+      "id": "msg_a_1789985996471",
       "role": "assistant",
       "text": "Generated layout for: Add 2 new KPI metric cards for monthly churn and latency",
-      "timestamp": "2026-09-20T13:09:00.280Z",
+      "timestamp": "2026-09-21T10:19:56.471Z",
       "stepsCount": 1,
       "changesSummary": "Created layout with 1 container and child components",
       "metadata": {
@@ -96,6 +96,6 @@
       }
     }
   ],
-  "createdAt": "2026-09-20T13:09:00.280Z",
-  "updatedAt": "2026-09-20T13:09:00.280Z"
+  "createdAt": "2026-09-21T10:19:56.471Z",
+  "updatedAt": "2026-09-21T10:19:56.471Z"
 }

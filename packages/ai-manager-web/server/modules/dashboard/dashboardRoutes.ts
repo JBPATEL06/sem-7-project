@@ -1,8 +1,7 @@
 import { Router, Response } from 'express';
 import path from 'path';
 import fs from 'fs';
-import { localOrAuth, AuthRequest, getIsMongoConnected } from '../auth/auth.js';
-import { ProjectModel, ActivityLogModel } from '../../models/index.js';
+import { localOrAuth, AuthRequest } from '../auth/auth.js';
 import initSqlJs from 'sql.js';
 
 export const dashboardRouter = Router();
@@ -30,14 +29,6 @@ export async function logActivity(item: Omit<ActivityItem, 'id' | 'timestamp'>) 
       id: `act_${Date.now()}_${Math.random().toString(36).slice(2, 6)}`,
       timestamp: new Date().toISOString()
     };
-
-    if (getIsMongoConnected()) {
-      try {
-        await ActivityLogModel.create(newActivity);
-      } catch (e) {
-        console.error('[logActivity] Atlas create error:', e);
-      }
-    }
 
     const dir = path.dirname(ACTIVITY_FILE);
     if (!fs.existsSync(dir)) fs.mkdirSync(dir, { recursive: true });
@@ -73,10 +64,7 @@ dashboardRouter.get('/stats', localOrAuth, async (req: AuthRequest, res: Respons
     const userId = req.user?.sub;
 
     let projects: any[] = [];
-    if (getIsMongoConnected()) {
-      const filter = isAdmin ? {} : (userId ? { userId } : {});
-      projects = await ProjectModel.find(filter).lean();
-    } else if (fs.existsSync(PROJECTS_FILE)) {
+    if (fs.existsSync(PROJECTS_FILE)) {
       try {
         const parsed = JSON.parse(fs.readFileSync(PROJECTS_FILE, 'utf-8'));
         projects = isAdmin ? parsed : parsed.filter((p: any) => !p.userId || p.userId === userId);
@@ -160,7 +148,7 @@ dashboardRouter.get('/stats', localOrAuth, async (req: AuthRequest, res: Respons
         groqApi: groqStatus,
         sqlJsRuntime: sqlJsStatus,
         encryptionLayer: encryptionStatus,
-        mongoPrimaryStore: getIsMongoConnected() ? 'Connected (Atlas)' : 'Local JSON'
+        localStorage: 'Active (.ai-manager)'
       }
     });
   } catch (err: any) {
@@ -177,26 +165,7 @@ dashboardRouter.get('/activity', localOrAuth, async (req: AuthRequest, res: Resp
 
     let activities: ActivityItem[] = [];
 
-    if (getIsMongoConnected()) {
-      try {
-        const filter = isAdmin ? {} : (userId ? { userId } : {});
-        const docs = await ActivityLogModel.find(filter).sort({ timestamp: -1 }).limit(50).lean();
-        activities = docs.map((d: any) => ({
-          id: d.id,
-          projectId: d.projectId,
-          projectName: d.projectName,
-          userId: d.userId,
-          action: d.action,
-          detail: d.detail,
-          timestamp: d.timestamp,
-          status: d.status
-        }));
-      } catch (e) {
-        console.error('[dashboard/activity] Atlas read error:', e);
-      }
-    }
-
-    if (activities.length === 0 && fs.existsSync(ACTIVITY_FILE)) {
+    if (fs.existsSync(ACTIVITY_FILE)) {
       try {
         const raw = JSON.parse(fs.readFileSync(ACTIVITY_FILE, 'utf-8'));
         activities = isAdmin ? raw : raw.filter((a: any) => !a.userId || a.userId === userId);

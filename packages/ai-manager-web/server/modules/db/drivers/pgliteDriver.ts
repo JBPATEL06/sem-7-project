@@ -27,6 +27,14 @@ export async function getPgliteInstance(projectId: string = 'acme-api'): Promise
   let db = pgliteInstances.get(cleanId);
   if (!db) {
     const dataDir = getPgliteDataDir(cleanId);
+    const pidFile = path.join(dataDir, 'postmaster.pid');
+    if (fs.existsSync(pidFile)) {
+      try {
+        fs.unlinkSync(pidFile);
+      } catch (err) {
+        console.warn(`[PGlite] Failed to clean up stale pid file ${pidFile}:`, err);
+      }
+    }
     db = new PGlite(dataDir);
     await db.waitReady;
     await seedDefaultPgliteTables(db, cleanId);
@@ -76,7 +84,7 @@ export async function queryPglite(sql: string, params: any[] = [], projectId: st
   const db = await getPgliteInstance(projectId);
   const res = await db.query(sql, params);
   const rows = res.rows || [];
-  const fields = res.fields ? res.fields.map((f: any) => f.name) : (rows.length > 0 ? Object.keys(rows[0]) : []);
+  const fields = res.fields ? res.fields.map((f: any) => f.name) : (rows.length > 0 && rows[0] ? Object.keys(rows[0] as object) : []);
 
   return {
     rows,
@@ -84,6 +92,26 @@ export async function queryPglite(sql: string, params: any[] = [], projectId: st
     affectedRows: res.affectedRows
   };
 }
+
+export async function execPglite(sql: string, projectId: string = 'acme-api'): Promise<Array<{
+  rows: any[];
+  fields: string[];
+  affectedRows?: number;
+}>> {
+  const db = await getPgliteInstance(projectId);
+  const results = await db.exec(sql);
+  return results.map((res: any) => {
+    const rows = res.rows || [];
+    const fields = res.fields ? res.fields.map((f: any) => f.name) : (rows.length > 0 && rows[0] ? Object.keys(rows[0] as object) : []);
+    return {
+      rows,
+      fields,
+      affectedRows: res.affectedRows
+    };
+  });
+}
+
+
 
 export async function getPgliteTables(projectId: string = 'acme-api'): Promise<Array<{ tableName: string; rowCount: number }>> {
   const db = await getPgliteInstance(projectId);
@@ -96,7 +124,7 @@ export async function getPgliteTables(projectId: string = 'acme-api'): Promise<A
 
   const tables: Array<{ tableName: string; rowCount: number }> = [];
   for (const row of res.rows) {
-    const countRes = await db.query(`SELECT COUNT(*) as count FROM "${row.table_name}"`);
+    const countRes = await db.query<{ count: string | number }>(`SELECT COUNT(*) as count FROM "${row.table_name}"`);
     const count = countRes.rows[0]?.count ? parseInt(String(countRes.rows[0].count), 10) : 0;
     tables.push({
       tableName: row.table_name,

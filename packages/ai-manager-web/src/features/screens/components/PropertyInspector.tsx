@@ -924,7 +924,6 @@ struct ${cleanName || 'Element'}: View {
             onClick={() => {
               const codeData = generateCode();
               navigator.clipboard.writeText(codeData);
-              alert('Copied 1x component to clipboard!');
             }}
             className="flex-1 py-1.5 px-2 rounded bg-[#2a2a2a] hover:bg-[#383838] border border-[#383838] text-[11px] font-medium text-slate-200 hover:text-white text-center cursor-pointer"
           >

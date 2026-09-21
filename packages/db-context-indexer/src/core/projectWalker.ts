@@ -18,7 +18,13 @@ export function loadProject(options: WalkOptions): { project: Project; sourceFil
     '**/.next/**',
     '**/coverage/**',
     '**/.git/**',
-    '**/packages/open-pencil/**'
+    '**/packages/open-pencil/**',
+    'packages/drawio-repo/**',
+    '**/packages/drawio-repo/**',
+    'packages/postgres-meta/**',
+    '**/packages/postgres-meta/**',
+    'packages/open-pencil-repo/**',
+    '**/packages/open-pencil-repo/**',
   ];
 
   let gitignoreExcludes: string[] = [];

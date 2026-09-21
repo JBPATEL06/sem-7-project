@@ -64,7 +64,7 @@ export function useSettings() {
       }
     } catch (err: any) {
       console.error('[useSettings/toggleReveal] Error:', err);
-      alert(`Could not reveal key: ${err.message}`);
+      setError(`Could not reveal key: ${err.message}`);
     } finally {
       setRevealingKey(null);
     }

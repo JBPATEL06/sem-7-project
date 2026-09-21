@@ -1,7 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Layout, NavRoute } from '@/shared/components';
-import { AuthProvider, useAuth } from '@/shared/context';
-import { LoginPage, RegisterPage, AdminPage } from '@/features/auth';
+import { AuthProvider } from '@/shared/context';
 import { DashboardPage } from '@/features/dashboard';
 import { ProjectsPage, ProjectDetailPage } from '@/features/cockpit';
 import { DbManagerPage } from '@/features/db-manager';
@@ -13,9 +12,6 @@ import { SettingsPage } from '@/features/settings';
 import { ChatPage } from '@/features/chat';
 
 const AppContent: React.FC = () => {
-  const { isAuthenticated, isLoading, isAdmin } = useAuth();
-  const [authView, setAuthView] = useState<'login' | 'register'>('login');
-
   // Determine initial route from pathname or hash if provided
   const getInitialRoute = (): NavRoute => {
     const rawPath = window.location.pathname.replace(/^\/+|\/+$/g, '') || window.location.hash.replace('#/', '').replace('#', '');
@@ -30,8 +26,7 @@ const AppContent: React.FC = () => {
         'git-view',
         'diagrams',
         'screens',
-        'settings',
-        'admin'
+        'settings'
       ].includes(rawPath)
     ) {
       return rawPath as NavRoute;
@@ -44,12 +39,6 @@ const AppContent: React.FC = () => {
   const [viewingProjectDetailId, setViewingProjectDetailId] = useState<string | null>(null);
 
   const handleNavigate = (route: NavRoute) => {
-    // Role guard for admin route
-    if (route === 'admin' && !isAdmin) {
-      setCurrentRoute('dashboard');
-      window.history.pushState(null, '', '/dashboard');
-      return;
-    }
     // If navigating to projects directly, clear detail view unless specifically requested
     if (route !== 'projects') {
       setViewingProjectDetailId(null);
@@ -72,34 +61,6 @@ const AppContent: React.FC = () => {
       <ScreensPage
         selectedProject={{ id: selectedProject, name: selectedProject }}
         onNavigateDashboard={() => handleNavigate('dashboard')}
-      />
-    );
-  }
-
-  // Show loading spinner during initial session verification
-  if (isLoading) {
-    return (
-      <div className="min-h-screen w-full bg-[#1e1e1e] flex flex-col items-center justify-center gap-3">
-        <div className="size-8 border-3 border-[#3b82f6] border-t-transparent rounded-full animate-spin" />
-        <span className="text-xs font-mono text-slate-400">Verifying local session...</span>
-      </div>
-    );
-  }
-
-  // Unauthenticated Route Guard
-  if (!isAuthenticated) {
-    if (authView === 'register') {
-      return (
-        <RegisterPage
-          onNavigateToLogin={() => setAuthView('login')}
-          onSuccess={() => handleNavigate('dashboard')}
-        />
-      );
-    }
-    return (
-      <LoginPage
-        onNavigateToRegister={() => setAuthView('register')}
-        onSuccess={() => handleNavigate('dashboard')}
       />
     );
   }
@@ -143,8 +104,6 @@ const AppContent: React.FC = () => {
         return <DiagramsPage projectId={selectedProject} />;
       case 'settings':
         return <SettingsPage />;
-      case 'admin':
-        return isAdmin ? <AdminPage /> : <DashboardPage onNavigate={handleNavigate} />;
       default:
         return <DashboardPage onNavigate={handleNavigate} />;
     }

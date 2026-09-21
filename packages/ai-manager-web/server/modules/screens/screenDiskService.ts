@@ -2,8 +2,7 @@ import fs from 'fs';
 import path from 'path';
 import { ScreenLayoutSpec, localScreenStore, DEFAULT_SCREEN_THEME } from './screenTypes.js';
 import { exportScreenToFigBuffer } from './figExporter.js';
-import { ScreenModel } from '../../models/index.js';
-import { getIsMongoConnected } from '../auth/auth.js';
+import { AppLogger } from '../../shared/utils/logger.js';
 import { getWorkspaceRootDir } from '../../shared/index.js';
 
 import { atomicWriteFileSync } from '../../shared/utils/atomicPersistence.js';
@@ -150,19 +149,6 @@ export async function syncDiskScreensToStore(projectId: string = 'acme-api', use
         updatedAt: new Date().toISOString()
       };
 
-      if (getIsMongoConnected()) {
-        try {
-          await ScreenModel.create({
-            id: newSpec.id,
-            projectId: newSpec.projectId,
-            userId: newSpec.userId,
-            name: newSpec.name,
-            description: newSpec.description,
-            layout: newSpec.board,
-            components: newSpec.board.components
-          });
-        } catch {}
-      }
       await localScreenStore.create(newSpec);
       existingSlugs.add(slug);
     }

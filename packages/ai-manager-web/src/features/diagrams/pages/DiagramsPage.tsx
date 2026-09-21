@@ -24,10 +24,61 @@ interface DiagramsPageProps {
   onNavigateDashboard?: () => void;
 }
 
+const DEFAULT_ARCHITECTURE_XML = `<mxGraphModel dx="1000" dy="800" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="1100" pageHeight="850" background="#090d16">
+  <root>
+    <mxCell id="0"/>
+    <mxCell id="1" parent="0"/>
+    <mxCell id="client" value="Client App&#xa;(Vite + React :5173)" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#1e293b;strokeColor=#3b82f6;strokeWidth=2;fontColor=#ffffff;fontStyle=1;fontSize=13;" vertex="1" parent="1">
+      <mxGeometry x="120" y="200" width="170" height="70" as="geometry"/>
+    </mxCell>
+    <mxCell id="gateway" value="API Gateway / Server&#xa;(Express :3000)" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#1e293b;strokeColor=#10b981;strokeWidth=2;fontColor=#ffffff;fontStyle=1;fontSize=13;" vertex="1" parent="1">
+      <mxGeometry x="380" y="200" width="180" height="70" as="geometry"/>
+    </mxCell>
+    <mxCell id="pglite" value="Postgres WASM&#xa;(PGlite :1337)" style="shape=cylinder3;whiteSpace=wrap;html=1;boundedLbl=1;backgroundOutline=1;size=15;fillColor=#1e293b;strokeColor=#8b5cf6;strokeWidth=2;fontColor=#ffffff;fontStyle=1;fontSize=13;" vertex="1" parent="1">
+      <mxGeometry x="660" y="100" width="150" height="90" as="geometry"/>
+    </mxCell>
+    <mxCell id="atlas" value="MongoDB Atlas&#xa;(Auth &amp; Session Store)" style="shape=cylinder3;whiteSpace=wrap;html=1;boundedLbl=1;backgroundOutline=1;size=15;fillColor=#1e293b;strokeColor=#f59e0b;strokeWidth=2;fontColor=#ffffff;fontStyle=1;fontSize=13;" vertex="1" parent="1">
+      <mxGeometry x="660" y="270" width="160" height="90" as="geometry"/>
+    </mxCell>
+    <mxCell id="edge1" value="REST / SSE" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;entryX=0;entryY=0.5;strokeColor=#60a5fa;strokeWidth=2;fontColor=#93c5fd;" edge="1" parent="1" source="client" target="gateway">
+      <mxGeometry relative="1" as="geometry"/>
+    </mxCell>
+    <mxCell id="edge2" value="SQL Queries" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;entryX=0;entryY=0.5;strokeColor=#a78bfa;strokeWidth=2;fontColor=#c4b5fd;" edge="1" parent="1" source="gateway" target="pglite">
+      <mxGeometry relative="1" as="geometry"/>
+    </mxCell>
+    <mxCell id="edge3" value="Mongoose / Auth" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;entryX=0;entryY=0.5;strokeColor=#fbbf24;strokeWidth=2;fontColor=#fde68a;" edge="1" parent="1" source="gateway" target="atlas">
+      <mxGeometry relative="1" as="geometry"/>
+    </mxCell>
+  </root>
+</mxGraphModel>`;
+
+const BLANK_DIAGRAM_XML = `<mxGraphModel dx="1000" dy="800" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="1100" pageHeight="850">
+  <root>
+    <mxCell id="0"/>
+    <mxCell id="1" parent="0"/>
+  </root>
+</mxGraphModel>`;
+
+const getDiagramXml = (diagram: Diagram | null): string => {
+  if (!diagram) return BLANK_DIAGRAM_XML;
+  if (diagram.files?.xml && typeof diagram.files.xml === 'string' && diagram.files.xml.trim().length > 0) {
+    return diagram.files.xml;
+  }
+  if ((diagram as any).xml && typeof (diagram as any).xml === 'string' && (diagram as any).xml.trim().length > 0) {
+    return (diagram as any).xml;
+  }
+  if (diagram.type === 'scratchpad' || diagram.name.toLowerCase().includes('blank') || diagram.name.toLowerCase().includes('scratchpad')) {
+    return BLANK_DIAGRAM_XML;
+  }
+  return DEFAULT_ARCHITECTURE_XML;
+};
+
 export const DiagramsPage: React.FC<DiagramsPageProps> = ({ projectId = 'acme-api', onNavigateDashboard }) => {
-  const DRAWIO_URL = 'http://localhost:8085/index.html?dev=1&embed=1&proto=json&configure=1';
+  const DRAWIO_URL = 'http://localhost:8085/index.html?embed=1&proto=json&spin=1&dev=1';
   const iframeRef = useRef<HTMLIFrameElement>(null);
   const autoSaveTimerRef = useRef<NodeJS.Timeout | null>(null);
+  const loadedDiagramIdRef = useRef<string | null>(null);
+  const currentXmlRef = useRef<string>('');
 
   const {
     diagrams,
@@ -56,83 +107,110 @@ export const DiagramsPage: React.FC<DiagramsPageProps> = ({ projectId = 'acme-ap
     : 'architecture_flow';
   const currentFilePath = `diagrams/${slug}.drawio`;
 
+  // Send load action to iframe
+  const sendLoadDiagram = useCallback((xmlData?: string) => {
+    const xmlToLoad = xmlData || currentXmlRef.current || BLANK_DIAGRAM_XML;
+    console.log('[DiagramsPage] postMessage -> sending load action, XML length:', xmlToLoad.length);
+    iframeRef.current?.contentWindow?.postMessage(
+      JSON.stringify({ action: 'load', xml: xmlToLoad, autosave: 1 }),
+      '*'
+    );
+  }, []);
+
   // Reload iframe editor
   const handleRefreshStudio = () => {
     setIsIframeLoaded(false);
+    loadedDiagramIdRef.current = null;
     setIframeKey((k) => k + 1);
     setStatusMessage('Reloading draw.io Studio Engine...');
     setTimeout(() => setStatusMessage(null), 2500);
   };
 
-  // Perform atomic save
+  // Perform atomic save (does NOT re-trigger iframe load)
   const executeSave = useCallback(async (xmlData?: string) => {
     if (!activeDiagram) return;
     try {
-      const xmlToSave = xmlData || (activeDiagram as any).xml || `<mxGraphModel><root><mxCell id="0"/><mxCell id="1" parent="0"/></root></mxGraphModel>`;
+      const xmlToSave = xmlData || currentXmlRef.current;
+      if (!xmlToSave) return;
+      currentXmlRef.current = xmlToSave;
       await saveDiagram(activeDiagram.id, [], activeDiagram.appState || {}, { xml: xmlToSave });
       setSaveSuccess(true);
-      setTimeout(() => setSaveSuccess(false), 2500);
+      setTimeout(() => setSaveSuccess(false), 2000);
     } catch (err: any) {
       console.error('[draw.io AutoSave Error]:', err);
     }
-  }, [activeDiagram, saveDiagram]);
+  }, [activeDiagram?.id, activeDiagram?.appState, saveDiagram]);
 
   // Handle draw.io Embed Protocol postMessages
   useEffect(() => {
     const handleMessage = (event: MessageEvent) => {
-      if (!event.data || typeof event.data !== 'string') {
-        if (event.data && typeof event.data === 'object' && event.data.event) {
-          const evt = event.data;
-          if (evt.event === 'init') {
-            setIsIframeLoaded(true);
-            const initialXml = (activeDiagram as any)?.xml || `<mxGraphModel><root><mxCell id="0"/><mxCell id="1" parent="0"/></root></mxGraphModel>`;
-            iframeRef.current?.contentWindow?.postMessage(
-              JSON.stringify({ action: 'load', xml: initialXml, autosave: 1 }),
-              '*'
-            );
-          } else if (evt.event === 'autosave' || evt.event === 'change') {
-            if (evt.xml) {
-              if (autoSaveTimerRef.current) clearTimeout(autoSaveTimerRef.current);
-              autoSaveTimerRef.current = setTimeout(() => {
-                executeSave(evt.xml);
-              }, 1750);
-            }
-          }
+      let data = event.data;
+      if (typeof data === 'string') {
+        try {
+          data = JSON.parse(data);
+        } catch {
+          return;
         }
-        return;
       }
 
-      try {
-        const msg = JSON.parse(event.data);
-        if (msg.event === 'init') {
-          setIsIframeLoaded(true);
-          const initialXml = (activeDiagram as any)?.xml || `<mxGraphModel><root><mxCell id="0"/><mxCell id="1" parent="0"/></root></mxGraphModel>`;
-          iframeRef.current?.contentWindow?.postMessage(
-            JSON.stringify({ action: 'load', xml: initialXml, autosave: 1 }),
-            '*'
-          );
-        } else if (msg.event === 'autosave' || msg.event === 'change' || msg.event === 'save') {
-          if (msg.xml) {
-            if (autoSaveTimerRef.current) clearTimeout(autoSaveTimerRef.current);
-            autoSaveTimerRef.current = setTimeout(() => {
-              executeSave(msg.xml);
-            }, 1750);
-          }
+      if (!data || typeof data !== 'object') return;
+
+      console.log('[DiagramsPage] Incoming draw.io event:', data.event);
+
+      if (data.event === 'configure') {
+        iframeRef.current?.contentWindow?.postMessage(
+          JSON.stringify({ action: 'configure', config: { defaultFonts: ['Helvetica'] } }),
+          '*'
+        );
+      } else if (data.event === 'init') {
+        setIsIframeLoaded(true);
+        if (activeDiagram) {
+          const xmlToLoad = getDiagramXml(activeDiagram);
+          loadedDiagramIdRef.current = activeDiagram.id;
+          currentXmlRef.current = xmlToLoad;
+          sendLoadDiagram(xmlToLoad);
         }
-      } catch (err) {}
+      } else if (data.event === 'autosave' || data.event === 'change' || data.event === 'save') {
+        if (data.xml) {
+          currentXmlRef.current = data.xml;
+          if (autoSaveTimerRef.current) clearTimeout(autoSaveTimerRef.current);
+          autoSaveTimerRef.current = setTimeout(() => {
+            executeSave(data.xml);
+          }, 1200);
+        }
+      }
     };
 
     window.addEventListener('message', handleMessage);
     return () => window.removeEventListener('message', handleMessage);
-  }, [activeDiagram, executeSave]);
+  }, [activeDiagram, sendLoadDiagram, executeSave]);
+
+  // When switching to a DIFFERENT diagram, load its XML into the iframe
+  useEffect(() => {
+    if (isIframeLoaded && activeDiagram) {
+      if (loadedDiagramIdRef.current !== activeDiagram.id) {
+        console.log(`[DiagramsPage] Switching active diagram from ${loadedDiagramIdRef.current} to ${activeDiagram.id}`);
+        const xmlToLoad = getDiagramXml(activeDiagram);
+        loadedDiagramIdRef.current = activeDiagram.id;
+        currentXmlRef.current = xmlToLoad;
+        sendLoadDiagram(xmlToLoad);
+      }
+    }
+  }, [activeDiagram?.id, isIframeLoaded, sendLoadDiagram]);
 
   // Handle Create New Diagram
   const handleCreate = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!newDiagramName.trim()) return;
-    await createDiagram(newDiagramName.trim(), newDiagramType, []);
+    const initialXml = newDiagramType === 'scratchpad' ? BLANK_DIAGRAM_XML : DEFAULT_ARCHITECTURE_XML;
+    const created = await createDiagram(newDiagramName.trim(), newDiagramType, [], initialXml);
     setNewDiagramName('');
     setIsCreateModalOpen(false);
+    if (created && isIframeLoaded) {
+      loadedDiagramIdRef.current = created.id;
+      currentXmlRef.current = initialXml;
+      sendLoadDiagram(initialXml);
+    }
   };
 
   return (

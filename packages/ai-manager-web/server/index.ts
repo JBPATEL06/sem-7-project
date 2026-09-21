@@ -11,14 +11,11 @@ import path from 'path';
 import { fileURLToPath } from 'url';
 import {
   authRouter,
-  initMongoAndMigrate,
-  initDefaultAdmin,
   projectsRouter,
   dbRouter,
   dashboardRouter,
   settingsRouter,
   qaRouter,
-  adminRouter,
   gitRouter,
   diagramRouter,
   screenRouter,
@@ -59,7 +56,6 @@ app.use(cors({
 app.use(express.json({ limit: '10mb' }));
 
 app.use('/api/auth', authRouter);
-app.use('/api/admin', adminRouter);
 app.use('/api/projects', projectsRouter);
 app.use('/api/db', dbRouter);
 app.use('/api/dashboard', dashboardRouter);
@@ -110,8 +106,6 @@ function startServer() {
   try {
     app.listen(PORT, async () => {
       console.log(`[ai-manager-web] Local Express Server running on http://localhost:${PORT}`);
-      await initMongoAndMigrate();
-      await initDefaultAdmin();
     });
   } catch (err: any) {
     console.error(`[ai-manager-web] Server startup failed: ${err.message}`);

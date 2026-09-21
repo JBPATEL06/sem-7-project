@@ -132,10 +132,10 @@ export const ProjectDetailPage: React.FC<ProjectDetailPageProps> = ({
         onBack();
       } else {
         const data = await res.json();
-        alert(data.error || 'Failed to delete project');
+        console.error('[ProjectDetailPage] Delete error:', data.error);
       }
     } catch (err: any) {
-      alert(err.message || 'Failed to delete project');
+      console.error('[ProjectDetailPage] Delete exception:', err.message);
     } finally {
       setIsDeleting(false);
       setIsDeleteModalOpen(false);

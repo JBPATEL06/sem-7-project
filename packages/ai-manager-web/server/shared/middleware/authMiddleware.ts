@@ -64,59 +64,34 @@ export interface AuthRequest extends Request {
   user?: JwtPayload;
 }
 
-export function requireAuth(req: AuthRequest, res: Response, next: NextFunction): void {
-  const authHeader = req.headers.authorization;
-  if (!authHeader || !authHeader.startsWith('Bearer ')) {
-    res.status(401).json({ error: 'Unauthorized. Token missing or invalid header.' });
-    return;
-  }
-
-  const token = authHeader.substring(7);
-  try {
-    const payload = verifyToken(token);
-    req.user = payload;
-    next();
-  } catch {
-    res.status(401).json({ error: 'Invalid or expired session token.' });
-  }
-}
-
-export function requireAdmin(req: AuthRequest, res: Response, next: NextFunction): void {
-  requireAuth(req, res, () => {
-    if (!req.user || req.user.role !== 'admin') {
-      res.status(403).json({ error: 'Forbidden. Admin privileges required.' });
-      return;
-    }
-    next();
-  });
-}
-
-export function localOrAuth(req: AuthRequest, res: Response, next: NextFunction): void {
-  const authHeader = req.headers.authorization;
-  if (authHeader && authHeader.startsWith('Bearer ')) {
-    const token = authHeader.substring(7);
-    try {
-      const payload = verifyToken(token);
-      req.user = payload;
-      return next();
-    } catch {
-      // Token provided but invalid
-      if (process.env.NODE_ENV === 'production') {
-        res.status(401).json({ error: 'Invalid or expired session token.' });
-        return;
-      }
-    }
-  }
-
-  // Strictly restrict unauthenticated admin fallback to non-production local dev
-  if (process.env.NODE_ENV === 'production') {
-    res.status(401).json({ error: 'Unauthorized. Token missing or invalid header.' });
-    return;
-  }
-
+export function requireAuth(req: AuthRequest, _res: Response, next: NextFunction): void {
   req.user = {
     sub: 'local-dev-user',
-    email: 'bhanderijeel8@gmail.com',
+    email: 'local@workspace.dev',
+    role: 'admin',
+    authMethod: 'password',
+    iat: Math.floor(Date.now() / 1000),
+    exp: Math.floor(Date.now() / 1000) + 86400
+  };
+  next();
+}
+
+export function requireAdmin(req: AuthRequest, _res: Response, next: NextFunction): void {
+  req.user = {
+    sub: 'local-dev-user',
+    email: 'local@workspace.dev',
+    role: 'admin',
+    authMethod: 'password',
+    iat: Math.floor(Date.now() / 1000),
+    exp: Math.floor(Date.now() / 1000) + 86400
+  };
+  next();
+}
+
+export function localOrAuth(req: AuthRequest, _res: Response, next: NextFunction): void {
+  req.user = {
+    sub: 'local-dev-user',
+    email: 'local@workspace.dev',
     role: 'admin',
     authMethod: 'password',
     iat: Math.floor(Date.now() / 1000),

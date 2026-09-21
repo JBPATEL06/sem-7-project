@@ -273,7 +273,7 @@ gitRouter.get('/tree', localOrAuth, async (req: AuthRequest, res: Response): Pro
     }
 
     const lines = fileListRaw.split('\n').filter((f) => f.trim().length > 0);
-    const files = lines.slice(0, 200).map((filePath) => {
+    const files = lines.slice(0, 2000).map((filePath) => {
       const isDb = isDbRelated(filePath);
       const ext = path.extname(filePath);
       const name = path.basename(filePath);

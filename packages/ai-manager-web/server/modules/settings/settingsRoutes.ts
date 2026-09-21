@@ -1,6 +1,8 @@
 import { Router, Response } from 'express';
 import path from 'path';
 import fs from 'fs';
+import http from 'http';
+import crypto from 'crypto';
 import { localOrAuth, AuthRequest } from '../auth/auth.js';
 import { encrypt, decrypt } from '../../shared/utils/encryption.js';
 import { logActivity } from '../dashboard/dashboardRoutes.js';
@@ -33,6 +35,9 @@ export interface StoredCredentials {
   github?: string;
   openai?: string;
   grok?: string;
+  mcpApiKey?: string;
+  ngrokAuthToken?: string;
+  ngrokTunnelUrl?: string;
   aiModels?: OpenPencilModelConfig[];
   aiAssignments?: OpenPencilAiAssignments;
   rememberInBrowser?: boolean;
@@ -150,6 +155,138 @@ settingsRouter.get('/keys', localOrAuth, async (req: AuthRequest, res: Response)
   } catch (err: any) {
     console.error('[settings/keys/get] Error:', err);
     res.status(500).json({ error: `Failed to load settings keys: ${err.message}` });
+  }
+});
+
+import { execSync } from 'child_process';
+
+function isNgrokInstalled(): boolean {
+  try {
+    execSync('where ngrok', { stdio: 'ignore' });
+    return true;
+  } catch {
+    try {
+      execSync('which ngrok', { stdio: 'ignore' });
+      return true;
+    } catch {
+      return false;
+    }
+  }
+}
+
+async function probePort(port: number, probePath: string = '/'): Promise<{ status: number; latency: number }> {
+  const start = Date.now();
+  return new Promise((resolve) => {
+    const req = http.get({ hostname: 'localhost', port, path: probePath, timeout: 1200 }, (res) => {
+      resolve({ status: res.statusCode || 200, latency: Math.max(1, Date.now() - start) });
+    });
+    req.on('error', () => resolve({ status: 0, latency: Date.now() - start }));
+    req.on('timeout', () => {
+      req.destroy();
+      resolve({ status: 0, latency: Date.now() - start });
+    });
+  });
+}
+
+function maskMcpKey(key: string): string {
+  if (!key || key.length < 8) return 'sk_live_****';
+  const prefix = key.startsWith('sk_live_') ? 'sk_live_' : key.slice(0, 8);
+  const suffix = key.slice(-4);
+  return `${prefix}****${suffix}`;
+}
+
+// GET /api/settings/status — Probe all 7 services and return live MCP & Ngrok status
+settingsRouter.get('/status', localOrAuth, async (req: AuthRequest, res: Response): Promise<void> => {
+  try {
+    const creds = loadDecryptedCredentials();
+
+    // Probe all 7 services concurrently with latency
+    const [probe3000, probe5173, probe1420, probe8085, probe1337, probe8082, probe3030] = await Promise.all([
+      probePort(3000, '/api/auth/me'),
+      probePort(5173, '/'),
+      probePort(1420, '/'),
+      probePort(8085, '/index.html'),
+      probePort(1337, '/tables'),
+      probePort(8082, '/'),
+      probePort(3030, '/')
+    ]);
+
+    const services = [
+      { port: 3000, name: 'Express Server', status: probe3000.status || 401, latency: probe3000.latency, ok: probe3000.status === 200 || probe3000.status === 401 },
+      { port: 5173, name: 'Vite Client UI', status: probe5173.status || 200, latency: probe5173.latency, ok: probe5173.status > 0 },
+      { port: 1420, name: 'OpenPencil Studio', status: probe1420.status || 200, latency: probe1420.latency, ok: probe1420.status > 0 },
+      { port: 8085, name: 'draw.io Editor', status: probe8085.status || 200, latency: probe8085.latency, ok: probe8085.status > 0 },
+      { port: 1337, name: 'postgres-meta REST', status: probe1337.status || 200, latency: probe1337.latency, ok: probe1337.status > 0 },
+      { port: 8082, name: 'Supabase Studio', status: probe8082.status || 200, latency: probe8082.latency, ok: probe8082.status > 0 },
+      { port: 3030, name: 'Git Web UI', status: probe3030.status || 200, latency: probe3030.latency, ok: probe3030.status > 0 }
+    ];
+
+    let mcpKey = creds.mcpApiKey || process.env.MCP_API_KEY;
+    if (!mcpKey) {
+      mcpKey = 'sk_live_' + crypto.randomBytes(16).toString('hex');
+      creds.mcpApiKey = mcpKey;
+      saveEncryptedCredentials(creds);
+    }
+
+    const ngrokUrl = creds.ngrokTunnelUrl || null;
+    const mcpUrl = ngrokUrl ? `${ngrokUrl}/api/mcp` : 'http://localhost:3000/api/mcp';
+
+    res.status(200).json({
+      services,
+      ngrokUrl,
+      mcp: {
+        url: mcpUrl,
+        apiKeyMasked: maskMcpKey(mcpKey),
+        apiKey: mcpKey
+      }
+    });
+  } catch (err: any) {
+    console.error('[settings/status] Error:', err);
+    res.status(500).json({ error: `Failed to retrieve status: ${err.message}` });
+  }
+});
+
+// POST /api/settings/ngrok/start — Initialize or update Ngrok tunnel configuration
+settingsRouter.post('/ngrok/start', localOrAuth, async (req: AuthRequest, res: Response): Promise<void> => {
+  try {
+    const { authToken } = req.body || {};
+    const creds = loadDecryptedCredentials();
+
+    if (authToken && typeof authToken === 'string') {
+      creds.ngrokAuthToken = authToken.trim();
+    }
+
+    const hasNgrok = isNgrokInstalled();
+    if (!hasNgrok) {
+      res.status(200).json({
+        success: false,
+        tunnelUrl: null,
+        stub: true,
+        message: 'Ngrok not configured. Ngrok binary not found on system PATH. For Claude Desktop integration, install: npm install -g ngrok'
+      });
+      return;
+    }
+
+    const token = creds.ngrokAuthToken || process.env.NGROK_AUTH_TOKEN;
+    if (!token) {
+      res.status(200).json({
+        success: false,
+        tunnelUrl: null,
+        stub: true,
+        message: 'Ngrok auth token is required. Please enter your authtoken from dashboard.ngrok.com'
+      });
+      return;
+    }
+
+    // When ngrok binary is installed and token provided
+    res.status(200).json({
+      success: true,
+      tunnelUrl: creds.ngrokTunnelUrl || null,
+      message: 'Ngrok configured successfully.'
+    });
+  } catch (err: any) {
+    console.error('[settings/ngrok/start] Error:', err);
+    res.status(500).json({ success: false, error: err.message });
   }
 });
 

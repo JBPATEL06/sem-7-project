@@ -2,9 +2,8 @@ import { Router, Response } from 'express';
 import fs from 'fs';
 import path from 'path';
 import { JsonStore, getWorkspaceRootDir } from '../../shared/index.js';
-import { localOrAuth, AuthRequest, getIsMongoConnected } from '../auth/auth.js';
+import { localOrAuth, AuthRequest } from '../auth/auth.js';
 import { logActivity } from '../dashboard/dashboardRoutes.js';
-import { DiagramModel } from '../../models/index.js';
 import { loadDecryptedCredentials } from '../settings/settingsRoutes.js';
 import { detectIntent, callLlmForChatReply } from '../screens/screenRoutes.js';
 
@@ -61,10 +60,16 @@ export function syncDiagramToDisk(diagram: Diagram): string {
       files: diagram.files || {}
     };
     atomicWriteFileSync(filePath, JSON.stringify(data, null, 2));
-    return `diagrams/${slug}.excalidraw`;
+
+    if (diagram.files?.xml && typeof diagram.files.xml === 'string') {
+      const drawioPath = path.join(targetDir, `${slug}.drawio`);
+      atomicWriteFileSync(drawioPath, diagram.files.xml);
+    }
+
+    return `diagrams/${slug}.drawio`;
   } catch (e) {
     console.error('[Diagrams] Disk sync error:', e);
-    return `diagrams/${getDiagramSlug(diagram.name)}.excalidraw`;
+    return `diagrams/${getDiagramSlug(diagram.name)}.drawio`;
   }
 }
 
@@ -80,37 +85,16 @@ export function deleteDiagramFromDisk(name: string) {
     if (fs.existsSync(filePath)) {
       fs.unlinkSync(filePath);
     }
+    const drawioPath = path.join(targetDir, `${slug}.drawio`);
+    if (fs.existsSync(drawioPath)) {
+      fs.unlinkSync(drawioPath);
+    }
   } catch (e) {
     console.error('[Diagrams] Disk delete error:', e);
   }
 }
 
 async function getDiagramsFromDb(projectId?: string, userId?: string, isAdmin: boolean = false): Promise<Diagram[]> {
-  if (getIsMongoConnected()) {
-    try {
-      const query: any = {};
-      if (projectId) query.projectId = projectId;
-      if (!isAdmin && userId) query.userId = userId;
-
-      const docs = await DiagramModel.find(query).sort({ updatedAt: -1 }).lean();
-      return docs.map((d: any) => ({
-        id: d.id,
-        projectId: d.projectId,
-        userId: d.userId,
-        name: d.name,
-        description: d.description,
-        type: d.type,
-        elements: d.elements || [],
-        appState: d.appState || {},
-        files: d.files || {},
-        createdAt: d.createdAt,
-        updatedAt: d.updatedAt
-      }));
-    } catch (e) {
-      console.error('[Diagrams] Atlas read error:', e);
-    }
-  }
-
   const all = await diagramStore.getAll();
   let filtered = projectId ? all.filter((d) => d.projectId === projectId) : all;
   if (!isAdmin && userId) {
@@ -120,30 +104,8 @@ async function getDiagramsFromDb(projectId?: string, userId?: string, isAdmin: b
 }
 
 async function getDiagramByIdFromDb(id: string): Promise<Diagram | null> {
-  if (getIsMongoConnected()) {
-    try {
-      const doc = await DiagramModel.findOne({ id }).lean();
-      if (doc) {
-        return {
-          id: (doc as any).id,
-          projectId: (doc as any).projectId,
-          userId: (doc as any).userId,
-          name: (doc as any).name,
-          description: (doc as any).description,
-          type: (doc as any).type,
-          elements: (doc as any).elements || [],
-          appState: (doc as any).appState || {},
-          files: (doc as any).files || {},
-          createdAt: (doc as any).createdAt,
-          updatedAt: (doc as any).updatedAt
-        };
-      }
-    } catch (e) {
-      console.error('[Diagrams] Atlas getById error:', e);
-    }
-  }
-
-  return await diagramStore.getById(id);
+  const diagram = await diagramStore.getById(id);
+  return diagram || null;
 }
 
 export async function syncDiskDiagramsToStore(projectId: string = 'acme-api', userId: string = 'usr_admin_default'): Promise<void> {
@@ -196,11 +158,6 @@ export async function syncDiskDiagramsToStore(projectId: string = 'acme-api', us
         updatedAt: new Date().toISOString()
       };
 
-      if (getIsMongoConnected()) {
-        try {
-          await DiagramModel.create(newDiagram);
-        } catch {}
-      }
       await diagramStore.create(newDiagram);
       existingSlugs.add(slug);
     }
@@ -300,14 +257,6 @@ diagramRouter.post('/', localOrAuth, async (req: AuthRequest, res: Response): Pr
       updatedAt: now
     };
 
-    if (getIsMongoConnected()) {
-      try {
-        await DiagramModel.create(newDiagram);
-      } catch (e) {
-        console.error('[Diagrams] Atlas create error:', e);
-      }
-    }
-
     const created = await diagramStore.create(newDiagram);
     const relPath = syncDiagramToDisk(newDiagram);
 
@@ -371,14 +320,6 @@ diagramRouter.put('/:id', localOrAuth, async (req: AuthRequest, res: Response): 
     if (appState !== undefined) updates.appState = appState;
     if (files !== undefined) updates.files = files;
 
-    if (getIsMongoConnected()) {
-      try {
-        await DiagramModel.updateOne({ id }, { $set: updates });
-      } catch (e) {
-        console.error('[Diagrams] Atlas update error:', e);
-      }
-    }
-
     const updated = await diagramStore.update(id, updates);
     const fullUpdated: Diagram = updated || { ...existing, ...updates };
     const relPath = syncDiagramToDisk(fullUpdated);
@@ -414,14 +355,6 @@ diagramRouter.delete('/:id', localOrAuth, async (req: AuthRequest, res: Response
     if (!isAdmin && !isOwner) {
       res.status(403).json({ error: 'Forbidden. You do not have permission to delete this diagram.' });
       return;
-    }
-
-    if (getIsMongoConnected()) {
-      try {
-        await DiagramModel.deleteOne({ id });
-      } catch (e) {
-        console.error('[Diagrams] Atlas delete error:', e);
-      }
     }
 
     const deleted = await diagramStore.delete(id);
@@ -815,7 +748,7 @@ diagramRouter.post('/generate-ai', localOrAuth, async (req: AuthRequest, res: Re
           { id: 'g_1', name: 'Web Client Studio (React 19)', sub: 'Excalidraw & Stitch Canvas', x: 60, y: 180, width: 260, height: 100, color: '#38bdf8', bg: '#082f49' },
           { id: 'g_2', name: 'AI Manager API Gateway', sub: 'Express · LocalOrAuth Middleware', x: 390, y: 180, width: 260, height: 100, color: '#a855f7', bg: '#1e1b4b' },
           { id: 'g_3', name: 'AI Synthesis Engine', sub: 'Groq / OpenAI Cascade · Heuristics', x: 730, y: 80, width: 270, height: 100, color: '#10b981', bg: '#064e3b' },
-          { id: 'g_4', name: 'Primary Persistence Layer', sub: 'MongoDB Atlas · Local JSON Store', x: 730, y: 280, width: 270, height: 100, color: '#f59e0b', bg: '#451a03' },
+          { id: 'g_4', name: 'Primary Persistence Layer', sub: 'Local JSON Store · SQLite DB', x: 730, y: 280, width: 270, height: 100, color: '#f59e0b', bg: '#451a03' },
           { id: 'g_5', name: 'Workspace Disk Files', sub: 'ui/*.fig · diagrams/*.excalidraw', x: 1080, y: 180, width: 270, height: 100, color: '#06b6d4', bg: '#131b2e' }
         ];
         connsList = [
@@ -848,7 +781,7 @@ diagramRouter.post('/generate-ai', localOrAuth, async (req: AuthRequest, res: Re
           { id: 'ws_2', name: 'NGINX Load Balancer', sub: 'Sticky Sessions · TLS Offload', x: 380, y: 180, width: 250, height: 100, color: '#10b981', bg: '#064e3b' },
           { id: 'ws_3', name: 'WebSocket Cluster Nodes', sub: 'Node.js Cluster · WSS Protocol', x: 710, y: 80, width: 260, height: 100, color: '#a855f7', bg: '#1e1b4b' },
           { id: 'ws_4', name: 'Redis Pub/Sub Message Bus', sub: 'Channel Broadcasting · Sub-ms', x: 710, y: 280, width: 260, height: 100, color: '#ef4444', bg: '#450a0a' },
-          { id: 'ws_5', name: 'MongoDB Message Store', sub: 'Capped Collections · Time-Series', x: 1050, y: 180, width: 260, height: 100, color: '#f59e0b', bg: '#451a03' }
+          { id: 'ws_5', name: 'Event Message Store', sub: 'Indexed Tables · Time-Series', x: 1050, y: 180, width: 260, height: 100, color: '#f59e0b', bg: '#451a03' }
         ];
         connsList = [
           { from: 1, to: 2, color: '#38bdf8', label: 'Upgrade: WebSocket' },
@@ -1133,18 +1066,8 @@ diagramRouter.post('/generate-ai', localOrAuth, async (req: AuthRequest, res: Re
     };
 
     if (mode === 'modify' && diagramId) {
-      if (getIsMongoConnected()) {
-        try {
-          await DiagramModel.updateOne({ id: diagramId }, { $set: fullDiagram });
-        } catch {}
-      }
       await diagramStore.update(diagramId, fullDiagram);
     } else {
-      if (getIsMongoConnected()) {
-        try {
-          await DiagramModel.create(fullDiagram);
-        } catch {}
-      }
       await diagramStore.create(fullDiagram);
     }
 

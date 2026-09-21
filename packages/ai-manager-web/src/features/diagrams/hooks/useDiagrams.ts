@@ -60,17 +60,21 @@ export function useDiagrams(projectId: string = 'acme-api') {
 
   // Create new diagram
   const createDiagram = useCallback(
-    async (name: string, type: Diagram['type'] = 'architecture', initialElements: any[] = []) => {
+    async (name: string, type: Diagram['type'] = 'architecture', initialElements: any[] = [], initialXml?: string) => {
       try {
         setIsSaving(true);
         setError(null);
-        const res = await ApiClient.post<{ message: string; diagram: Diagram }>('/api/diagrams', {
+        const payload: any = {
           projectId,
           name,
           type,
           elements: initialElements,
           appState: { viewBackgroundColor: '#1e1e24', theme: 'dark' }
-        });
+        };
+        if (initialXml) {
+          payload.files = { xml: initialXml };
+        }
+        const res = await ApiClient.post<{ message: string; diagram: Diagram }>('/api/diagrams', payload);
 
         if (res.diagram) {
           setDiagrams((prev) => [res.diagram, ...prev]);

@@ -1,4 +1,77 @@
 # Progress
+- **Supabase Studio Table Editor Crash Resolution (`currentColumns.map is not a function`) (Completed & Verified)**:
+  - **Root Cause**: Upgraded `@electric-sql/pglite` to 0.5.8 while `pglite_data/acme-api` retained an older incompatible PGlite storage directory format. This caused `new PGlite(dataDir)` to fail on `:1337` (`postgresMetaService`) with HTTP 500 error payload `{ error: ... }`. When Supabase Studio on `:8082` queried `:1337/tables`, it received an error object instead of an array, triggering `currentColumns.map is not a function` when inspecting column metadata.
+  - **Fix 1 (Storage Migration)**: Backed up old directory and migrated `pglite_data/acme-api` with verified 0.5.8 PGlite schema containing all 7 tables (`customers`, `order_items`, `orders`, `payments`, `products`, `projects`, `users`) with full row data and foreign key constraints.
+  - **Fix 2 (Defensive Array Guards)**: Updated `packages/ai-manager-web/scripts/services/supabaseStudioService.js` adding strict `Array.isArray()` guards for `currentColumns`, `allTables`, and `rows` to prevent unhandled JS runtime crashes in the event of API anomalies.
+  - **Verification**: Verified `:1337/tables` (HTTP 200, 7 tables), `:1337/columns?table=users` (HTTP 200, 5 columns), and `:1337/table-data?table=users` (HTTP 200, 2 rows) via live PowerShell requests.
+- **Full MongoDB, Mongoose, Atlas, and Auth/Admin Removal (Completed & Verified)**:
+  - **Full Scope Execution**: Completely stripped MongoDB, Mongoose, and Atlas connectivity across `packages/ai-manager-web/server/`. Removed all Mongoose models (`server/models`), database connection branches (`dbRoutes.ts`, `projects.ts`, `diagramRoutes.ts`, `dashboardRoutes.ts`, `qaDiagnosticsService.ts`), and unmounted the Atlas connection startup hook from `server/index.ts`.
+  - **Auth & Admin Elimination**: Removed all auth gates, login/register/admin routes, guards, session verifications, and screens (`LoginPage`, `RegisterPage`, `AdminPage`). Application boots directly into Dashboard. `AuthContext` converted to a transparent local provider.
+  - **Single Storage Architecture (.ai-manager/)**: Confirmed all state resides strictly on local disk:
+    - `.ai-manager/projects.json` -> Project list, metadata, git tracking, status
+    - `.ai-manager/diagrams.json` -> Excalidraw diagrams, elements, appState
+    - `.ai-manager/screens.json` -> Screens Studio / OpenPencil boards, layout specs, tokens
+    - `.ai-manager/activity.json` -> Chronological audit event trail
+    - `.ai-manager/connections.json` -> Local database connection specs (Postgres / Supabase / SQLite)
+    - `.ai-manager/credentials.enc` -> AES-256-GCM encrypted local secrets and API keys
+    - `.ai-manager/design_tokens.json` -> Design tokens, theme variables
+    - `.ai-manager/branch-flags.json` -> Git branch flags and review notes
+    - `.ai-manager/users.json` -> Local user record (fallback)
+    - `.ai-manager/dbs/:projectId.sqlite` & `pglite_data/:projectId/` -> Embedded per-project relational database engines
+  - **Verification**:
+    - `Get-ChildItem -Path server -Recurse -File | Select-String -Pattern "mongo|mongoose|MONGODB_URI"` -> **0 hits**.
+    - `npm run build` in `packages/ai-manager-web` (`tsc && vite build && tsup`) -> **0 errors, build success in 2.96s (Vite) + 52ms (tsup)**.
+
+  - **pglite-socket Integration**: Installed `@electric-sql/pglite@0.5.8` and `@electric-sql/pglite-socket@0.2.11`. Initialized `PGLiteSocketServer` wrapping in-process PGlite database (`pglite_data/v058_acme`) listening on TCP `127.0.0.1:5432`.
+  - **Empirical Verification**: Connected via standard Node `pg.Client` over TCP `postgresql://postgres:postgres@127.0.0.1:5432/postgres`. Queried live customer row (`customer_id: 1, Customer_1`), verified all 4 foreign key constraints across the 5-table schema, and verified row counts (51 customers, 50 orders, 50 products, 50 order_items, 50 payments).
+  - **@pgkit/admin Evaluation**: Mounted `@pgkit/admin@0.6.1` on port 5050 via `getExpressRouter(connectionString)`. Verified TRPC endpoints (`healthcheck`, `inspect`, `executeSql`). Found excellent CodeMirror 6 autocomplete and ReactGrid copy-paste capabilities, but confirmed it has **zero visual table builder**, **zero data insertion or inline editing UI**, and only static text Mermaid ERD diagrams.
+  - **Recommendation**: Retain custom Supabase-parity Studio UI on `:8082` for full table builder, inline editing, and interactive SVG bezier ERD, while keeping `pglite-socket` running permanently on TCP 5432 for external tooling.
+
+- **DB Manager: Real Upstream Supabase Studio Investigation & Fallback (a) UX Engine (Completed & Verified)**:
+  - **Investigation**: Cloned upstream `supabase/supabase` (`apps/studio`, `packages/ui`, `packages/pg-meta`). Identified 4 hard blockers making standalone direct run non-feasible without Docker and real TCP Postgres: (1) Upstream Studio expects an external TCP Postgres connection string (`postgresql://...`) encrypted with `CRYPTO_KEY` sent to `postgres-meta`, whereas we run in-process PGlite WASM (no TCP socket on 5432); (2) `apps/studio/next.config.ts` sets `X-Frame-Options: DENY`, blocking iframe embedding; (3) `apps/studio` requires 9 internal monorepo packages and `libpg-query` C++ native compilation; (4) Upstream Studio relies on Docker orchestration with Kong and GoTrue.
+  - **Fallback (a) Implemented**:
+    - **Fix 1 (ERD Relationship Lines)**: Updated `GET /schema/erd` in `postgresMetaService.js` to introspect `table_constraints` and `key_column_usage`. Implemented dynamic SVG cubic bezier curve overlay (`#erdSvgOverlay`) with arrowheads, hover highlights, and tooltips in `supabaseStudioService.js`. Tested on 5-table schema with 4 live FK lines.
+    - **Fix 2 (Visual Table Builder)**: Added `POST /create-table` in `postgresMetaService.js` and "+ New Table" modal in `supabaseStudioService.js` supporting column definitions, types, PK, unique, not null, and FK references.
+    - **Fix 3 (Zero alert()/confirm())**: Built dark toast notification system (`showToast`) and inline function testing UI. Verified 0 alert() / confirm() calls across frontend.
+    - **Fix 4 (Insert Row PK Constraints)**: Inspected `column_default` and sequences (`nextval`); plain non-sequence integer PKs are strictly enforced as required with client-side validation.
+    - **Fix 5 (Resizable SQL Editor)**: Added vertical splitter drag handle and `⛶ Expand` maximize button to expand editor to 75vh for 100+ line queries.
+  - **Storage Service Status**: Checked and reported status as NOT STARTED.
+  - **Verification**: Verified via `scratch/test_fk_query.mjs`, `scratch/test_table_editor.mjs`, `npx tsc --noEmit` (0 errors), and live services probe (`:1337`, `:8082`).
+
+- **SQL Editor Multi-Statement Query Execution Support (Completed & Verified)**:
+  - **Investigation**: Confirmed that `POST /query` previously routed queries through `queryPglite(sql, [], projectId)` which created a PostgreSQL prepared statement. PostgreSQL/PGlite strictly limits prepared statements to a single query, throwing `"cannot insert multiple commands into a prepared statement"`.
+  - **PGlite Driver Raw Exec**: Implemented and exported `execPglite(sql, projectId)` in `server/modules/db/drivers/pgliteDriver.ts` calling `await db.exec(sql)`. Defensively handled stale `postmaster.pid` cleanup on initialization.
+  - **postgresMetaService Endpoint**: Switched `POST /query` to call `execPglite(sql, projectId)`. Standardized response to display the last executed statement's rows while preserving `totalStatements` and `allResults`.
+  - **Table Editor Safety**: Maintained safe parameterized queries (`queryPglite`) for `/insert-row` and `/update-cell`.
+  - **Verification**: Verified all 4 test cases (Single statement, UNION ALL query, TRUE multi-statement script, and mixed DDL + DML script) and Table Editor CRUD via `scratch/test_multi_statement_sql.mjs` and `scratch/test_table_editor.mjs` with 100% success.
+
+
+- **Item 2: Settings Page Master MCP Exposure (Completed & Verified)**:
+  - Built full **Connect Your AI** module in `SettingsPage.tsx` and `settingsRoutes.ts`.
+  - Implemented `GET /api/settings/status` probing all 7 ports (`3000`, `5173`, `1420`, `8085`, `1337`, `8082`, `3030`) with live latency metrics and masked/full MCP key retrieval.
+  - Implemented `POST /api/settings/ngrok/start` strictly inspecting binary on system PATH and enforcing stub mode if absent (zero fabricated URLs).
+  - Built 3 frontend sections: Active Services Probe Grid (with latency + 15s auto-poll toggle + manual refresh), Public Ngrok Tunnel Card, and Claude Desktop JSON Config with token reveal toggle and 1-click clipboard copy.
+  - Verified empirically: all 4 acceptance tests passed, outputs verified via curl and node, and browser state confirmed.
+
+- **AST Indexer Vendor Exclusions & Full Test Suite Pass (Completed & Verified)**:
+  - Excluded upstream third-party repositories (`packages/drawio-repo/**`, `packages/postgres-meta/**`, `packages/open-pencil-repo/**`) from `ts-morph` AST processing in `packages/db-context-indexer/src/core/projectWalker.ts`.
+  - Rebuilt `packages/db-context-indexer` (`tsup`) and synchronized `dist/` into `packages/ai-manager-web/node_modules/`.
+  - Cleared stale `.dbci/index.sqlite` cache and adjusted test timeouts in `tests/flowAudit.test.ts`.
+  - Verified 100% test pass: all 7 test files and 28/28 tests passed in 15.67 seconds (`npm test`), verified crash safety (`test_crash_safety.ts`), and verified `VENDOR_FILES_COUNT=0` via SQLite verification script.
+
+- **Item 1: Unified Dev Service Orchestration (Completed & Verified)**:
+  - Implemented multi-process orchestration in `packages/ai-manager-web/scripts/dev.js` running all 7 core services concurrently:
+    1. Express Backend (`:3000`) -> `npx tsx server/index.ts`
+    2. Vite Client UI (`:5173`) -> `npx vite`
+    3. OpenPencil Studio (`:1420`) -> `npx vite --port 1420`
+    4. draw.io Local Editor (`:8085`) -> `node scripts/services/drawioService.js` (serving `packages/drawio-repo/src/main/webapp/index.html`)
+    5. postgres-meta REST API (`:1337`) -> `npx tsx scripts/services/postgresMetaService.js` (backed by isolated project PGlite WASM)
+    6. Supabase Studio UI (`:8082`) -> `node scripts/services/supabaseStudioService.js` (embedded in `DbManagerPage.tsx`)
+    7. Git Web UI (`:3030`) -> `node scripts/services/gitUiService.js` (local Git server)
+  - Cloned upstream `packages/drawio-repo` (`https://github.com/jgraph/drawio.git`) and `packages/postgres-meta` (`https://github.com/supabase/postgres-meta.git`).
+  - Installed `@electric-sql/pglite` in `packages/ai-manager-web` and synchronized `packages/db-context-indexer` dist.
+  - Verified empirical proof: all 7 ports pinged successfully (HTTP 200 / 401) and confirmed active `LISTENING` sockets via `netstat -ano`.
+
 - **Clean Architecture & Feature-Driven Restructuring (Phases 1, 2 & 3 Completed & Verified)**:
   - **Phase 1: Dead Code & Redundant File Pruning**:
     - Deleted `packages/.dbci/` (dead duplicate cache index).

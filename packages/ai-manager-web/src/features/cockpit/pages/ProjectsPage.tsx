@@ -683,7 +683,7 @@ export const ProjectsPage: React.FC<ProjectsPageProps> = ({
                 </div>
               </div>
 
-              <div className="flex-1 overflow-y-auto p-3 space-y-3">
+              <div className="flex-1 overflow-y-auto p-3 pb-20 space-y-3">
                 {filteredModels.map((model, idx) => (
                   <div key={idx} className="p-3 rounded-lg bg-slate-900/80 border border-slate-800 space-y-2">
                     <div className="flex items-center justify-between">
@@ -726,7 +726,7 @@ export const ProjectsPage: React.FC<ProjectsPageProps> = ({
 
           {/* Tab 2: API ENDPOINTS */}
           {inspectorTab === 'api' && (
-            <div className="flex-1 overflow-y-auto p-3 space-y-2">
+            <div className="flex-1 overflow-y-auto p-3 pb-20 space-y-2">
               <span className="text-[11px] font-bold text-slate-400 uppercase font-mono block mb-2">
                 Active REST & SSE Endpoints (16)
               </span>
@@ -754,7 +754,7 @@ export const ProjectsPage: React.FC<ProjectsPageProps> = ({
 
           {/* Tab 3: CODE VIEW */}
           {inspectorTab === 'code' && (
-            <div className="flex-1 overflow-y-auto p-3 font-mono text-[11px] text-slate-300 space-y-2">
+            <div className="flex-1 overflow-y-auto p-3 pb-20 font-mono text-[11px] text-slate-300 space-y-2">
               <div className="text-xs text-slate-400 pb-2 border-b border-slate-800 font-sans">
                 Project AST Index Map
               </div>
@@ -779,7 +779,7 @@ export interface UniversalGraph {
 
           {/* Tab 4: GIT LINEAGE */}
           {inspectorTab === 'git' && (
-            <div className="flex-1 overflow-y-auto p-3 space-y-2">
+            <div className="flex-1 overflow-y-auto p-3 pb-20 space-y-2">
               <span className="text-[11px] font-bold text-slate-400 uppercase font-mono block mb-2">
                 Git Commit Trace & Authors
               </span>

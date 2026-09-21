@@ -151,6 +151,7 @@ export interface ScreenLayoutSpec {
   name: string;
   description: string;
   board: LayoutBoard;
+  layout?: LayoutBoard;
   theme: {
     primaryColor: string;
     backgroundColor: string;

@@ -134,7 +134,7 @@ flowAuditRouter.get('/stream', (req: AuthRequest, res: Response): void => {
   const steps = [
     { step: 1, name: 'AST_TOKENIZATION', message: 'Scanning source files and building TypeScript AST compiler projects...', percent: 20 },
     { step: 2, name: 'ROUTE_DISCOVERY', message: 'Parsing Express and API route definitions, handlers, and middlewares...', percent: 40 },
-    { step: 3, name: 'QUERY_EXTRACTION', message: 'Scanning database queries (MongoDB, Supabase, Postgres, Redis, MySQL)...', percent: 65 },
+    { step: 3, name: 'QUERY_EXTRACTION', message: 'Scanning database queries (Supabase, Postgres, SQLite, Redis, MySQL)...', percent: 65 },
     { step: 4, name: 'CALL_GRAPH_TRAVERSAL', message: 'Resolving caller/callee trees and tracing direct database touches...', percent: 85 },
     { step: 5, name: 'INDEX_PERSISTENCE', message: 'Committing symbols, AST nodes, and call edges to SQLite storage...', percent: 100 }
   ];

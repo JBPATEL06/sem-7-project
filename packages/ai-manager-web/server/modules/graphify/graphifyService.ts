@@ -221,7 +221,7 @@ export async function buildPromptContextBundle(projectId: string = 'sem-7-projec
 **Core Overview**: ${bundle.prd.overview || 'AI Manager Local Cockpit'}
 
 ## Architecture & Tech Stack
-- Stack: ${bundle.architecture.techStack.slice(0, 5).join(', ') || 'React, Express, SQLite, MongoDB, TypeScript'}
+- Stack: ${bundle.architecture.techStack.slice(0, 5).join(', ') || 'React, Express, SQLite, PGlite, TypeScript'}
 - Key Decisions: ${bundle.architecture.keyDecisions.slice(0, 3).join('; ') || 'Local-first architecture'}
 
 ## Active Plans & Progress

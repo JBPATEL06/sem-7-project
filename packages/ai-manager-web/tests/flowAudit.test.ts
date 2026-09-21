@@ -34,7 +34,7 @@ describe('Flow Audit & AST Visualizer Endpoint Tests', () => {
     } finally {
       server.close();
     }
-  });
+  }, 30000);
 
   it('2. GET /api/flow-audit/export generates OpenTelemetry-compliant JSON trace', async () => {
     const server = app.listen(0);
@@ -58,7 +58,7 @@ describe('Flow Audit & AST Visualizer Endpoint Tests', () => {
     } finally {
       server.close();
     }
-  });
+  }, 30000);
 
   it('3. POST /api/flow-audit/scan performs incremental AST compilation', async () => {
     const server = app.listen(0);

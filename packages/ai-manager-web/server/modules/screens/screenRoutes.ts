@@ -1,8 +1,7 @@
 import { Router, Response } from 'express';
 import fs from 'fs';
 import path from 'path';
-import { ScreenModel } from '../../models/index.js';
-import { localOrAuth, AuthRequest, getIsMongoConnected } from '../auth/auth.js';
+import { localOrAuth, AuthRequest } from '../auth/auth.js';
 import { AppLogger } from '../../shared/utils/logger.js';
 import { exportScreenToFigBuffer } from './figExporter.js';
 import {
@@ -201,20 +200,7 @@ screenRouter.get('/', localOrAuth, async (req: AuthRequest, res: Response) => {
 
     let screens: any[] = [];
 
-    if (getIsMongoConnected()) {
-      try {
-        let query: any = {};
-        if (projectId) query.projectId = projectId;
-        if (user && user.role !== 'admin') {
-          query.userId = user.sub;
-        }
-        screens = await ScreenModel.find(query).sort({ updatedAt: -1 }).lean();
-      } catch (e) {
-        console.error('[Screens] Atlas read error:', e);
-      }
-    }
-
-    if (screens.length === 0) {
+    {
       let localScreens = await localScreenStore.getAll();
       if (user && user.role !== 'admin') {
         localScreens = localScreens.filter((s: ScreenLayoutSpec) => s.userId === user.sub);
@@ -318,13 +304,7 @@ screenRouter.post('/modify-element', localOrAuth, async (req: AuthRequest, res: 
       return res.status(400).json({ error: 'screenId is required.' });
     }
 
-    let screen: any = null;
-    if (getIsMongoConnected()) {
-      screen = await ScreenModel.findOne({ id: screenId }).lean();
-    }
-    if (!screen) {
-      screen = await localScreenStore.getById(screenId);
-    }
+    let screen = await localScreenStore.getById(screenId);
     if (!screen) {
       return res.status(404).json({ error: `Screen ${screenId} not found.` });
     }
@@ -348,11 +328,7 @@ screenRouter.post('/modify-element', localOrAuth, async (req: AuthRequest, res: 
       updatedAt: new Date().toISOString()
     };
 
-    if (getIsMongoConnected()) {
-      try {
-        await ScreenModel.updateOne({ id: screenId }, { $set: { layout: updatedSpec.board, components: updatedComponents, updatedAt: updatedSpec.updatedAt } });
-      } catch {}
-    }
+
     await localScreenStore.update(screenId, updatedSpec);
     syncScreenToDisk(updatedSpec);
 
@@ -390,19 +366,7 @@ screenRouter.post('/generate', localOrAuth, async (req: AuthRequest, res: Respon
     spec.userId = userId;
     spec.projectId = projectId;
 
-    try {
-      if (getIsMongoConnected()) {
-        await ScreenModel.create({
-          id: spec.id,
-          projectId: spec.projectId,
-          userId: spec.userId,
-          name: spec.name,
-          description: spec.description,
-          layout: spec.board,
-          components: spec.board.components
-        });
-      }
-    } catch (err) {}
+
 
     await localScreenStore.create(spec);
     const relPath = syncScreenToDisk(spec);
@@ -445,13 +409,7 @@ screenRouter.get('/:id', localOrAuth, async (req: AuthRequest, res: Response) =>
     const id = req.params.id as string;
     const user = req.user;
 
-    let screen: any = null;
-    if (getIsMongoConnected()) {
-      screen = await ScreenModel.findOne({ id }).lean();
-    }
-    if (!screen) {
-      screen = await localScreenStore.getById(id);
-    }
+    let screen = await localScreenStore.getById(id);
 
     if (!screen) {
       return res.status(404).json({ error: `Screen ${id} not found` });
@@ -513,19 +471,7 @@ screenRouter.post('/', localOrAuth, async (req: AuthRequest, res: Response) => {
       updatedAt: new Date().toISOString()
     };
 
-    try {
-      if (getIsMongoConnected()) {
-        await ScreenModel.create({
-          id: fullSpec.id,
-          projectId: fullSpec.projectId,
-          userId: fullSpec.userId,
-          name: fullSpec.name,
-          description: fullSpec.description,
-          layout: fullSpec.board,
-          components: fullSpec.board.components
-        });
-      }
-    } catch (err) {}
+
 
     await localScreenStore.create(fullSpec);
     const relPath = syncScreenToDisk(fullSpec);
@@ -550,13 +496,7 @@ screenRouter.put('/:id', localOrAuth, async (req: AuthRequest, res: Response) =>
     const user = req.user;
     const { name, description, board, theme } = req.body;
 
-    let existing: any = null;
-    if (getIsMongoConnected()) {
-      existing = await ScreenModel.findOne({ id }).lean();
-    }
-    if (!existing) {
-      existing = await localScreenStore.getById(id);
-    }
+    let existing = await localScreenStore.getById(id);
 
     if (!existing) {
       return res.status(404).json({ error: `Screen ${id} not found` });
@@ -582,22 +522,7 @@ screenRouter.put('/:id', localOrAuth, async (req: AuthRequest, res: Response) =>
       updatedAt: new Date().toISOString()
     };
 
-    try {
-      if (getIsMongoConnected()) {
-        await ScreenModel.updateOne(
-          { id },
-          {
-            $set: {
-              name: updatedSpec.name,
-              description: updatedSpec.description,
-              layout: updatedSpec.board,
-              components: updatedSpec.board.components,
-              updatedAt: updatedSpec.updatedAt
-            }
-          }
-        );
-      }
-    } catch {}
+
 
     await localScreenStore.update(id, updatedSpec);
     const relPath = syncScreenToDisk(updatedSpec);
@@ -621,13 +546,7 @@ screenRouter.delete('/:id', localOrAuth, async (req: AuthRequest, res: Response)
     const id = req.params.id as string;
     const user = req.user;
 
-    let existing: any = null;
-    if (getIsMongoConnected()) {
-      existing = await ScreenModel.findOne({ id }).lean();
-    }
-    if (!existing) {
-      existing = await localScreenStore.getById(id);
-    }
+    let existing = await localScreenStore.getById(id);
 
     if (!existing) {
       return res.status(404).json({ error: `Screen ${id} not found` });
@@ -637,9 +556,7 @@ screenRouter.delete('/:id', localOrAuth, async (req: AuthRequest, res: Response)
       return res.status(403).json({ error: 'Forbidden: Access denied to delete this layout spec' });
     }
 
-    if (getIsMongoConnected()) {
-      await ScreenModel.deleteOne({ id });
-    }
+
     await localScreenStore.delete(id);
     deleteScreenFromDisk(existing.name);
 
@@ -659,13 +576,7 @@ screenRouter.get('/:id/export', localOrAuth, async (req: AuthRequest, res: Respo
     const id = req.params.id as string;
     const user = req.user;
 
-    let screen: any = null;
-    if (getIsMongoConnected()) {
-      screen = await ScreenModel.findOne({ id }).lean();
-    }
-    if (!screen) {
-      screen = await localScreenStore.getById(id);
-    }
+    let screen = await localScreenStore.getById(id);
 
     if (!screen) {
       return res.status(404).json({ error: `Screen ${id} not found` });
@@ -920,13 +831,7 @@ screenRouter.post('/generate-stitch', localOrAuth, async (req: AuthRequest, res:
 
     let currentScreenSpec: ScreenLayoutSpec | null = null;
     if (screenId) {
-      if (getIsMongoConnected()) {
-        const doc = await ScreenModel.findOne({ id: screenId }).lean();
-        if (doc) currentScreenSpec = doc as any;
-      }
-      if (!currentScreenSpec) {
-        currentScreenSpec = await localScreenStore.getById(screenId);
-      }
+      currentScreenSpec = await localScreenStore.getById(screenId);
     }
 
     const hasExistingComponents = (currentScreenSpec?.board?.components?.length || existingBoard?.components?.length || 0) > 0;
@@ -1003,11 +908,7 @@ screenRouter.post('/generate-stitch', localOrAuth, async (req: AuthRequest, res:
         currentScreenSpec.chatHistory = updatedChatHistory;
         currentScreenSpec.updatedAt = new Date().toISOString();
 
-        if (getIsMongoConnected()) {
-          try {
-            await ScreenModel.updateOne({ id: currentScreenSpec.id }, { $set: { chatHistory: updatedChatHistory, updatedAt: currentScreenSpec.updatedAt } });
-          } catch {}
-        }
+
         await localScreenStore.update(currentScreenSpec.id, currentScreenSpec);
       }
 
@@ -1033,12 +934,7 @@ screenRouter.post('/generate-stitch', localOrAuth, async (req: AuthRequest, res:
     if (effectiveMode === 'modify' && screenId) {
       let existing: any = currentScreenSpec;
       if (!existing) {
-        if (getIsMongoConnected()) {
-          existing = await ScreenModel.findOne({ id: screenId }).lean();
-        }
-        if (!existing) {
-          existing = await localScreenStore.getById(screenId);
-        }
+        existing = await localScreenStore.getById(screenId);
       }
       if (existing) {
         const board = existing.layout || existing.board;
@@ -1124,39 +1020,8 @@ screenRouter.post('/generate-stitch', localOrAuth, async (req: AuthRequest, res:
     };
 
     if (effectiveMode === 'modify' && screenId) {
-      if (getIsMongoConnected()) {
-        try {
-          await ScreenModel.updateOne(
-            { id: screenId },
-            {
-              $set: {
-                name: fullSpec.name,
-                description: fullSpec.description,
-                layout: fullSpec.board,
-                components: fullSpec.board.components,
-                chatHistory: fullSpec.chatHistory,
-                updatedAt: fullSpec.updatedAt
-              }
-            }
-          );
-        } catch {}
-      }
       await localScreenStore.update(screenId, fullSpec);
     } else {
-      if (getIsMongoConnected()) {
-        try {
-          await ScreenModel.create({
-            id: fullSpec.id,
-            projectId: fullSpec.projectId,
-            userId: fullSpec.userId,
-            name: fullSpec.name,
-            description: fullSpec.description,
-            layout: fullSpec.board,
-            components: fullSpec.board.components,
-            chatHistory: fullSpec.chatHistory
-          });
-        } catch {}
-      }
       await localScreenStore.create(fullSpec);
     }
 
@@ -1191,13 +1056,7 @@ screenRouter.post('/:id/chat', localOrAuth, async (req: AuthRequest, res: Respon
       return res.status(400).json({ error: 'Message text is required' });
     }
 
-    let screen: any = null;
-    if (getIsMongoConnected()) {
-      screen = await ScreenModel.findOne({ id }).lean();
-    }
-    if (!screen) {
-      screen = await localScreenStore.getById(id);
-    }
+    let screen = await localScreenStore.getById(id);
     if (!screen) {
       return res.status(404).json({ error: `Screen ${id} not found` });
     }
@@ -1228,11 +1087,7 @@ screenRouter.post('/:id/chat', localOrAuth, async (req: AuthRequest, res: Respon
     const updatedHistory = [...(screen.chatHistory || []), userMsg, assistantMsg];
     screen.chatHistory = updatedHistory;
 
-    if (getIsMongoConnected()) {
-      try {
-        await ScreenModel.updateOne({ id }, { $set: { chatHistory: updatedHistory } });
-      } catch {}
-    }
+
     await localScreenStore.update(id, { ...screen, chatHistory: updatedHistory });
 
     return res.json({
